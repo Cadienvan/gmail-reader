@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, Settings, Palette, MessageSquare, HardDrive, Key } from 'lucide-react';
+import { X, Settings, Palette, MessageSquare, HardDrive, Key, Activity } from 'lucide-react';
 import { EnvironmentConfigPanel } from './EnvironmentConfigPanel';
 import { ModelConfigPanel } from './ModelConfigPanel';
 import { PromptConfigPanel } from './PromptConfigPanel';
 import { StorageConfigPanel } from './StorageConfigPanel';
+import { PerformanceConfigPanel } from './PerformanceConfigPanel';
 import { OAuthSetupGuide } from './OAuthSetupGuide';
 import { environmentConfigService } from '../services/environmentConfigService';
 
@@ -13,7 +14,7 @@ interface ConfigurationModalProps {
   initialTab?: string;
 }
 
-type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'storage';
+type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'performance' | 'storage';
 
 interface Tab {
   id: TabId;
@@ -79,6 +80,18 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         <PromptConfigPanel
           onConfigChange={(config) => {
             console.log('Prompt configuration updated:', config);
+          }}
+        />
+      )
+    },
+    {
+      id: 'performance',
+      label: 'Performance',
+      icon: Activity,
+      component: (
+        <PerformanceConfigPanel
+          onConfigChange={(config) => {
+            console.log('Performance configuration updated:', config);
           }}
         />
       )

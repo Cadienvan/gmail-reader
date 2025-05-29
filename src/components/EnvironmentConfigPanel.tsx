@@ -53,16 +53,6 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
       }
     }
 
-    if (!config.backendApiUrl.trim()) {
-      errors.backendApiUrl = 'Backend API URL is required';
-    } else {
-      try {
-        new URL(config.backendApiUrl);
-      } catch {
-        errors.backendApiUrl = 'Invalid URL format';
-      }
-    }
-
     if (!config.ollamaBaseUrl.trim()) {
       errors.ollamaBaseUrl = 'Ollama Base URL is required';
     } else {
@@ -295,28 +285,10 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
             </div>
           </div>
 
-          {/* API Settings */}
+          {/* AI Configuration */}
           <div className="space-y-3">
-            <h4 className="font-medium text-gray-700 border-b pb-1">API Endpoints</h4>
+            <h4 className="font-medium text-gray-700 border-b pb-1">AI Configuration</h4>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Backend API URL
-              </label>
-              <input
-                type="text"
-                value={config.backendApiUrl}
-                onChange={(e) => handleConfigChange('backendApiUrl', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md text-sm ${
-                  validationErrors.backendApiUrl ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="http://localhost:3100"
-              />
-              {validationErrors.backendApiUrl && (
-                <p className="text-red-600 text-xs mt-1">{validationErrors.backendApiUrl}</p>
-              )}
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Ollama Base URL
@@ -532,28 +504,10 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
               </div>
             </div>
 
-            {/* API Settings */}
+            {/* AI Configuration */}
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-700 border-b pb-1">API Endpoints</h4>
+              <h4 className="font-medium text-gray-700 border-b pb-1">AI Configuration</h4>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Backend API URL
-                </label>
-                <input
-                  type="text"
-                  value={config.backendApiUrl}
-                  onChange={(e) => handleConfigChange('backendApiUrl', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md text-sm ${
-                    validationErrors.backendApiUrl ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="http://localhost:3100"
-                />
-                {validationErrors.backendApiUrl && (
-                  <p className="text-red-600 text-xs mt-1">{validationErrors.backendApiUrl}</p>
-                )}
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ollama Base URL

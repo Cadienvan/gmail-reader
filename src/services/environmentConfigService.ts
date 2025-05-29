@@ -2,7 +2,6 @@ export interface EnvironmentConfig {
   googleClientId: string;
   googleClientSecret: string;
   googleRedirectUri: string;
-  backendApiUrl: string;
   ollamaBaseUrl: string;
 }
 
@@ -53,7 +52,6 @@ class EnvironmentConfigService {
       this.config.googleClientId &&
       this.config.googleClientSecret &&
       this.config.googleRedirectUri &&
-      this.config.backendApiUrl &&
       this.config.ollamaBaseUrl
     );
   }
@@ -67,13 +65,6 @@ class EnvironmentConfigService {
       clientSecret: this.config.googleClientSecret,
       redirectUri: this.config.googleRedirectUri
     };
-  }
-
-  /**
-   * Get backend API URL
-   */
-  getBackendApiUrl(): string {
-    return this.config.backendApiUrl;
   }
 
   /**
@@ -139,7 +130,6 @@ class EnvironmentConfigService {
       googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
       googleClientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
       googleRedirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth-callback.html`,
-      backendApiUrl: import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3100',
       ollamaBaseUrl: import.meta.env.VITE_OLLAMA_BASE_URL || 'http://localhost:11434'
     };
   }
@@ -150,7 +140,6 @@ class EnvironmentConfigService {
       typeof config.googleClientId === 'string' &&
       typeof config.googleClientSecret === 'string' &&
       typeof config.googleRedirectUri === 'string' &&
-      typeof config.backendApiUrl === 'string' &&
       typeof config.ollamaBaseUrl === 'string'
     );
   }

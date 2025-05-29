@@ -1,4 +1,4 @@
-import type { OllamaModel, OllamaTagsResponse, FlashCard, ModelConfiguration, PromptConfiguration } from '../types';
+import type { OllamaModel, OllamaTagsResponse, FlashCard, ModelConfiguration, PromptConfiguration, PerformanceConfiguration, QueuedRequest } from '../types';
 import { environmentConfigService } from './environmentConfigService';
 
 class OllamaService {
@@ -7,8 +7,15 @@ class OllamaService {
   }
   private readonly MODEL_CONFIG_KEY = 'ollama-model-configuration';
   private readonly PROMPT_CONFIG_KEY = 'ollama-prompt-configuration';
+  private readonly PERFORMANCE_CONFIG_KEY = 'ollama-performance-configuration';
   private modelConfig: ModelConfiguration;
   private promptConfig: PromptConfiguration;
+  private performanceConfig: PerformanceConfiguration;
+  
+  // Queue management
+  private requestQueue: QueuedRequest[] = [];
+  private isProcessingQueue = false;
+  private activeRequests = 0;
 
   constructor() {
     // Load or initialize model configuration
@@ -40,6 +47,15 @@ class OllamaService {
       this.promptConfig = this.getDefaultPromptConfiguration();
       this.savePromptConfiguration();
     }
+
+    // Load or initialize performance configuration
+    const savedPerformanceConfig = localStorage.getItem(this.PERFORMANCE_CONFIG_KEY);
+    if (savedPerformanceConfig) {
+      this.performanceConfig = JSON.parse(savedPerformanceConfig);
+    } else {
+      this.performanceConfig = this.getDefaultPerformanceConfiguration();
+      this.savePerformanceConfiguration();
+    }
   }
 
   getModelConfiguration(): ModelConfiguration {
@@ -66,6 +82,27 @@ class OllamaService {
 
   private savePromptConfiguration(): void {
     localStorage.setItem(this.PROMPT_CONFIG_KEY, JSON.stringify(this.promptConfig));
+  }
+
+  getPerformanceConfiguration(): PerformanceConfiguration {
+    return { ...this.performanceConfig };
+  }
+
+  setPerformanceConfiguration(config: PerformanceConfiguration): void {
+    this.performanceConfig = { ...config };
+    this.savePerformanceConfiguration();
+  }
+
+  private savePerformanceConfiguration(): void {
+    localStorage.setItem(this.PERFORMANCE_CONFIG_KEY, JSON.stringify(this.performanceConfig));
+  }
+
+  private getDefaultPerformanceConfiguration(): PerformanceConfiguration {
+    return {
+      enableQueueMode: false,
+      maxConcurrentRequests: 1,
+      requestDelay: 1000
+    };
   }
 
   private getDefaultPromptConfiguration(): PromptConfiguration {
@@ -161,6 +198,109 @@ Content to analyze:
       console.error('Failed to fetch available models:', error);
       return [];
     }
+  }
+
+  // Queue management methods
+  private generateRequestId(): string {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  }
+
+  private async addToQueue<T>(
+    type: QueuedRequest['type'],
+    content: string,
+    signal?: AbortSignal
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const request: QueuedRequest = {
+        id: this.generateRequestId(),
+        type,
+        content,
+        resolve: resolve as (result: any) => void,
+        reject,
+        signal,
+        addedAt: Date.now()
+      };
+
+      this.requestQueue.push(request);
+      this.processQueue();
+    });
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.isProcessingQueue || 
+        this.requestQueue.length === 0 || 
+        this.activeRequests >= this.performanceConfig.maxConcurrentRequests) {
+      return;
+    }
+
+    this.isProcessingQueue = true;
+
+    while (this.requestQueue.length > 0 && 
+           this.activeRequests < this.performanceConfig.maxConcurrentRequests) {
+      const request = this.requestQueue.shift();
+      if (!request) break;
+
+      // Check if request was cancelled
+      if (request.signal?.aborted) {
+        request.reject(new Error('Request was cancelled'));
+        continue;
+      }
+
+      this.activeRequests++;
+      
+      // Process the request
+      this.executeQueuedRequest(request).finally(() => {
+        this.activeRequests--;
+        // Add delay between requests if configured
+        if (this.performanceConfig.requestDelay > 0 && this.requestQueue.length > 0) {
+          setTimeout(() => this.processQueue(), this.performanceConfig.requestDelay);
+        } else {
+          this.processQueue();
+        }
+      });
+    }
+
+    this.isProcessingQueue = false;
+  }
+
+  private async executeQueuedRequest(request: QueuedRequest): Promise<void> {
+    try {
+      let result: any;
+      
+      switch (request.type) {
+        case 'summary':
+          result = await this.executeGenerateSummary(request.content, request.signal);
+          break;
+        case 'improved-summary':
+          result = await this.executeGenerateImprovedSummary(request.content, request.signal);
+          break;
+        case 'flashcard':
+          result = await this.executeGenerateFlashCards(request.content, request.signal);
+          break;
+        default:
+          throw new Error(`Unknown request type: ${request.type}`);
+      }
+      
+      request.resolve(result);
+    } catch (error) {
+      request.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
+  getQueueStatus(): { queueLength: number; activeRequests: number; isProcessing: boolean } {
+    return {
+      queueLength: this.requestQueue.length,
+      activeRequests: this.activeRequests,
+      isProcessing: this.isProcessingQueue
+    };
+  }
+
+  clearQueue(): void {
+    // Reject all pending requests
+    this.requestQueue.forEach(request => {
+      request.reject(new Error('Queue was cleared'));
+    });
+    this.requestQueue = [];
   }
 
   async generateSummary(content: string, signal?: AbortSignal): Promise<string> {

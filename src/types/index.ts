@@ -125,6 +125,22 @@ export interface ModelConfiguration {
   detailed: string;
 }
 
+export interface PerformanceConfiguration {
+  enableQueueMode: boolean;
+  maxConcurrentRequests: number;
+  requestDelay: number; // milliseconds between requests when queue is processing
+}
+
+export interface QueuedRequest {
+  id: string;
+  type: 'summary' | 'flashcard' | 'improved-summary';
+  content: string;
+  resolve: (result: string | any) => void;
+  reject: (error: Error) => void;
+  signal?: AbortSignal;
+  addedAt: number;
+}
+
 export interface PromptConfiguration {
   summaryPrompt: string;
   flashCardPrompt: string;
