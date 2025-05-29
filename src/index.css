@@ -1,0 +1,296 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+
+/* Flash card 3D flip animations */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Prose styles for email content */
+.prose {
+  max-width: none;
+  text-align: left;
+}
+
+.prose p {
+  margin-bottom: 1em;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.prose ul, .prose ol {
+  margin: 1em 0;
+  padding-left: 1.5em;
+}
+
+.prose li {
+  margin: 0.5em 0;
+}
+
+.prose a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.prose a:hover {
+  color: #1d4ed8;
+}
+
+.prose blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  margin: 1em 0;
+  font-style: italic;
+}
+
+/* Markdown specific styles */
+.prose code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.prose pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+/* Email HTML content isolation */
+.email-html-content {
+  /* CSS containment to isolate styles */
+  contain: layout style;
+  
+  /* Reset any inherited styles */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  
+  /* Ensure contained layout */
+  overflow: auto;
+  max-width: 100%;
+  
+  /* Create a new stacking context */
+  isolation: isolate;
+}
+
+/* Reset styles within HTML email content */
+.email-html-content * {
+  /* Prevent layout breaks */
+  max-width: 100% !important;
+  word-wrap: break-word;
+  
+  /* Reset problematic properties */
+  position: static !important;
+  z-index: auto !important;
+  
+  /* Ensure text is readable */
+  color: inherit;
+  font-family: inherit;
+}
+
+/* Specific resets for common email elements */
+.email-html-content table {
+  width: auto !important;
+  max-width: 100% !important;
+  table-layout: auto !important;
+  border-collapse: collapse;
+}
+
+.email-html-content img {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block;
+  margin: 0.5em 0;
+}
+
+/* Ensure links are properly styled */
+.email-html-content a {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+  cursor: pointer !important;
+}
+
+.email-html-content a:hover {
+  color: #1d4ed8 !important;
+  background-color: #ddd6fe !important;
+}
+
+/* Typography resets */
+.email-html-content h1,
+.email-html-content h2,
+.email-html-content h3,
+.email-html-content h4,
+.email-html-content h5,
+.email-html-content h6 {
+  margin: 1em 0 0.5em 0 !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+}
+
+.email-html-content p {
+  margin: 0.5em 0 !important;
+  line-height: 1.5 !important;
+}
+
+.email-html-content ul,
+.email-html-content ol {
+  margin: 0.5em 0 !important;
+  padding-left: 1.5em !important;
+}
+
+.email-html-content li {
+  margin: 0.25em 0 !important;
+}
+
+/* Hide any problematic elements */
+.email-html-content style,
+.email-html-content script,
+.email-html-content link[rel="stylesheet"] {
+  display: none !important;
+}
+
+/* Tooltip styles */
+.thinking-tooltip {
+  position: relative;
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.thinking-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #e5e7eb;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.thinking-icon:hover {
+  background-color: #d1d5db;
+}
+
+.thinking-content {
+  visibility: hidden;
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.thinking-tooltip:hover .thinking-content {
+  visibility: visible;
+}
+
+/* Arrow for tooltip */
+.thinking-content::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: white transparent transparent transparent;
+}
+
+/* Content toggle styles */
+.content-toggle-button {
+  transition: all 0.2s ease;
+}
+
+.content-toggle-button.active {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.content-toggle-button:not(.active) {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.content-toggle-button:not(.active):hover {
+  background-color: #e5e7eb;
+  color: #4b5563;
+}
+
+

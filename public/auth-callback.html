@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gmail Authentication</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f9fafb;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="status">Completing authentication...</div>
+    </div>
+
+    <script>
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        function completeAuth() {
+            const code = getUrlParameter('code');
+            const error = getUrlParameter('error');
+            const statusDiv = document.getElementById('status');
+
+            if (error) {
+                statusDiv.innerHTML = '<div class="error">❌ Authentication failed: ' + error + '</div>';
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'GMAIL_AUTH_ERROR',
+                        error: error
+                    }, window.location.origin);
+                }
+                setTimeout(() => window.close(), 3000);
+                return;
+            }
+
+            if (code) {
+                statusDiv.innerHTML = '<div class="success">✅ Authentication successful! Exchanging code for tokens...</div>';
+                
+                // Exchange the authorization code for tokens
+                // Note: In a real production app, this should be done server-side for security
+                fetch('https://oauth2.googleapis.com/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        code: code,
+                        client_id: localStorage.getItem('gmail_client_id') || '',
+                        client_secret: localStorage.getItem('gmail_client_secret') || '',
+                        redirect_uri: window.location.origin + '/auth-callback.html',
+                        grant_type: 'authorization_code'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.access_token) {
+                        statusDiv.innerHTML = '<div class="success">✅ Authentication complete! You can close this window.</div>';
+                        if (window.opener) {
+                            window.opener.postMessage({
+                                type: 'GMAIL_AUTH_SUCCESS',
+                                access_token: data.access_token,
+                                refresh_token: data.refresh_token
+                            }, window.location.origin);
+                        }
+                        setTimeout(() => window.close(), 2000);
+                    } else {
+                        throw new Error(data.error_description || 'Failed to get access token');
+                    }
+                })
+                .catch(err => {
+                    statusDiv.innerHTML = '<div class="error">❌ Token exchange failed: ' + err.message + '</div>';
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'GMAIL_AUTH_ERROR',
+                            error: err.message
+                        }, window.location.origin);
+                    }
+                    setTimeout(() => window.close(), 3000);
+                });
+            } else {
+                statusDiv.innerHTML = '<div class="error">❌ No authorization code received</div>';
+                setTimeout(() => window.close(), 3000);
+            }
+        }
+
+        // Start the authentication completion process
+        completeAuth();
+    </script>
+</body>
+</html>
