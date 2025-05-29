@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, RotateCcw, Download, Upload, Eye, EyeOff, AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
+import { Settings, Save, RotateCcw, Download, Upload, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { environmentConfigService } from '../services/environmentConfigService';
 import type { EnvironmentConfig } from '../services/environmentConfigService';
 

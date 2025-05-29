@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Settings, Palette, MessageSquare, HardDrive, Key } from 'lucide-react';
 import { EnvironmentConfigPanel } from './EnvironmentConfigPanel';
 import { ModelConfigPanel } from './ModelConfigPanel';
