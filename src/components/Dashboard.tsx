@@ -336,10 +336,10 @@ export const Dashboard: React.FC = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
             <div className="mb-3 md:mb-0">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Gmail Email Traversal
+                Gmail Reader
               </h1>
               <p className="text-sm md:text-base text-gray-600 mt-1">
-                Traverse your unread emails with AI-powered link summaries
+                Read your (forever and ever) unread emails with AI-powered link summaries.
               </p>
             </div>
             <div>
