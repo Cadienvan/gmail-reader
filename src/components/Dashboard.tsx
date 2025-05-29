@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings } from 'lucide-react';
+import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
@@ -203,6 +203,23 @@ export const Dashboard: React.FC = () => {
     // The list will be refreshed when the modal is closed or when user explicitly refreshes
   };
 
+  const handleEmailDeleted = (emailId: string) => {
+    // Remove the deleted email from the emails array
+    setEmails(prevEmails => {
+      const filteredEmails = prevEmails.filter(email => email.id !== emailId);
+      
+      // If this was the last email in the list, close the modal
+      if (filteredEmails.length === 0) {
+        setShowEmailModal(false);
+      } else if (currentEmailIndex >= filteredEmails.length) {
+        // If we deleted the last email in the list, move to the previous one
+        setCurrentEmailIndex(Math.max(0, filteredEmails.length - 1));
+      }
+      
+      return filteredEmails;
+    });
+  };
+
   const OllamaStatusIndicator = () => {
     switch (ollamaStatus) {
       case 'checking':
@@ -344,6 +361,14 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.open('https://github.com/Cadienvan/gmail-reader', '_blank')}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 transition-colors text-sm"
+                  title="View on GitHub"
+                >
+                  <Github size={16} />
+                  GitHub
+                </button>
                 <button
                   onClick={() => setShowConfigurationModal(true)}
                   className="flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
@@ -596,6 +621,7 @@ export const Dashboard: React.FC = () => {
           onNext={handleNextEmail}
           onPrev={handlePrevEmail}
           onEmailMarkedAsRead={handleEmailMarkedAsRead}
+          onEmailDeleted={handleEmailDeleted}
         />
 
         <EmailLogModal

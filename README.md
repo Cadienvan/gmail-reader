@@ -1,6 +1,10 @@
 # Gmail AI Helper - Setup & Configuration Guide
 
-**Gmail AI Helper** is an intelligent email management application that helps you traverse Gmail emails with AI-powered link analysis, flash card generation, and voice commands support.
+**Gmail AI Helper** is an intelligent email management application that helps you traverse Gmail emails with AI-powered link analysis, flash card generation, and voice commands support. **🔒 Everything runs locally** - your data never leaves your device, with AI processing handled entirely by your local Ollama installation and all content cached securely in your browser.
+
+## 🌐 **Quick Access**
+
+- **🚀 Live App**: [https://gmail-ai-reader.netlify.app/](https://gmail-ai-reader.netlify.app/)
 
 ---
 
@@ -19,18 +23,20 @@
 
 ### Core Features
 - **📧 Gmail Integration**: Fetch and traverse unread emails
-- **🤖 AI-Powered Analysis**: Generate intelligent summaries of email links using local Ollama
+- **🤖 AI-Powered Analysis**: Generate intelligent summaries of email links using **100% local Ollama** - no data sent to external services
 - **🎴 Flash Cards**: Create educational flash cards from content for learning
 - **🎤 Voice Commands**: Hands-free navigation (Italian/English support)
 - **📊 Analytics**: Track viewed emails and manage storage
 - **⚙️ Configurable AI**: Customize AI models and prompts
 
 ### Technical Features
-- **Local AI Processing**: Uses Ollama with deepseek-r1:1.5b model
-- **Advanced Link Extraction**: Automatically detects and analyzes links in emails
-- **Smart Caching**: Efficient storage of emails, summaries, and flash cards
-- **Voice Recognition**: Multilingual voice commands for accessibility
-- **Modern UI**: Responsive design with Tailwind CSS
+- **🔒 Privacy-First Local AI Processing**: Uses your local Ollama installation with any compatible model
+- **🧠 Flexible Model Support**: Choose from any Ollama-compatible model for your specific needs
+- **💾 Smart Browser Caching**: All emails, summaries, and flash cards stored locally in your browser
+- **🔗 Advanced Link Extraction**: Automatically detects and analyzes links in emails
+- **🎤 Voice Recognition**: Multilingual voice commands for accessibility
+- **🎨 Modern UI**: Responsive design with Tailwind CSS
+- **🚫 Zero External Dependencies**: No cloud AI services required - everything runs on your machine
 
 ---
 
@@ -42,12 +48,14 @@
 # Install Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
 
-# Pull the required AI model
+# Pull a recommended AI model (example - you can use any model you prefer)
 ollama pull deepseek-r1:1.5b
 
 # Start Ollama service
 ollama serve
 ```
+
+> **🎯 Model Flexibility**: The `deepseek-r1:1.5b` model shown above is just an example. Once Ollama is running, the application will automatically detect and display **all available models** in your local installation. You can use any model that suits your needs - from lightweight options like `llama3.2:1b` to more powerful models like `llama3.1:70b` depending on your hardware capabilities.
 
 ### 2. Install Node.js Dependencies
 
@@ -120,13 +128,13 @@ Click the microphone button and say:
 #### Link Analysis
 1. Open any email with links
 2. Click on extracted links in the right panel
-3. AI generates intelligent summaries automatically
-4. Summaries are cached for fast access
+3. **AI generates intelligent summaries locally** using your Ollama installation
+4. All summaries are **cached in your browser** for instant future access - no re-processing needed
 
 #### Flash Cards Generation
 1. When viewing link summaries, click "Generate Flash Cards"
-2. AI creates educational Q&A pairs
-3. Cards are saved for later review
+2. **Local AI creates educational Q&A pairs** - all processing happens on your machine
+3. Cards are **saved locally in your browser** for later review
 4. Use "Flash Card Game" for study sessions
 
 #### Configuration
@@ -138,12 +146,14 @@ Click the microphone button and say:
 
 ## 📊 **Storage Management**
 
-The application provides detailed storage analytics:
+The application provides detailed storage analytics for all locally cached data:
 
-- **Email Cache**: Faster loading of previously fetched emails
-- **Link Summaries**: Cached AI-generated content summaries
-- **Flash Cards**: Educational cards with tagging system
-- **Configuration**: Environment and AI settings
+- **📧 Email Cache**: Faster loading of previously fetched emails (stored in browser)
+- **🔗 Link Summaries**: Cached AI-generated content summaries (processed locally)
+- **🎴 Flash Cards**: Educational cards with tagging system (stored locally)
+- **⚙️ Configuration**: Environment and AI settings (browser storage)
+
+**🔒 Privacy Note**: All data is stored locally in your browser's storage. Nothing is sent to external servers except for the initial Gmail API calls (which go directly to Google's servers).
 
 Access via Configuration > Storage tab.
 
@@ -152,9 +162,11 @@ Access via Configuration > Storage tab.
 ## ⚙️ **Advanced Configuration**
 
 ### AI Model Configuration
-- **Quick Model**: Fast processing for initial summaries
-- **Detailed Model**: Comprehensive analysis for important content
-- **Custom Prompts**: Tailor AI responses to your needs
+- **🧠 Flexible Model Selection**: Choose from any model available in your local Ollama installation
+- **⚡ Quick Model**: Fast processing for initial summaries (e.g., smaller models like llama3.2:1b)
+- **🎯 Detailed Model**: Comprehensive analysis for important content (e.g., larger models like llama3.1:8b)
+- **📝 Custom Prompts**: Tailor AI responses to your specific needs
+- **🔒 100% Local**: All AI processing happens on your machine - no external API calls
 
 ### Environment Settings
 - **Backend API URL**: For link content fetching
@@ -201,8 +213,9 @@ npm run build:github # Build for GitHub Pages
 
 **"Ollama service unavailable"**
 - Ensure Ollama is running: `ollama serve`
-- Check if model is installed: `ollama pull deepseek-r1:1.5b`
+- Check if you have any model installed: `ollama list` (if empty, pull any model: `ollama pull llama3.2:1b`)
 - Verify Ollama URL in Configuration → Environment
+- The application will automatically detect all available models once Ollama is running
 
 **Voice commands not working**
 - Check browser microphone permissions
