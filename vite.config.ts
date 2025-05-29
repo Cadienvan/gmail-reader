@@ -4,7 +4,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: process.env.NODE_ENV === 'production' ? '/gmail-reader/' : '/',
+  base: '/',
   plugins: [
     react(),
     nodePolyfills({
