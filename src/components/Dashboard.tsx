@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Zap } from 'lucide-react';
-import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration } from '../types';
+import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Zap, Star, Link, Award } from 'lucide-react';
+import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration, QualityAssessmentResult } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
 import { emailLogService } from '../utils/emailLogService';
 import { flashCardService } from '../services/flashCardService';
+import { deepAnalysisCache } from '../services/deepAnalysisCache';
 import { EmailModal } from './EmailModal';
 import { EmailLogModal } from './EmailLogModal';
 import { FlashCardsModal } from './FlashCardsModal';
@@ -344,6 +345,54 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // Helper function to get quality assessment for an email
+  const getEmailQuality = (emailId: string): QualityAssessmentResult | null => {
+    return deepAnalysisCache.getResult(emailId);
+  };
+
+  // Helper function to render quality badge
+  const renderQualityBadge = (emailId: string) => {
+    const quality = getEmailQuality(emailId);
+    
+    if (!quality) {
+      return null;
+    }
+
+    const { isHighQuality, qualityScore, hasLinks, contentType } = quality;
+
+    return (
+      <div className="flex items-center gap-2 ml-2">
+        {isHighQuality && (
+          <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+            <Star size={12} />
+            High Quality
+          </div>
+        )}
+        
+        <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+          <Award size={12} />
+          {qualityScore}%
+        </div>
+        
+        {hasLinks && (
+          <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
+            <Link size={12} />
+            Links
+          </div>
+        )}
+        
+        <span className={`px-2 py-1 rounded-full text-xs ${
+          contentType === 'full-email' ? 'bg-green-100 text-green-700' :
+          contentType === 'links-only' ? 'bg-orange-100 text-orange-700' :
+          'bg-gray-100 text-gray-700'
+        }`}>
+          {contentType === 'full-email' ? 'Full' : 
+           contentType === 'links-only' ? 'Links' : 'Mixed'}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Main Content Area */}
@@ -569,6 +618,9 @@ export const Dashboard: React.FC = () => {
                           )}
                         </div>
                       </div>
+
+                      {/* Quality Assessment Badges */}
+                      {renderQualityBadge(email.id)}
                     </div>
                   ))}
                 </div>

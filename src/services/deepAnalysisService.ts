@@ -9,6 +9,7 @@ import { gmailService } from './gmailService';
 import { ollamaService } from './ollamaService';
 import { linkService } from './linkService';
 import { tabSummaryStorage } from './tabSummaryStorage';
+import { deepAnalysisCache } from './deepAnalysisCache';
 
 type DeepAnalysisEventCallback = (progress: DeepAnalysisProgress) => void;
 
@@ -37,6 +38,7 @@ class DeepAnalysisService {
 
   constructor() {
     this.loadConfig();
+    this.loadCachedResults();
   }
 
   private loadConfig(): void {
@@ -47,6 +49,16 @@ class DeepAnalysisService {
       }
     } catch (error) {
       console.error('Failed to load deep analysis config:', error);
+    }
+  }
+
+  private loadCachedResults(): void {
+    try {
+      // Load cached results into current session for backwards compatibility
+      const cachedResults = deepAnalysisCache.getAllResults();
+      this.progress.qualityResults = [...cachedResults];
+    } catch (error) {
+      console.error('Failed to load cached analysis results:', error);
     }
   }
 
@@ -234,6 +246,9 @@ class DeepAnalysisService {
         processedAt: Date.now()
       };
 
+      // Save to persistent cache
+      deepAnalysisCache.saveResult(qualityResult);
+
       // Add to results
       this.progress.qualityResults.push(qualityResult);
 
@@ -265,6 +280,9 @@ class DeepAnalysisService {
         isHighQuality: false,
         processedAt: Date.now()
       };
+
+      // Save failed result to cache as well
+      deepAnalysisCache.saveResult(failedResult);
 
       this.progress.qualityResults.push(failedResult);
       
@@ -415,13 +433,29 @@ class DeepAnalysisService {
   }
 
   isEmailHighQuality(emailId: string): boolean {
-    return this.progress.qualityResults.some(
+    // First check current session results
+    const sessionResult = this.progress.qualityResults.some(
       result => result.emailId === emailId && result.isHighQuality
     );
+    
+    if (sessionResult) {
+      return true;
+    }
+    
+    // Then check the persistent cache
+    return deepAnalysisCache.isEmailHighQuality(emailId);
   }
 
   getEmailQualityResult(emailId: string): QualityAssessmentResult | undefined {
-    return this.progress.qualityResults.find(result => result.emailId === emailId);
+    // First check current session results
+    const sessionResult = this.progress.qualityResults.find(result => result.emailId === emailId);
+    
+    if (sessionResult) {
+      return sessionResult;
+    }
+    
+    // Then check the persistent cache
+    return deepAnalysisCache.getResult(emailId) || undefined;
   }
 }
 
