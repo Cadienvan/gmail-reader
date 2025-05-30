@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github } from 'lucide-react';
+import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Zap } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
@@ -11,6 +11,7 @@ import { FlashCardsModal } from './FlashCardsModal';
 import { FlashCardImportExport } from './FlashCardImportExport';
 import { VoiceCommands } from './VoiceCommands';
 import { ConfigurationModal } from './ConfigurationModal';
+import { DeepAnalysisSidebar } from './DeepAnalysisSidebar';
 
 export const Dashboard: React.FC = () => {
   const [emails, setEmails] = useState<ParsedEmail[]>([]);
@@ -34,6 +35,7 @@ export const Dashboard: React.FC = () => {
   const [showFlashCardGameModal, setShowFlashCardGameModal] = useState(false);
   const [showImportExportModal, setShowImportExportModal] = useState(false);
   const [showConfigurationModal, setShowConfigurationModal] = useState(false);
+  const [showDeepAnalysisSidebar, setShowDeepAnalysisSidebar] = useState(false);
   const [currentEmailIndex, setCurrentEmailIndex] = useState(0);
   const [allFlashCards, setAllFlashCards] = useState<FlashCard[]>([]);
   const [isLoadingFlashCards, setIsLoadingFlashCards] = useState(false);
@@ -343,13 +345,15 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      {/* Voice Commands */}
-      <VoiceCommands {...voiceCommandCallbacks} />
-      
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Main Content Area */}
+      <div className="flex-1 p-4">
+        {/* Voice Commands */}
+        <VoiceCommands {...voiceCommandCallbacks} />
+        
+        <div className="max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
             <div className="mb-3 md:mb-0">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
@@ -469,6 +473,15 @@ export const Dashboard: React.FC = () => {
                     View Log
                   </button>
                   <button
+                    onClick={() => setShowDeepAnalysisSidebar(!showDeepAnalysisSidebar)}
+                    disabled={ollamaStatus === 'unavailable'}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Start Deep Analysis of all unread emails"
+                  >
+                    <Zap size={16} />
+                    Deep Analysis
+                  </button>
+                  <button
                     onClick={loadEmails}
                     disabled={isLoading || isRetrying}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
@@ -559,6 +572,8 @@ export const Dashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
+
+
 
                 {/* Pagination Controls */}
                 <div className="flex items-center justify-between mt-4">
@@ -664,7 +679,15 @@ export const Dashboard: React.FC = () => {
           isOpen={showConfigurationModal}
           onClose={() => setShowConfigurationModal(false)}
         />
+        </div>
       </div>
+      
+      {/* Deep Analysis Sidebar - Positioned as a lateral sidebar */}
+      <DeepAnalysisSidebar
+        isVisible={showDeepAnalysisSidebar}
+        onToggle={() => setShowDeepAnalysisSidebar(!showDeepAnalysisSidebar)}
+        className="fixed right-0 top-0 h-full z-40"
+      />
     </div>
   );
 };

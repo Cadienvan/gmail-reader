@@ -133,7 +133,7 @@ export interface PerformanceConfiguration {
 
 export interface QueuedRequest {
   id: string;
-  type: 'summary' | 'flashcard' | 'improved-summary';
+  type: 'summary' | 'flashcard' | 'improved-summary' | 'quality';
   content: string;
   resolve: (result: string | any) => void;
   reject: (error: Error) => void;
@@ -144,4 +144,39 @@ export interface QueuedRequest {
 export interface PromptConfiguration {
   summaryPrompt: string;
   flashCardPrompt: string;
+  qualityAssessmentPrompt: string;
+}
+
+export interface DeepAnalysisProgress {
+  totalEmails: number;
+  processedEmails: number;
+  currentPage: number;
+  qualityResults: QualityAssessmentResult[];
+  isRunning: boolean;
+  currentlyProcessingEmailId?: string;
+  currentlyProcessingEmailSubject?: string;
+  startTime?: number;
+  endTime?: number;
+  error?: string;
+}
+
+export interface QualityAssessmentResult {
+  emailId: string;
+  subject: string;
+  from: string;
+  hasLinks: boolean;
+  contentType: 'full-email' | 'links-only' | 'mixed';
+  qualityScore: number;
+  diversityScore: number;
+  reasoning: string;
+  isHighQuality: boolean;
+  processedAt: number;
+}
+
+export interface DeepAnalysisConfig {
+  enabled: boolean;
+  qualityThreshold: number;
+  diversityThreshold: number;
+  maxPagesToProcess: number;
+  autoCreateTabs: boolean;
 }

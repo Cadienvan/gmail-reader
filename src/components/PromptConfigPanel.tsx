@@ -15,13 +15,16 @@ export const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
   const [config, setConfig] = useState<PromptConfiguration>(ollamaService.getPromptConfiguration());
   const [editingSummary, setEditingSummary] = useState(false);
   const [editingFlashCard, setEditingFlashCard] = useState(false);
+  const [editingQualityAssessment, setEditingQualityAssessment] = useState(false);
   const [tempSummaryPrompt, setTempSummaryPrompt] = useState(config.summaryPrompt);
   const [tempFlashCardPrompt, setTempFlashCardPrompt] = useState(config.flashCardPrompt);
+  const [tempQualityAssessmentPrompt, setTempQualityAssessmentPrompt] = useState(config.qualityAssessmentPrompt);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setTempSummaryPrompt(config.summaryPrompt);
     setTempFlashCardPrompt(config.flashCardPrompt);
+    setTempQualityAssessmentPrompt(config.qualityAssessmentPrompt);
   }, [config]);
 
   const handleSaveConfig = async () => {
@@ -29,7 +32,8 @@ export const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
     try {
       const newConfig: PromptConfiguration = {
         summaryPrompt: tempSummaryPrompt,
-        flashCardPrompt: tempFlashCardPrompt
+        flashCardPrompt: tempFlashCardPrompt,
+        qualityAssessmentPrompt: tempQualityAssessmentPrompt
       };
       
       ollamaService.setPromptConfiguration(newConfig);
@@ -37,6 +41,7 @@ export const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
       onConfigChange?.(newConfig);
       setEditingSummary(false);
       setEditingFlashCard(false);
+      setEditingQualityAssessment(false);
     } catch (error) {
       console.error('Failed to save prompt configuration:', error);
     } finally {
@@ -51,13 +56,17 @@ export const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
       setConfig(defaultConfig);
       setTempSummaryPrompt(defaultConfig.summaryPrompt);
       setTempFlashCardPrompt(defaultConfig.flashCardPrompt);
+      setTempQualityAssessmentPrompt(defaultConfig.qualityAssessmentPrompt);
       onConfigChange?.(defaultConfig);
       setEditingSummary(false);
       setEditingFlashCard(false);
+      setEditingQualityAssessment(false);
     }
   };
 
-  const hasChanges = tempSummaryPrompt !== config.summaryPrompt || tempFlashCardPrompt !== config.flashCardPrompt;
+  const hasChanges = tempSummaryPrompt !== config.summaryPrompt || 
+                    tempFlashCardPrompt !== config.flashCardPrompt ||
+                    tempQualityAssessmentPrompt !== config.qualityAssessmentPrompt;
 
   return (
     <div className={className}>
@@ -67,7 +76,7 @@ export const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
           <div>
             <h3 className="text-lg font-semibold text-gray-900">AI Prompt Configuration</h3>
             <p className="text-sm text-gray-600 mt-1">
-              Customize the prompts used for AI-powered summaries and flash card generation
+              Customize the prompts used for AI-powered summaries, flash card generation, and deep analysis quality assessment
             </p>
           </div>
           <button
@@ -158,6 +167,48 @@ export const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
               <div className="bg-gray-50 p-4 rounded-md border">
                 <pre className="text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto">
                   {config.flashCardPrompt}
+                </pre>
+              </div>
+            )}
+          </div>
+
+          {/* Quality Assessment Prompt Configuration */}
+          <div className="border border-gray-200 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="font-medium text-gray-900">Quality Assessment Prompt</h4>
+                <p className="text-sm text-gray-600 mt-1">
+                  Used by Deep Analysis to evaluate email content quality and diversity
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingQualityAssessment(!editingQualityAssessment)}
+                className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+              >
+                {editingQualityAssessment ? <Eye size={16} /> : <Edit size={16} />}
+                {editingQualityAssessment ? 'Preview' : 'Edit'}
+              </button>
+            </div>
+            
+            {editingQualityAssessment ? (
+              <div>
+                <textarea
+                  value={tempQualityAssessmentPrompt}
+                  onChange={(e) => setTempQualityAssessmentPrompt(e.target.value)}
+                  className="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-sm resize-vertical focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your quality assessment prompt here. Use {CONTENT} as a placeholder for the content to be analyzed."
+                />
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-800">
+                    <strong>Tip:</strong> Use <code className="bg-blue-100 px-1 rounded">{'{CONTENT}'}</code> as a placeholder where the content should be inserted.
+                    The prompt should instruct the AI to return a JSON object with contentType, hasLinks, qualityScore, diversityScore, and reasoning fields.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 p-4 rounded-md border">
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  {config.qualityAssessmentPrompt}
                 </pre>
               </div>
             )}
