@@ -24,7 +24,7 @@ interface EmailMetadata {
 
 class TabSummaryStorageService {
   private readonly DB_NAME = 'gmail-reader-tabs-db';
-  private readonly DB_VERSION = 2; // Increment version for schema change
+  private readonly DB_VERSION = 4; // Incremented to fix version conflict
   private readonly TABS_STORE = 'tabs';
   private readonly EMAIL_METADATA_STORE = 'email_metadata';
   private db: IDBDatabase | null = null;
@@ -42,8 +42,33 @@ class TabSummaryStorageService {
       const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
       
       request.onerror = (event) => {
-        console.error("Database error:", (event.target as IDBRequest).error);
-        reject((event.target as IDBRequest).error);
+        const error = (event.target as IDBRequest).error;
+        console.error("Database error:", error);
+        
+        // Handle version error by clearing the database and retrying
+        if (error?.name === 'VersionError') {
+          console.warn('Database version conflict detected. Clearing database...');
+          const deleteRequest = indexedDB.deleteDatabase(this.DB_NAME);
+          deleteRequest.onsuccess = () => {
+            console.log('Database cleared. Retrying initialization...');
+            // Retry initialization after clearing
+            const retryRequest = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+            retryRequest.onsuccess = (retryEvent) => {
+              this.db = (retryEvent.target as IDBOpenDBRequest).result;
+              this.initialized = true;
+              resolve(true);
+            };
+            retryRequest.onerror = () => {
+              reject(new Error('Failed to initialize database after clearing'));
+            };
+            retryRequest.onupgradeneeded = this.handleUpgrade.bind(this);
+          };
+          deleteRequest.onerror = () => {
+            reject(new Error('Failed to clear conflicting database'));
+          };
+        } else {
+          reject(error);
+        }
       };
       
       request.onsuccess = (event) => {
@@ -52,23 +77,25 @@ class TabSummaryStorageService {
         resolve(true);
       };
       
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        
-        // Create tabs store
-        if (!db.objectStoreNames.contains(this.TABS_STORE)) {
-          const tabStore = db.createObjectStore(this.TABS_STORE, { keyPath: 'url' });
-          tabStore.createIndex('lastOpened', 'lastOpened', { unique: false });
-        }
-        
-        // Create email metadata store for deep analysis
-        if (!db.objectStoreNames.contains(this.EMAIL_METADATA_STORE)) {
-          const emailStore = db.createObjectStore(this.EMAIL_METADATA_STORE, { keyPath: 'emailId' });
-          emailStore.createIndex('processedAt', 'processedAt', { unique: false });
-          emailStore.createIndex('qualityScore', 'qualityScore', { unique: false });
-        }
-      };
+      request.onupgradeneeded = this.handleUpgrade.bind(this);
     });
+  }
+
+  private handleUpgrade(event: IDBVersionChangeEvent) {
+    const db = (event.target as IDBOpenDBRequest).result;
+    
+    // Create tabs store
+    if (!db.objectStoreNames.contains(this.TABS_STORE)) {
+      const tabStore = db.createObjectStore(this.TABS_STORE, { keyPath: 'url' });
+      tabStore.createIndex('lastOpened', 'lastOpened', { unique: false });
+    }
+    
+    // Create email metadata store for deep analysis
+    if (!db.objectStoreNames.contains(this.EMAIL_METADATA_STORE)) {
+      const emailStore = db.createObjectStore(this.EMAIL_METADATA_STORE, { keyPath: 'emailId' });
+      emailStore.createIndex('processedAt', 'processedAt', { unique: false });
+      emailStore.createIndex('qualityScore', 'qualityScore', { unique: false });
+    }
   }
 
   async ensureInitialized() {

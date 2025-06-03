@@ -30,7 +30,7 @@ interface FlashCardTagRelation {
 class DBStorageService {
   private db: IDBDatabase | null = null;
   private readonly DB_NAME = 'gmail-reader-db';
-  private readonly DB_VERSION = 2; // Incremented to add flashcard stores
+  private readonly DB_VERSION = 4; // Incremented to fix version conflict
   private initialized = false;
   private initPromise: Promise<boolean> | null = null;
 
@@ -45,8 +45,33 @@ class DBStorageService {
       const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
       
       request.onerror = (event) => {
-        console.error("Database error:", (event.target as IDBRequest).error);
-        reject((event.target as IDBRequest).error);
+        const error = (event.target as IDBRequest).error;
+        console.error("Database error:", error);
+        
+        // Handle version error by clearing the database and retrying
+        if (error?.name === 'VersionError') {
+          console.warn('Database version conflict detected. Clearing database...');
+          const deleteRequest = indexedDB.deleteDatabase(this.DB_NAME);
+          deleteRequest.onsuccess = () => {
+            console.log('Database cleared. Retrying initialization...');
+            // Retry initialization after clearing
+            const retryRequest = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+            retryRequest.onsuccess = (retryEvent) => {
+              this.db = (retryEvent.target as IDBOpenDBRequest).result;
+              this.initialized = true;
+              resolve(true);
+            };
+            retryRequest.onerror = () => {
+              reject(new Error('Failed to initialize database after clearing'));
+            };
+            retryRequest.onupgradeneeded = this.handleUpgrade.bind(this);
+          };
+          deleteRequest.onerror = () => {
+            reject(new Error('Failed to clear conflicting database'));
+          };
+        } else {
+          reject(error);
+        }
       };
       
       request.onsuccess = (event) => {
@@ -55,38 +80,40 @@ class DBStorageService {
         resolve(true);
       };
       
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        
-        // Create tabs store
-        if (!db.objectStoreNames.contains('tabs')) {
-          const tabStore = db.createObjectStore('tabs', { keyPath: 'url' });
-          tabStore.createIndex('lastOpened', 'lastOpened', { unique: false });
-        }
-
-        // Create flashcard tags store
-        if (!db.objectStoreNames.contains('flash_card_tags')) {
-          const tagStore = db.createObjectStore('flash_card_tags', { keyPath: 'id', autoIncrement: true });
-          tagStore.createIndex('name', 'name', { unique: true });
-        }
-
-        // Create flashcards store
-        if (!db.objectStoreNames.contains('flash_cards')) {
-          const cardStore = db.createObjectStore('flash_cards', { keyPath: 'id', autoIncrement: true });
-          cardStore.createIndex('sourceType', 'sourceType', { unique: false });
-          cardStore.createIndex('sourceId', 'sourceId', { unique: false });
-          cardStore.createIndex('createdAt', 'createdAt', { unique: false });
-          cardStore.createIndex('sourceTypeAndId', ['sourceType', 'sourceId'], { unique: false });
-        }
-
-        // Create flashcard-tag relationships store
-        if (!db.objectStoreNames.contains('flash_card_tag_relations')) {
-          const relationStore = db.createObjectStore('flash_card_tag_relations', { keyPath: ['cardId', 'tagId'] });
-          relationStore.createIndex('cardId', 'cardId', { unique: false });
-          relationStore.createIndex('tagId', 'tagId', { unique: false });
-        }
-      };
+      request.onupgradeneeded = this.handleUpgrade.bind(this);
     });
+  }
+
+  private handleUpgrade(event: IDBVersionChangeEvent) {
+    const db = (event.target as IDBOpenDBRequest).result;
+    
+    // Create tabs store
+    if (!db.objectStoreNames.contains('tabs')) {
+      const tabStore = db.createObjectStore('tabs', { keyPath: 'url' });
+      tabStore.createIndex('lastOpened', 'lastOpened', { unique: false });
+    }
+
+    // Create flashcard tags store
+    if (!db.objectStoreNames.contains('flash_card_tags')) {
+      const tagStore = db.createObjectStore('flash_card_tags', { keyPath: 'id', autoIncrement: true });
+      tagStore.createIndex('name', 'name', { unique: true });
+    }
+
+    // Create flashcards store
+    if (!db.objectStoreNames.contains('flash_cards')) {
+      const cardStore = db.createObjectStore('flash_cards', { keyPath: 'id', autoIncrement: true });
+      cardStore.createIndex('sourceType', 'sourceType', { unique: false });
+      cardStore.createIndex('sourceId', 'sourceId', { unique: false });
+      cardStore.createIndex('createdAt', 'createdAt', { unique: false });
+      cardStore.createIndex('sourceTypeAndId', ['sourceType', 'sourceId'], { unique: false });
+    }
+
+    // Create flashcard-tag relationships store
+    if (!db.objectStoreNames.contains('flash_card_tag_relations')) {
+      const relationStore = db.createObjectStore('flash_card_tag_relations', { keyPath: ['cardId', 'tagId'] });
+      relationStore.createIndex('cardId', 'cardId', { unique: false });
+      relationStore.createIndex('tagId', 'tagId', { unique: false });
+    }
   }
 
   async ensureInitialized() {

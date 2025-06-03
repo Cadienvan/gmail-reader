@@ -1335,6 +1335,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       }
     } catch (error) {
       console.error('Failed to load high-quality tabs:', error);
+      // Don't throw the error, just log it to prevent blocking the email modal
+      if (error instanceof Error && error.message.includes('VersionError')) {
+        console.warn('Database version conflict detected. Please refresh the page to resolve.');
+      }
     }
   };
 
