@@ -15,6 +15,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import { FlashCardsModal } from './FlashCardsModal';
 import { DeepAnalysisSidebar } from './DeepAnalysisSidebar';
 import { RegexChecker } from './RegexChecker';
+import { environmentConfigService } from '../services/environmentConfigService';
 
 interface EmailModalProps {
   emails: ParsedEmail[];
@@ -95,10 +96,30 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const [showRegexChecker, setShowRegexChecker] = useState<boolean>(false);
   const [regexCheckerUrl, setRegexCheckerUrl] = useState<string>('');
 
+  // Save for later mode state
+  const [saveForLaterMode, setSaveForLaterMode] = useState<boolean>(() => 
+    environmentConfigService.getSaveForLaterMode()
+  );
+
   const currentEmail = emails[currentIndex];
 
   // Check if current email is already marked as read
   const isCurrentEmailRead = currentEmail?.isRead || false;
+
+  // Helper function to show notifications
+  const showNotification = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
+    // Create a simple notification (you can enhance this with a proper notification system)
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white ${
+      type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.remove();
+    }, 3000);
+  };
 
   // Sidebar toggle function
   const toggleSidebar = () => {
@@ -768,6 +789,38 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   };
 
   const handleLinkClick = async (link: ExtractedLink) => {
+    // Check if we're in save for later mode
+    if (saveForLaterMode) {
+      try {
+        // Fetch link content without generating summary
+        const { content, finalUrl } = await linkService.fetchLinkContent(link.url);
+        
+        // Save content to storage for later review
+        const savedData = {
+          url: link.url,
+          finalUrl,
+          summary: '', // No summary in save for later mode
+          loading: false,
+          savedForLater: true
+        };
+        
+        await tabSummaryStorage.saveLinkSummary(
+          link.url, 
+          savedData, 
+          content, 
+          finalUrl ? new URL(finalUrl).hostname : new URL(link.url).hostname
+        );
+        
+        // Show notification instead of creating a tab
+        showNotification(`Link content saved for later review: ${new URL(link.url).hostname}`, 'success');
+        
+      } catch (error) {
+        showNotification(`Failed to save link content: ${error instanceof Error ? error.message : 'Unknown error'}`, 'info');
+      }
+      return;
+    }
+
+    // Normal mode: generate summary and create tabs
     // Add the URL to active summaries if not already there
     setActiveSummaryUrls(prev => {
       if (!prev.includes(link.url)) {
@@ -857,7 +910,35 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const handleEmailSummary = async () => {
     if (!emailContent || !currentEmail) return;
 
-    // Create a unique identifier for email summary tab
+    // Check if we're in save for later mode
+    if (saveForLaterMode) {
+      try {
+        // Save email content without generating a summary
+        const emailTabId = `email:${currentEmail.id}`;
+        const savedContent = {
+          url: emailTabId,
+          summary: 'Email saved for later review',
+          loading: false,
+          savedForLater: true
+        };
+        
+        // Save to IndexedDB for later review
+        await tabSummaryStorage.saveLinkSummary(
+          emailTabId, 
+          savedContent, 
+          emailContent.body, 
+          `Email: ${currentEmail.subject}`
+        );
+        
+        showNotification('Email saved for later review', 'success');
+      } catch (error) {
+        console.error('Failed to save email for later:', error);
+        showNotification('Failed to save email', 'error');
+      }
+      return;
+    }
+
+    // Original summarization logic for normal mode
     const emailTabId = `email:${currentEmail.id}`;
     
     // Add the email summary to active summaries if not already there

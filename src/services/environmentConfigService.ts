@@ -3,6 +3,7 @@ export interface EnvironmentConfig {
   googleClientSecret: string;
   googleRedirectUri: string;
   ollamaBaseUrl: string;
+  saveForLaterMode: boolean;
 }
 
 class EnvironmentConfigService {
@@ -75,6 +76,13 @@ class EnvironmentConfigService {
   }
 
   /**
+   * Get save for later mode setting
+   */
+  getSaveForLaterMode(): boolean {
+    return this.config.saveForLaterMode;
+  }
+
+  /**
    * Export configuration as JSON string
    */
   exportConfiguration(): string {
@@ -130,7 +138,8 @@ class EnvironmentConfigService {
       googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
       googleClientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
       googleRedirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth-callback.html`,
-      ollamaBaseUrl: import.meta.env.VITE_OLLAMA_BASE_URL || 'http://localhost:11434'
+      ollamaBaseUrl: import.meta.env.VITE_OLLAMA_BASE_URL || 'http://localhost:11434',
+      saveForLaterMode: false
     };
   }
 
@@ -140,7 +149,8 @@ class EnvironmentConfigService {
       typeof config.googleClientId === 'string' &&
       typeof config.googleClientSecret === 'string' &&
       typeof config.googleRedirectUri === 'string' &&
-      typeof config.ollamaBaseUrl === 'string'
+      typeof config.ollamaBaseUrl === 'string' &&
+      typeof config.saveForLaterMode === 'boolean'
     );
   }
 }

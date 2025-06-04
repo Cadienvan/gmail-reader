@@ -53,7 +53,6 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       icon: Settings,
       component: (
         <EnvironmentConfigPanel
-          inline={true}
           onConfigChange={(config) => {
             console.log('Environment configuration updated:', config);
           }}
@@ -136,24 +135,26 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b bg-gray-50">
-          {tabs.map((tab) => {
-            const IconComponent = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600 bg-white'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <IconComponent size={16} />
-                {tab.label}
-              </button>
-            );
-          })}
+        <div className="flex border-b bg-gray-50 overflow-x-auto">
+          <div className="flex flex-nowrap min-w-full">
+            {tabs.map((tab) => {
+              const IconComponent = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors flex-shrink-0 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600 bg-white'
+                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <IconComponent size={16} />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Tab Content */}
