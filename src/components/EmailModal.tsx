@@ -795,9 +795,12 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         // Fetch link content without generating summary
         const { content, finalUrl } = await linkService.fetchLinkContent(link.url);
         
+        // Use finalUrl as the primary identifier, fallback to original URL if no redirect occurred
+        const urlToSave = finalUrl || link.url;
+        
         // Save content to storage for later review
         const savedData = {
-          url: link.url,
+          url: urlToSave,
           finalUrl,
           summary: '', // No summary in save for later mode
           loading: false,
@@ -805,14 +808,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         };
         
         await tabSummaryStorage.saveLinkSummary(
-          link.url, 
+          urlToSave, 
           savedData, 
           content, 
           finalUrl ? new URL(finalUrl).hostname : new URL(link.url).hostname
         );
         
         // Show notification instead of creating a tab
-        showNotification(`Link content saved for later review: ${new URL(link.url).hostname}`, 'success');
+        showNotification(`Link content saved for later review: ${finalUrl ? new URL(finalUrl).hostname : new URL(link.url).hostname}`, 'success');
         
       } catch (error) {
         showNotification(`Failed to save link content: ${error instanceof Error ? error.message : 'Unknown error'}`, 'info');
@@ -1864,7 +1867,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     ) : (
                       <>
                         <FileText size={14} />
-                        <span>Summarize Email</span>
+                        <span>{saveForLaterMode ? 'Save for later' : 'Summarize Email'}</span>
                       </>
                     )}
                   </button>

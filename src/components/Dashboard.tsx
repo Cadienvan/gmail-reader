@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Zap, Star, Link, Award } from 'lucide-react';
+import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Zap, Star, Link, Award, Bookmark } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration, QualityAssessmentResult } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
@@ -13,6 +13,7 @@ import { FlashCardImportExport } from './FlashCardImportExport';
 import { VoiceCommands } from './VoiceCommands';
 import { ConfigurationModal } from './ConfigurationModal';
 import { DeepAnalysisSidebar } from './DeepAnalysisSidebar';
+import { SavedForLaterModal } from './SavedForLaterModal';
 
 export const Dashboard: React.FC = () => {
   const [emails, setEmails] = useState<ParsedEmail[]>([]);
@@ -37,6 +38,7 @@ export const Dashboard: React.FC = () => {
   const [showImportExportModal, setShowImportExportModal] = useState(false);
   const [showConfigurationModal, setShowConfigurationModal] = useState(false);
   const [showDeepAnalysisSidebar, setShowDeepAnalysisSidebar] = useState(false);
+  const [showSavedForLaterModal, setShowSavedForLaterModal] = useState(false);
   const [currentEmailIndex, setCurrentEmailIndex] = useState(0);
   const [allFlashCards, setAllFlashCards] = useState<FlashCard[]>([]);
   const [isLoadingFlashCards, setIsLoadingFlashCards] = useState(false);
@@ -522,6 +524,13 @@ export const Dashboard: React.FC = () => {
                     View Log
                   </button>
                   <button
+                    onClick={() => setShowSavedForLaterModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 border border-orange-300 rounded-lg hover:bg-orange-50 text-orange-700"
+                  >
+                    <Bookmark size={16} />
+                    Saved for later
+                  </button>
+                  <button
                     onClick={() => setShowDeepAnalysisSidebar(!showDeepAnalysisSidebar)}
                     disabled={ollamaStatus === 'unavailable'}
                     className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -730,6 +739,11 @@ export const Dashboard: React.FC = () => {
         <ConfigurationModal
           isOpen={showConfigurationModal}
           onClose={() => setShowConfigurationModal(false)}
+        />
+
+        <SavedForLaterModal
+          isOpen={showSavedForLaterModal}
+          onClose={() => setShowSavedForLaterModal(false)}
         />
         </div>
       </div>
