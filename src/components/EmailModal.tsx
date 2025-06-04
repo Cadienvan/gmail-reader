@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Zap } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Zap, Filter } from 'lucide-react';
 import type { ParsedEmail, ExtractedLink, LinkSummary, FlashCard, ModelConfiguration } from '../types';
 import { linkService } from '../services/linkService';
 import { ollamaService } from '../services/ollamaService';
@@ -14,6 +14,7 @@ import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import { FlashCardsModal } from './FlashCardsModal';
 import { DeepAnalysisSidebar } from './DeepAnalysisSidebar';
+import { RegexChecker } from './RegexChecker';
 
 interface EmailModalProps {
   emails: ParsedEmail[];
@@ -89,6 +90,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   // Deep analysis functionality
   const [isHighQualityEmail, setIsHighQualityEmail] = useState<boolean>(false);
   const [emailQualityResult, setEmailQualityResult] = useState<any>(null);
+
+  // Regex checker state
+  const [showRegexChecker, setShowRegexChecker] = useState<boolean>(false);
+  const [regexCheckerUrl, setRegexCheckerUrl] = useState<string>('');
 
   const currentEmail = emails[currentIndex];
 
@@ -335,6 +340,26 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const handleCancelAction = () => {
     setShowConfirmDialog(false);
     setConfirmAction(null);
+  };
+
+  // Regex checker handlers
+  const handleOpenRegexChecker = (url?: string) => {
+    setRegexCheckerUrl(url || '');
+    setShowRegexChecker(true);
+  };
+
+  const handleCloseRegexChecker = () => {
+    setShowRegexChecker(false);
+    setRegexCheckerUrl('');
+  };
+
+  const handleRegexPatternAdded = () => {
+    // The RegexChecker component handles pattern addition internally
+    // We might need to refresh the links if URL filtering is applied immediately
+    if (currentEmail && emailContent) {
+      const newLinks = linkService.extractLinksFromHTML(emailContent.htmlBody || emailContent.body);
+      setExtractedLinks(newLinks);
+    }
   };
 
   useEffect(() => {
@@ -1636,6 +1661,16 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               )}
             </button>
             
+            {/* URL Filter Button */}
+            <button
+              onClick={() => handleOpenRegexChecker()}
+              className="flex items-center gap-1 px-3 py-1 rounded text-sm bg-purple-600 text-white hover:bg-purple-700"
+              title="Open URL regex pattern checker"
+            >
+              <Filter size={14} />
+              URL Filter
+            </button>
+            
             <span className="text-sm text-gray-500">
               {currentIndex + 1} of {emails.length}
             </span>
@@ -1909,6 +1944,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                               ? link.text 
                               : `Link to ${link.domain}`}
                           </div>
+                        </button>
+                        <button
+                          onClick={() => handleOpenRegexChecker(link.url)}
+                          className="p-1 text-purple-400 hover:text-purple-600"
+                          title="Add URL filter pattern"
+                        >
+                          <Filter size={14} />
                         </button>
                         <a
                           href={link.url}
@@ -2268,6 +2310,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         onSave={handleSaveFlashCards}
         onDelete={handleDeleteFlashCard}
         title="Generated Flash Cards"
+      />
+      
+      {/* Regex Checker Modal */}
+      <RegexChecker
+        isOpen={showRegexChecker}
+        onClose={handleCloseRegexChecker}
+        initialUrl={regexCheckerUrl}
+        onPatternAdded={handleRegexPatternAdded}
       />
     </>
   );

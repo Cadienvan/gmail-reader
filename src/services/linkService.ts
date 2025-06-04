@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import type { ExtractedLink } from '../types';
+import { urlFilterService } from './urlFilterService';
 
 interface CacheEntry {
   content: string;
@@ -52,22 +53,24 @@ class LinkService {
     const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
     const matches = text.match(urlRegex) || [];
     
-    return matches.map(url => {
-      try {
-        const urlObj = new URL(url);
-        return {
-          url: url,
-          text: url,
-          domain: urlObj.hostname
-        };
-      } catch (error) {
-        return {
-          url: url,
-          text: url,
-          domain: 'invalid-url'
-        };
-      }
-    });
+    return matches
+      .filter(url => !urlFilterService.shouldFilterUrl(url)) // Filter out URLs that match patterns
+      .map(url => {
+        try {
+          const urlObj = new URL(url);
+          return {
+            url: url,
+            text: url,
+            domain: urlObj.hostname
+          };
+        } catch (error) {
+          return {
+            url: url,
+            text: url,
+            domain: 'invalid-url'
+          };
+        }
+      });
   }
 
   extractLinksFromHTML(html: string): ExtractedLink[] {
@@ -80,15 +83,18 @@ class LinkService {
         const text = $(element).text().trim();
         
         if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
-          try {
-            const urlObj = new URL(href);
-            links.push({
-              url: href,
-              text: text || href,
-              domain: urlObj.hostname
-            });
-          } catch (error) {
-            // Skip invalid URLs
+          // Apply URL filtering here as well
+          if (!urlFilterService.shouldFilterUrl(href)) {
+            try {
+              const urlObj = new URL(href);
+              links.push({
+                url: href,
+                text: text || href,
+                domain: urlObj.hostname
+              });
+            } catch (error) {
+              // Skip invalid URLs
+            }
           }
         }
       });

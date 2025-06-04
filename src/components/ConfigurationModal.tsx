@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { X, Settings, Palette, MessageSquare, HardDrive, Key, Activity } from 'lucide-react';
+import { X, Settings, Palette, MessageSquare, HardDrive, Key, Activity, Filter } from 'lucide-react';
 import { EnvironmentConfigPanel } from './EnvironmentConfigPanel';
 import { ModelConfigPanel } from './ModelConfigPanel';
 import { PromptConfigPanel } from './PromptConfigPanel';
 import { StorageConfigPanel } from './StorageConfigPanel';
 import { PerformanceConfigPanel } from './PerformanceConfigPanel';
+import { UrlFilterConfigPanel } from './UrlFilterConfigPanel';
 import { OAuthSetupGuide } from './OAuthSetupGuide';
 import { environmentConfigService } from '../services/environmentConfigService';
 
@@ -14,7 +15,7 @@ interface ConfigurationModalProps {
   initialTab?: string;
 }
 
-type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'performance' | 'storage';
+type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'performance' | 'url-filters' | 'storage';
 
 interface Tab {
   id: TabId;
@@ -92,6 +93,18 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         <PerformanceConfigPanel
           onConfigChange={(config) => {
             console.log('Performance configuration updated:', config);
+          }}
+        />
+      )
+    },
+    {
+      id: 'url-filters',
+      label: 'URL Filters',
+      icon: Filter,
+      component: (
+        <UrlFilterConfigPanel
+          onConfigChange={(patterns) => {
+            console.log('URL filter configuration updated:', patterns);
           }}
         />
       )

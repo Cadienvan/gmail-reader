@@ -208,3 +208,19 @@ export interface SenderSelectionModalProps {
   isLoading?: boolean;
   title?: string;
 }
+
+// URL Filter types
+export interface UrlFilterPattern {
+  id: string;
+  name: string;
+  pattern: string;
+  description: string;
+  enabled: boolean;
+  createdAt: Date;
+  lastModified: Date;
+}
+
+export interface UrlFilterConfigPanelProps {
+  onConfigChange?: (patterns: UrlFilterPattern[]) => void;
+  className?: string;
+}
