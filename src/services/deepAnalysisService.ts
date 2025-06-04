@@ -3,7 +3,9 @@ import type {
   DeepAnalysisProgress, 
   QualityAssessmentResult, 
   DeepAnalysisConfig,
-  LinkSummary
+  LinkSummary,
+  EmailSender,
+  SenderSelectionConfig
 } from '../types';
 import { gmailService } from './gmailService';
 import { ollamaService } from './ollamaService';
@@ -35,6 +37,7 @@ class DeepAnalysisService {
   private callbacks: Set<DeepAnalysisEventCallback> = new Set();
   private abortController: AbortController | null = null;
   private readonly CONFIG_KEY = 'deep-analysis-config';
+  private senderConfigs: SenderSelectionConfig[] = [];
 
   constructor() {
     this.loadConfig();
@@ -175,12 +178,17 @@ class DeepAnalysisService {
         break;
       }
 
+      // Filter emails by sender selection if configured
+      const emailsToProcess = this.senderConfigs.length > 0 
+        ? this.filterEmailsBySenders(emailsResult.emails)
+        : emailsResult.emails;
+
       // Update total count on first page
       if (pageCount === 0) {
         // Estimate total based on first page - this is approximate
         const estimatedTotal = emailsResult.nextPageToken ? 
-          emailsResult.emails.length * this.config.maxPagesToProcess : 
-          emailsResult.emails.length;
+          emailsToProcess.length * this.config.maxPagesToProcess : 
+          emailsToProcess.length;
         
         this.updateProgress({
           totalEmails: estimatedTotal
@@ -190,7 +198,7 @@ class DeepAnalysisService {
       this.updateProgress({ currentPage: pageCount + 1 });
 
       // Process each email in the current page
-      for (const email of emailsResult.emails) {
+      for (const email of emailsToProcess) {
         this.checkAborted();
         await this.processEmail(email);
       }
@@ -203,6 +211,45 @@ class DeepAnalysisService {
 
       currentPageToken = emailsResult.nextPageToken;
       pageCount++;
+    }
+  }
+
+  private filterEmailsBySenders(emails: ParsedEmail[]): ParsedEmail[] {
+    if (this.senderConfigs.length === 0) {
+      return emails;
+    }
+
+    const selectedSenders = new Set(this.senderConfigs.map(config => config.email.toLowerCase()));
+    
+    return emails.filter(email => {
+      const senderEmail = this.extractEmailFromSender(email.from).toLowerCase();
+      return selectedSenders.has(senderEmail);
+    });
+  }
+
+  private extractEmailFromSender(fromField: string): string {
+    const nameMatch = fromField.match(/^(.+?)\s*<(.+)>$/);
+    return nameMatch ? nameMatch[2] : fromField;
+  }
+
+  private getSenderContentType(email: ParsedEmail): 'full-email' | 'links-only' | 'mixed' {
+    if (this.senderConfigs.length === 0) {
+      return 'mixed'; // Default fallback
+    }
+
+    const senderEmail = this.extractEmailFromSender(email.from).toLowerCase();
+    const senderConfig = this.senderConfigs.find(config => config.email.toLowerCase() === senderEmail);
+    
+    // Map user-friendly types to expected types
+    const userContentType = senderConfig?.contentType || 'mixed';
+    switch (userContentType) {
+      case 'full-text':
+        return 'full-email';
+      case 'links-only':
+        return 'links-only';
+      case 'mixed':
+      default:
+        return 'mixed';
     }
   }
 
@@ -225,11 +272,31 @@ class DeepAnalysisService {
       // Load email content
       const emailContent = await gmailService.getEmailContent(email.id);
       
-      // Classify content type and get quality assessment with context clearing
-      const assessment = await ollamaService.generateQualityAssessmentWithContextClear(
-        emailContent.body + (emailContent.htmlBody ? '\n\n' + emailContent.htmlBody : ''),
-        this.abortController?.signal
-      );
+      // Get user-provided content type for this sender, or use AI assessment as fallback
+      const userProvidedContentType = this.getSenderContentType(email);
+      
+      // If user provided content type, use simplified assessment
+      let assessment: any;
+      let contentType: 'full-email' | 'links-only' | 'mixed';
+      
+      if (this.senderConfigs.length > 0) {
+        // Use user-provided content type and simplified assessment
+        contentType = userProvidedContentType;
+        
+        // Generate simplified quality assessment without content type detection
+        assessment = await ollamaService.generateSimplifiedQualityAssessment(
+          emailContent.body + (emailContent.htmlBody ? '\n\n' + emailContent.htmlBody : ''),
+          contentType,
+          this.abortController?.signal
+        );
+      } else {
+        // Fall back to full AI assessment
+        assessment = await ollamaService.generateQualityAssessmentWithContextClear(
+          emailContent.body + (emailContent.htmlBody ? '\n\n' + emailContent.htmlBody : ''),
+          this.abortController?.signal
+        );
+        contentType = assessment.contentType || 'mixed';
+      }
 
       // Create quality result
       const qualityResult: QualityAssessmentResult = {
@@ -237,7 +304,7 @@ class DeepAnalysisService {
         subject: email.subject,
         from: email.from,
         hasLinks: assessment.hasLinks || false,
-        contentType: assessment.contentType || 'mixed',
+        contentType: contentType,
         qualityScore: assessment.qualityScore || 0,
         diversityScore: assessment.diversityScore || 0,
         reasoning: assessment.reasoning || 'No reasoning provided',
@@ -456,6 +523,79 @@ class DeepAnalysisService {
     
     // Then check the persistent cache
     return deepAnalysisCache.getResult(emailId) || undefined;
+  }
+
+  async collectUniqueSenders(): Promise<EmailSender[]> {
+    if (!gmailService.isAuthenticated()) {
+      throw new Error('Gmail not authenticated');
+    }
+
+    const senderMap = new Map<string, EmailSender>();
+    let currentPageToken: string | undefined = undefined;
+    let pageCount = 0;
+
+    // Collect senders from all pages up to the configured maximum
+    while (pageCount < this.config.maxPagesToProcess) {
+      try {
+        const emailsResult = await gmailService.getUnreadEmails(currentPageToken, 50, false);
+        
+        if (emailsResult.emails.length === 0) {
+          break;
+        }
+
+        // Process each email to extract sender information
+        for (const email of emailsResult.emails) {
+          const senderEmail = email.from.toLowerCase();
+          const emailDate = new Date(email.date).getTime();
+          
+          if (senderMap.has(senderEmail)) {
+            const existing = senderMap.get(senderEmail)!;
+            existing.emailCount++;
+            existing.lastEmailDate = Math.max(existing.lastEmailDate, emailDate);
+            
+            // Add subject to samples (keep max 5)
+            if (existing.sampleSubjects.length < 5 && !existing.sampleSubjects.includes(email.subject)) {
+              existing.sampleSubjects.push(email.subject);
+            }
+          } else {
+            // Extract name from email address if available
+            const nameMatch = email.from.match(/^(.+?)\s*<(.+)>$/);
+            const name = nameMatch ? nameMatch[1].trim().replace(/['"]/g, '') : undefined;
+            const emailOnly = nameMatch ? nameMatch[2] : email.from;
+
+            senderMap.set(senderEmail, {
+              email: emailOnly,
+              name: name,
+              emailCount: 1,
+              lastEmailDate: emailDate,
+              sampleSubjects: [email.subject]
+            });
+          }
+        }
+
+        if (!emailsResult.nextPageToken) {
+          break;
+        }
+
+        currentPageToken = emailsResult.nextPageToken;
+        pageCount++;
+      } catch (error) {
+        console.error(`Failed to collect senders from page ${pageCount + 1}:`, error);
+        break;
+      }
+    }
+
+    // Convert to array and sort by email count (descending)
+    return Array.from(senderMap.values()).sort((a, b) => b.emailCount - a.emailCount);
+  }
+
+  setSenderConfigs(configs: SenderSelectionConfig[]): void {
+    this.senderConfigs = [...configs];
+  }
+
+  async startDeepAnalysisWithSenders(senderConfigs: SenderSelectionConfig[]): Promise<void> {
+    this.setSenderConfigs(senderConfigs);
+    return this.startDeepAnalysis();
   }
 }
 

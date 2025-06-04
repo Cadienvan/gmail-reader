@@ -889,6 +889,119 @@ ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`;
     return this.generateQualityAssessment(content, signal);
   }
 
+  // Simplified quality assessment that uses user-provided content type instead of AI detection
+  async generateSimplifiedQualityAssessment(content: string, contentType: 'full-email' | 'links-only' | 'mixed', signal?: AbortSignal): Promise<any> {
+    try {
+      // Create a simplified prompt that focuses only on quality and diversity, 
+      // not content type detection
+      const simplifiedPrompt = `You are a content quality analyzer. You must respond ONLY with a valid JSON object.
+
+Analyze this email content and return a JSON object with this exact structure:
+
+{
+  "hasLinks": true,
+  "qualityScore": 75,
+  "diversityScore": 65,
+  "reasoning": "Brief explanation of the scores"
+}
+
+Rules:
+- hasLinks: true if contains URLs, false otherwise
+- qualityScore: 0-100 (technical depth, actionability, clarity)
+- diversityScore: 0-100 (unique perspective, novelty)
+- reasoning: 1-2 sentences explaining the scores
+
+Respond ONLY with the JSON object. No other text.
+
+Content:
+${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`;
+
+      const modelToUse = this.modelConfig.detailed;
+      
+      const response = await fetch(`${this.getBaseUrl()}/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          prompt: simplifiedPrompt,
+          stream: false,
+          options: {
+            temperature: 0.1,
+            num_predict: 150,
+            stop: ['\n\n', 'Content:', 'Rules:']
+          }
+        }),
+        signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Simplified quality assessment raw response:', data.response);
+      
+      if (data && data.response) {
+        try {
+          let cleanResponse = data.response.trim();
+          
+          // Remove common prefixes
+          cleanResponse = cleanResponse.replace(/^(Here's the JSON|Here is the JSON|The JSON response is:|Response:|Analysis:|Assessment:)/i, '').trim();
+          
+          // Find JSON boundaries
+          const jsonStart = cleanResponse.indexOf('{');
+          const jsonEnd = cleanResponse.lastIndexOf('}');
+          
+          if (jsonStart === -1 || jsonEnd === -1 || jsonStart >= jsonEnd) {
+            // Try parsing the entire response as JSON
+            const result = JSON.parse(cleanResponse);
+            return {
+              contentType: contentType, // Use provided content type
+              hasLinks: result.hasLinks || false,
+              qualityScore: result.qualityScore || 50,
+              diversityScore: result.diversityScore || 50,
+              reasoning: result.reasoning || 'Assessment completed'
+            };
+          }
+          
+          const jsonString = cleanResponse.substring(jsonStart, jsonEnd + 1);
+          const result = JSON.parse(jsonString);
+          
+          return {
+            contentType: contentType, // Use provided content type instead of AI detection
+            hasLinks: result.hasLinks || false,
+            qualityScore: Math.max(0, Math.min(100, Number(result.qualityScore) || 50)),
+            diversityScore: Math.max(0, Math.min(100, Number(result.diversityScore) || 50)),
+            reasoning: result.reasoning || 'Assessment completed'
+          };
+          
+        } catch (parseError) {
+          console.error('Failed to parse simplified quality assessment JSON:', parseError);
+          
+          // Enhanced fallback using content analysis and provided content type
+          return {
+            contentType: contentType,
+            hasLinks: content.includes('http') || content.includes('www.'),
+            qualityScore: content.length > 1000 ? 60 : 40,
+            diversityScore: content.includes('http') ? 55 : 45,
+            reasoning: `Fallback assessment using user-provided content type: ${contentType}`
+          };
+        }
+      } else {
+        throw new Error('No response received from Ollama');
+      }
+    } catch (error) {
+      if (signal?.aborted) {
+        throw new Error('Simplified quality assessment was cancelled');
+      }
+      
+      console.error('Ollama simplified quality assessment error:', error);
+      throw new Error(`Failed to generate simplified quality assessment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   // Diagnostic method to test quality assessment consistency
   async testQualityAssessmentConsistency(): Promise<void> {
     const testContent = `

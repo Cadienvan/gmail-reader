@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
-  Play, 
   Square, 
   BarChart3, 
   Clock, 
@@ -14,11 +13,13 @@ import {
   Trash2,
   Settings,
   RefreshCw,
-  TestTube
+  TestTube,
+  Users
 } from 'lucide-react';
-import type { DeepAnalysisProgress, QualityAssessmentResult, DeepAnalysisConfig } from '../types';
+import type { DeepAnalysisProgress, QualityAssessmentResult, DeepAnalysisConfig, EmailSender, SenderSelectionConfig } from '../types';
 import { deepAnalysisService } from '../services/deepAnalysisService';
 import { ollamaService } from '../services/ollamaService';
+import { SenderSelectionModal } from './SenderSelectionModal';
 
 interface DeepAnalysisSidebarProps {
   isVisible: boolean;
@@ -35,6 +36,9 @@ export const DeepAnalysisSidebar: React.FC<DeepAnalysisSidebarProps> = ({
   const [config, setConfig] = useState<DeepAnalysisConfig>(deepAnalysisService.getConfig());
   const [showConfig, setShowConfig] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [showSenderModal, setShowSenderModal] = useState(false);
+  const [availableSenders, setAvailableSenders] = useState<EmailSender[]>([]);
+  const [isLoadingSenders, setIsLoadingSenders] = useState(false);
 
   useEffect(() => {
     const unsubscribe = deepAnalysisService.subscribe(setProgress);
@@ -44,13 +48,46 @@ export const DeepAnalysisSidebar: React.FC<DeepAnalysisSidebarProps> = ({
   const handleStart = async () => {
     setIsStarting(true);
     try {
-      await deepAnalysisService.startDeepAnalysis();
+      // Collect unique senders first
+      setIsLoadingSenders(true);
+      const senders = await deepAnalysisService.collectUniqueSenders();
+      setAvailableSenders(senders);
+      setIsLoadingSenders(false);
+      
+      // Show sender selection modal
+      setShowSenderModal(true);
+    } catch (error) {
+      console.error('Failed to collect senders:', error);
+      alert(`Failed to collect senders: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsLoadingSenders(false);
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const handleSenderSelectionConfirm = async (senderConfigs: SenderSelectionConfig[]) => {
+    setShowSenderModal(false);
+    setIsStarting(true);
+    
+    try {
+      if (senderConfigs.length === 0) {
+        alert('No senders selected. Please select at least one sender to analyze.');
+        return;
+      }
+      
+      // Start analysis with selected senders
+      await deepAnalysisService.startDeepAnalysisWithSenders(senderConfigs);
     } catch (error) {
       console.error('Failed to start deep analysis:', error);
       alert(`Failed to start deep analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsStarting(false);
     }
+  };
+
+  const handleSenderSelectionCancel = () => {
+    setShowSenderModal(false);
+    setIsStarting(false);
   };
 
   const handleStop = () => {
@@ -205,8 +242,8 @@ export const DeepAnalysisSidebar: React.FC<DeepAnalysisSidebarProps> = ({
                   disabled={isStarting}
                   className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm"
                 >
-                  <Play size={14} />
-                  {isStarting ? 'Starting...' : 'Start Analysis'}
+                  <Users size={14} />
+                  {isStarting ? 'Loading Senders...' : 'Select Senders & Start'}
                 </button>
               ) : (
                 <button
@@ -427,6 +464,16 @@ export const DeepAnalysisSidebar: React.FC<DeepAnalysisSidebarProps> = ({
           </div>
         </div>
       )}
+      
+      {/* Sender Selection Modal */}
+      <SenderSelectionModal
+        isOpen={showSenderModal}
+        onClose={handleSenderSelectionCancel}
+        onConfirm={handleSenderSelectionConfirm}
+        senders={availableSenders}
+        isLoading={isLoadingSenders}
+        title="Choose Senders for Deep Analysis"
+      />
     </div>
   );
 };

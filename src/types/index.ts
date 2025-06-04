@@ -180,3 +180,31 @@ export interface DeepAnalysisConfig {
   maxPagesToProcess: number;
   autoCreateTabs: boolean;
 }
+
+// New types for sender selection feature
+export interface EmailSender {
+  email: string;
+  name?: string;
+  emailCount: number;
+  lastEmailDate: number;
+  sampleSubjects: string[];
+}
+
+export interface SenderSelectionConfig {
+  email: string;
+  name?: string;
+  include: boolean;
+  contentType: 'full-text' | 'links-only' | 'mixed';
+  emailCount: number;
+  lastEmailDate: number;
+  sampleSubjects: string[];
+}
+
+export interface SenderSelectionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (senderConfig: SenderSelectionConfig[]) => void;
+  senders: EmailSender[];
+  isLoading?: boolean;
+  title?: string;
+}
