@@ -364,97 +364,23 @@ Content to analyze:
   }
 
   async generateSummary(content: string, signal?: AbortSignal): Promise<string> {
-    try {
-      // Always use quick model initially
-      const modelToUse = this.modelConfig.quick;
-      const prompt = this.promptConfig.summaryPrompt.replace('{CONTENT}', content);
-      
-      const response = await fetch(`${this.getBaseUrl()}/api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          prompt: prompt,
-          stream: false
-        }),
-        signal
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      if (data && data.response) {
-        return data.response;
-      } else {
-        throw new Error('Invalid response from Ollama');
-      }
-    } catch (error) {
-      if (signal?.aborted) {
-        throw new Error('Summary generation was cancelled');
-      }
-      
-      console.error('Ollama service error:', error);
-      if (error instanceof Error) {
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-          throw new Error(`Ollama service is not running. Please start Ollama and ensure the ${this.modelConfig.quick} model is available.`);
-        }
-      }
-      if (error instanceof Response && error.status === 404) {
-        throw new Error(`Ollama model not found. Please ensure ${this.modelConfig.quick} is installed.`);
-      }
-      throw new Error(`Failed to generate summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Use the queue system if enabled for performance management
+    if (this.performanceConfig.enableQueueMode) {
+      return this.addToQueue<string>('summary', content, signal);
     }
+
+    // Direct execution if queue mode is disabled
+    return this.executeDirectSummary(content, signal);
   }
 
   async generateImprovedSummary(content: string, signal?: AbortSignal): Promise<string> {
-    try {
-      // Use detailed model for improved summary
-      const modelToUse = this.modelConfig.detailed;
-      const prompt = this.promptConfig.summaryPrompt.replace('{CONTENT}', content);
-      
-      const response = await fetch(`${this.getBaseUrl()}/api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          prompt: prompt,
-          stream: false
-        }),
-        signal
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      if (data && data.response) {
-        return data.response;
-      } else {
-        throw new Error('Invalid response from Ollama');
-      }
-    } catch (error) {
-      if (signal?.aborted) {
-        throw new Error('Improved summary generation was cancelled');
-      }
-      
-      console.error('Ollama service error:', error);
-      if (error instanceof Error) {
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-          throw new Error(`Ollama service is not running. Please start Ollama and ensure the ${this.modelConfig.detailed} model is available.`);
-        }
-      }
-      if (error instanceof Response && error.status === 404) {
-        throw new Error(`Ollama model not found. Please ensure ${this.modelConfig.detailed} is installed.`);
-      }
-      throw new Error(`Failed to generate improved summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Use the queue system if enabled for performance management
+    if (this.performanceConfig.enableQueueMode) {
+      return this.addToQueue<string>('improved-summary', content, signal);
     }
+
+    // Direct execution if queue mode is disabled
+    return this.executeDirectImprovedSummary(content, signal);
   }
 
   // Helper method to check if an improved summary is available
@@ -757,60 +683,94 @@ ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`;
 
   // Private execution methods for queue integration
   private async executeDirectSummary(content: string, signal?: AbortSignal): Promise<string> {
-    const modelToUse = this.modelConfig.quick;
-    const prompt = this.promptConfig.summaryPrompt.replace('{CONTENT}', content);
-    
-    const response = await fetch(`${this.getBaseUrl()}/api/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelToUse,
-        prompt: prompt,
-        stream: false
-      }),
-      signal
-    });
+    try {
+      const modelToUse = this.modelConfig.quick;
+      const prompt = this.promptConfig.summaryPrompt.replace('{CONTENT}', content);
+      
+      const response = await fetch(`${this.getBaseUrl()}/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          prompt: prompt,
+          stream: false
+        }),
+        signal
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
-    const data = await response.json();
-    if (data && data.response) {
-      return data.response;
-    } else {
-      throw new Error('Invalid response from Ollama');
+      const data = await response.json();
+      if (data && data.response) {
+        return data.response;
+      } else {
+        throw new Error('Invalid response from Ollama');
+      }
+    } catch (error) {
+      if (signal?.aborted) {
+        throw new Error('Summary generation was cancelled');
+      }
+      
+      console.error('Ollama service error:', error);
+      if (error instanceof Error) {
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          throw new Error(`Ollama service is not running. Please start Ollama and ensure the ${this.modelConfig.quick} model is available.`);
+        }
+      }
+      if (error instanceof Response && error.status === 404) {
+        throw new Error(`Ollama model not found. Please ensure ${this.modelConfig.quick} is installed.`);
+      }
+      throw new Error(`Failed to generate summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   private async executeDirectImprovedSummary(content: string, signal?: AbortSignal): Promise<string> {
-    const modelToUse = this.modelConfig.detailed;
-    const prompt = this.promptConfig.summaryPrompt.replace('{CONTENT}', content);
-    
-    const response = await fetch(`${this.getBaseUrl()}/api/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelToUse,
-        prompt: prompt,
-        stream: false
-      }),
-      signal
-    });
+    try {
+      const modelToUse = this.modelConfig.detailed;
+      const prompt = this.promptConfig.summaryPrompt.replace('{CONTENT}', content);
+      
+      const response = await fetch(`${this.getBaseUrl()}/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          prompt: prompt,
+          stream: false
+        }),
+        signal
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
-    const data = await response.json();
-    if (data && data.response) {
-      return data.response;
-    } else {
-      throw new Error('Invalid response from Ollama');
+      const data = await response.json();
+      if (data && data.response) {
+        return data.response;
+      } else {
+        throw new Error('Invalid response from Ollama');
+      }
+    } catch (error) {
+      if (signal?.aborted) {
+        throw new Error('Improved summary generation was cancelled');
+      }
+      
+      console.error('Ollama service error:', error);
+      if (error instanceof Error) {
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          throw new Error(`Ollama service is not running. Please start Ollama and ensure the ${this.modelConfig.detailed} model is available.`);
+        }
+      }
+      if (error instanceof Response && error.status === 404) {
+        throw new Error(`Ollama model not found. Please ensure ${this.modelConfig.detailed} is installed.`);
+      }
+      throw new Error(`Failed to generate improved summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

@@ -285,16 +285,9 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     try {
       const success = await gmailService.deleteEmail(currentEmail.id);
       if (success) {
-        // Notify parent component
+        // Notify parent component - let the parent handle navigation
         onEmailDeleted?.(currentEmail.id);
-        // Move to next email or close if last
-        if (currentIndex < emails.length - 1) {
-          onNext();
-        } else if (currentIndex > 0) {
-          onPrev();
-        } else {
-          onClose();
-        }
+        // The parent component (Dashboard) will handle the navigation and index updates
       } else {
         console.error('Failed to delete email');
         alert('Failed to delete email. Please try again.');

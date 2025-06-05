@@ -211,15 +211,34 @@ export const Dashboard: React.FC = () => {
   const handleEmailDeleted = (emailId: string) => {
     // Remove the deleted email from the emails array
     setEmails(prevEmails => {
+      const emailIndex = prevEmails.findIndex(email => email.id === emailId);
       const filteredEmails = prevEmails.filter(email => email.id !== emailId);
       
-      // If this was the last email in the list, close the modal
+      // If this was the last email in the list, handle navigation
       if (filteredEmails.length === 0) {
         setShowEmailModal(false);
-      } else if (currentEmailIndex >= filteredEmails.length) {
-        // If we deleted the last email in the list, move to the previous one
-        setCurrentEmailIndex(Math.max(0, filteredEmails.length - 1));
+        // If no more emails in current page and we're not on page 1, go to previous page
+        if (currentPage > 1) {
+          handlePrevPage();
+        }
+        return filteredEmails;
       }
+
+      // Calculate new index to maintain position as much as possible
+      let newIndex = currentEmailIndex;
+      
+      // If we deleted an email before the current index, adjust the current index
+      if (emailIndex < currentEmailIndex) {
+        newIndex = currentEmailIndex - 1;
+      }
+      // If we deleted the email at the current index, stay at the same index
+      // unless it was the last email in the list
+      else if (emailIndex === currentEmailIndex && currentEmailIndex >= filteredEmails.length) {
+        newIndex = Math.max(0, filteredEmails.length - 1);
+      }
+      
+      // Update the current email index
+      setCurrentEmailIndex(newIndex);
       
       return filteredEmails;
     });

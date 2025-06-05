@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Bookmark, Calendar, ExternalLink, Trash2, RefreshCw, AlertCircle, Download } from 'lucide-react';
+import { X, Bookmark, Calendar, ExternalLink, Trash2, RefreshCw, AlertCircle, Download, Play, Loader2 } from 'lucide-react';
 import { tabSummaryStorage } from '../services/tabSummaryStorage';
+import { ollamaService } from '../services/ollamaService';
+import { linkService } from '../services/linkService';
 import type { LinkSummary } from '../types';
 
 interface SavedForLaterModalProps {
@@ -19,6 +21,7 @@ export const SavedForLaterModal: React.FC<SavedForLaterModalProps> = ({ isOpen, 
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generatingSummaries, setGeneratingSummaries] = useState<Set<string>>(new Set());
 
   const loadSavedItems = async () => {
     setIsLoading(true);
@@ -94,6 +97,68 @@ export const SavedForLaterModal: React.FC<SavedForLaterModalProps> = ({ isOpen, 
     // Only open external links, not internal email references
     if (url.startsWith('http://') || url.startsWith('https://')) {
       window.open(url, '_blank');
+    }
+  };
+
+  const handleStartSummary = async (item: SavedItem) => {
+    if (generatingSummaries.has(item.url)) return;
+
+    setGeneratingSummaries(prev => new Set(prev).add(item.url));
+    setError(null);
+
+    try {
+      let summary: string;
+
+      if (item.url.startsWith('http://') || item.url.startsWith('https://')) {
+        // For URLs, fetch content and generate summary
+        const { content } = await linkService.fetchLinkContent(item.url);
+        summary = await ollamaService.generateSummary(content);
+      } else if (item.url.startsWith('email:')) {
+        // For emails, use stored content to generate summary
+        summary = await ollamaService.generateSummary(item.content || 'No content available');
+      } else {
+        // For other content (pasted text), generate summary directly
+        summary = await ollamaService.generateSummary(item.content || 'No content available');
+      }
+
+      // Update the item with the generated summary
+      const updatedItem: SavedItem = {
+        ...item,
+        summary,
+        loading: false,
+        savedForLater: false
+      };
+
+      // Save back to storage with summary
+      await tabSummaryStorage.saveLinkSummary(
+        item.url,
+        updatedItem,
+        item.content,
+        item.title
+      );
+
+      // Remove from saved items list since it now has a summary
+      setSavedItems(prev => prev.filter(savedItem => savedItem.url !== item.url));
+
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white bg-green-600';
+      notification.textContent = 'Summary generated successfully! Item moved to email tabs.';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+
+    } catch (error) {
+      console.error('Failed to generate summary:', error);
+      setError(`Failed to generate summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setGeneratingSummaries(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(item.url);
+        return newSet;
+      });
     }
   };
 
@@ -251,7 +316,7 @@ export const SavedForLaterModal: React.FC<SavedForLaterModalProps> = ({ isOpen, 
             </div>
           ) : (
             <div className="space-y-4">
-              {savedItems.map((item, index) => (
+              {savedItems.map((item) => (
                 <div
                   key={item.url}
                   className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -284,6 +349,20 @@ export const SavedForLaterModal: React.FC<SavedForLaterModalProps> = ({ isOpen, 
                     </div>
                     
                     <div className="flex items-center gap-2 ml-4">
+                      {/* Start Summary Button */}
+                      <button
+                        onClick={() => handleStartSummary(item)}
+                        disabled={generatingSummaries.has(item.url)}
+                        className="p-2 hover:bg-green-100 rounded-lg transition-colors disabled:opacity-50"
+                        title="Generate summary and move to email tabs"
+                      >
+                        {generatingSummaries.has(item.url) ? (
+                          <Loader2 className="w-4 h-4 text-green-600 animate-spin" />
+                        ) : (
+                          <Play className="w-4 h-4 text-green-600" />
+                        )}
+                      </button>
+                      
                       {(item.url.startsWith('http://') || item.url.startsWith('https://')) && (
                         <button
                           onClick={() => handleOpenLink(item.url)}
