@@ -412,81 +412,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     }
   }, [currentEmail]);
   
-  // Load saved tabs from storage on component mount
-  useEffect(() => {
-    const loadSavedTabs = async () => {
-      try {
-        // Get all saved tabs from storage
-        const savedTabs = await tabSummaryStorage.getAllTabs();
-        
-        if (savedTabs.length > 0) {
-          // Create LinkSummary objects from saved tabs
-          const summaries = new Map<string, LinkSummary>();
-          const tabUrls: string[] = [];
-          
-          savedTabs.forEach(tab => {
-            summaries.set(tab.url, tabSummaryStorage.toLinkSummary(tab));
-            tabUrls.push(tab.url);
-          });
-          
-          // Set the first tab as current if none is selected
-          if (tabUrls.length > 0 && !currentTabUrl) {
-            setCurrentTabUrl(tabUrls[0]);
-          }
-          
-          // Update state with loaded tabs
-          setLinkSummaries(prev => new Map([...prev, ...summaries]));
-          setActiveSummaryUrls(prev => {
-            // Only add tabs that aren't already in the list
-            const newTabs = tabUrls.filter(url => !prev.includes(url));
-            return [...prev, ...newTabs];
-          });
-        }
-      } catch (error) {
-        console.error('Failed to load saved tabs:', error);
-      }
-    };
-    
-    loadSavedTabs();
-  }, []);
-  
-  // Load saved tabs from storage on component mount
-  useEffect(() => {
-    const loadSavedTabs = async () => {
-      try {
-        // Get all saved tabs from storage
-        const savedTabs = await tabSummaryStorage.getAllTabs();
-        
-        if (savedTabs.length > 0) {
-          // Create LinkSummary objects from saved tabs
-          const summaries = new Map<string, LinkSummary>();
-          const tabUrls: string[] = [];
-          
-          savedTabs.forEach(tab => {
-            summaries.set(tab.url, tabSummaryStorage.toLinkSummary(tab));
-            tabUrls.push(tab.url);
-          });
-          
-          // Set the first tab as current if none is selected
-          if (tabUrls.length > 0 && !currentTabUrl) {
-            setCurrentTabUrl(tabUrls[0]);
-          }
-          
-          // Update state with loaded tabs
-          setLinkSummaries(prev => new Map([...prev, ...summaries]));
-          setActiveSummaryUrls(prev => {
-            // Only add tabs that aren't already in the list
-            const newTabs = tabUrls.filter(url => !prev.includes(url));
-            return [...prev, ...newTabs];
-          });
-        }
-      } catch (error) {
-        console.error('Failed to load saved tabs:', error);
-      }
-    };
-    
-    loadSavedTabs();
-  }, []);
+  // Note: Removed auto-loading of all saved tabs to prevent "saved for later" content from appearing in email modal
+  // Tabs will be loaded on-demand when user clicks on links or through deep analysis for high-quality emails
   
   // Cleanup effect for AbortControllers
   useEffect(() => {
@@ -1410,11 +1337,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         // Get all saved tabs that might belong to this email
         const savedTabs = await tabSummaryStorage.getAllTabs();
         
+        // Filter out "saved for later" content (items without summaries or with specific "saved for later" summaries)
+        const properTabs = savedTabs.filter(tab => 
+          tab.summary && // Must have a summary
+          tab.summary !== 'Email saved for later review' && // Not email saved for later
+          tab.summary !== 'Link content saved for later review' // Not link saved for later
+        );
+        
         // Filter tabs that were likely created around the time this email was processed
         const emailProcessTime = metadata.processedAt;
         const timeWindow = 60 * 60 * 1000; // 1 hour window
         
-        const relatedTabs = savedTabs.filter(tab => 
+        const relatedTabs = properTabs.filter(tab => 
           Math.abs(tab.lastOpened - emailProcessTime) < timeWindow
         );
 
