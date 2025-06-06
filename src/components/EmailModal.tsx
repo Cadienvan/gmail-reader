@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Zap, Filter } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Zap, Filter, AlertCircle } from 'lucide-react';
 import type { ParsedEmail, ExtractedLink, LinkSummary, FlashCard, ModelConfiguration } from '../types';
 import { linkService } from '../services/linkService';
 import { ollamaService } from '../services/ollamaService';
@@ -2038,17 +2038,22 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                           <button
                             key={url}
                             onClick={() => handleTabSwitch(url)}
-                            className={`px-3 py-2 text-sm rounded-t-lg border-b-2 transition-colors flex items-center gap-2 max-w-[200px] flex-shrink-0 ${
-                              currentTabUrl === url
-                                ? 'border-blue-500 bg-white text-blue-700'
-                                : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                            className={`px-3 py-2 text-sm rounded-t-lg border-b-2 transition-all duration-300 flex items-center gap-2 max-w-[200px] flex-shrink-0 ${
+                              summary?.error 
+                                ? 'border-red-400 bg-red-100 text-red-800 hover:bg-red-200 shadow-sm animate-pulse' // Enhanced error state styling
+                                : currentTabUrl === url
+                                  ? 'border-blue-500 bg-white text-blue-700'
+                                  : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                             }`}
-                            title={displayUrl}
+                            title={summary?.error ? `Error: ${summary.error}` : displayUrl}
                           >
                             {summary?.loading && (
                               <Loader2 size={12} className="animate-spin flex-shrink-0" />
                             )}
-                            {isEmailTab && <Mail size={12} className="flex-shrink-0" />}
+                            {summary?.error && (
+                              <AlertCircle size={14} className="flex-shrink-0 text-red-700 animate-pulse" />
+                            )}
+                            {isEmailTab && !summary?.error && <Mail size={12} className="flex-shrink-0" />}
                             <span className="truncate">{domain}</span>
                             <span
                               onClick={(e) => {
