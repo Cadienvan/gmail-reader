@@ -101,6 +101,17 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     environmentConfigService.getSaveForLaterMode()
   );
 
+  // Focus modes state with localStorage persistence
+  const [focusMode, setFocusMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('emailModal_focusMode');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
+  const [hyperFocusMode, setHyperFocusMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('emailModal_hyperFocusMode');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
   const currentEmail = emails[currentIndex];
 
   // Check if current email is already marked as read
@@ -140,6 +151,46 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     const newVisibility = !showDeepAnalysisSidebar;
     setShowDeepAnalysisSidebar(newVisibility);
     localStorage.setItem('emailModal_deepAnalysisSidebarVisible', JSON.stringify(newVisibility));
+  };
+
+  // Focus modes toggle functions
+  const toggleFocusMode = () => {
+    const newFocusMode = !focusMode;
+    console.log('Toggling focus mode (with container queries):', newFocusMode);
+    setFocusMode(newFocusMode);
+    localStorage.setItem('emailModal_focusMode', JSON.stringify(newFocusMode));
+    
+    // Disable hyper focus mode when enabling regular focus mode
+    if (newFocusMode && hyperFocusMode) {
+      setHyperFocusMode(false);
+      localStorage.setItem('emailModal_hyperFocusMode', JSON.stringify(false));
+    }
+  };
+
+  const toggleHyperFocusMode = () => {
+    const newHyperFocusMode = !hyperFocusMode;
+    setHyperFocusMode(newHyperFocusMode);
+    localStorage.setItem('emailModal_hyperFocusMode', JSON.stringify(newHyperFocusMode));
+    
+    // Disable regular focus mode when enabling hyper focus mode
+    if (newHyperFocusMode && focusMode) {
+      setFocusMode(false);
+      localStorage.setItem('emailModal_focusMode', JSON.stringify(false));
+    }
+  };
+
+  // Extract links with meaningful titles for hyper focus mode
+  const getLinksWithTitles = () => {
+    return extractedLinks.filter(link => {
+      // Include links that have a meaningful title (not just the URL)
+      const hasTitle = link.text && 
+                      link.text.trim() !== '' && 
+                      link.text !== link.url &&
+                      link.text.length > 3 && // Minimum length to be meaningful
+                      !link.text.match(/^https?:\/\//); // Not just a URL
+      
+      return hasTitle;
+    });
   };
 
   // Flash card generation functions8//8
@@ -1439,8 +1490,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const activeSummary = getActiveSummary();
 
   return (
-    <>
-      <style>
+    <>      <style>
         {`
           .email-content-container & {
             .link-highlight {
@@ -1487,7 +1537,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               background-color: #fef08a !important;
               box-shadow: 0 0 0 2px #eab308 !important;
             }
-            
+
             a.link-highlight:hover {
               background-color: #fef08a !important;
             }
@@ -1496,6 +1546,151 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             .link-highlight {
               animation: highlight-pulse 0.5s ease-in-out;
             }
+          }
+
+          /* Focus Mode Styles with Container Queries */
+          .email-content-container.focus-mode {
+            container-type: inline-size;
+          }
+          
+          /* Default: make all elements semi-transparent */
+          .email-content-container.focus-mode .prose *:not(:has(a)),
+          .email-content-container.focus-mode .email-html-content *:not(:has(a)) {
+            opacity: 0.3 !important;
+            transition: opacity 0.2s ease !important;
+          }
+          
+          /* Keep elements that contain links at full opacity */
+          .email-content-container.focus-mode .prose *:has(a),
+          .email-content-container.focus-mode .email-html-content *:has(a) {
+            opacity: 1 !important;
+          }
+          
+          /* Keep ALL control elements at full opacity */
+          .email-content-container.focus-mode button,
+          .email-content-container.focus-mode button *,
+          .email-content-container.focus-mode .content-toggle-button,
+          .email-content-container.focus-mode .content-toggle-button *,
+          .email-content-container.focus-mode .bg-indigo-50,
+          .email-content-container.focus-mode .bg-indigo-50 *,
+          .email-content-container.focus-mode .bg-blue-50,
+          .email-content-container.focus-mode .bg-blue-50 *,
+          .email-content-container.focus-mode textarea,
+          .email-content-container.focus-mode input {
+            opacity: 1 !important;
+          }
+          
+          /* Enhance links with subtle highlighting in focus mode */
+          .email-content-container.focus-mode a[href] {
+            background-color: #fef08a !important;
+            color: #1e40af !important;
+            text-decoration: underline !important;
+            padding: 2px 4px !important;
+            border-radius: 3px !important;
+            box-shadow: 0 0 0 1px #eab308 !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            display: inline !important;
+          }
+          
+          /* Enhanced hover effects for links in focus mode */
+          .email-content-container.focus-mode a[href]:hover {
+            background-color: #fed7aa !important;
+            box-shadow: 0 0 0 2px #d97706 !important;
+            transform: scale(1.02) !important;
+            transition: all 0.2s ease !important;
+          }
+          
+          /* Keep hyper focus elements at full opacity */
+          .email-content-container.focus-mode .hyper-focus-links-container,
+          .email-content-container.focus-mode .hyper-focus-links-container *,
+          .email-content-container.focus-mode .hyper-focus-separator,
+          .email-content-container.focus-mode .hyper-focus-separator * {
+            opacity: 1 !important;
+          }
+          
+          /* Fallback for browsers that don't support :has() */
+          @supports not selector(:has(a)) {
+            .email-content-container.focus-mode .prose *,
+            .email-content-container.focus-mode .email-html-content * {
+              opacity: 0.4 !important;
+              transition: opacity 0.2s ease !important;
+            }
+            
+            .email-content-container.focus-mode a[href],
+            .email-content-container.focus-mode a[href] * {
+              opacity: 1 !important;
+              background-color: #fef08a !important;
+              color: #1e40af !important;
+              font-weight: 600 !important;
+            }
+          }
+
+          /* Hyper Focus Mode Styles */
+          .hyper-focus-links-container {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          }
+
+          .hyper-focus-links-container h3 {
+            color: #1e40af !important;
+            margin: 0 0 12px 0 !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+          }
+
+          .hyper-focus-link-item {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            padding: 8px 12px !important;
+            margin: 4px 0 !important;
+            background: white !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 6px !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+          }
+
+          .hyper-focus-link-item:hover {
+            background: #f1f5f9 !important;
+            border-color: #3b82f6 !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+          }
+
+          .hyper-focus-link-domain {
+            font-weight: 600 !important;
+            color: #3b82f6 !important;
+            font-size: 13px !important;
+            min-width: 120px !important;
+            flex-shrink: 0 !important;
+          }
+
+          .hyper-focus-link-title {
+            color: #374151 !important;
+            font-size: 14px !important;
+            flex: 1 !important;
+            line-height: 1.4 !important;
+          }
+
+          .hyper-focus-separator {
+            margin: 20px 0 !important;
+            padding: 12px !important;
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 6px !important;
+            text-align: center !important;
+            color: #6b7280 !important;
+            font-weight: 500 !important;
+            font-size: 14px !important;
           }
 
           @keyframes highlight-pulse {
@@ -1786,7 +1981,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           } overflow-hidden`}>
             {/* Email Content - responsive width based on sidebar visibility */}
             <div className={`${isSidebarVisible ? 'w-[70%]' : 'w-full'} ${isSidebarVisible ? 'border-r' : ''} flex flex-col overflow-hidden relative`}>
-              <div className="flex-1 overflow-y-auto p-4 email-content-container">
+              <div className={`flex-1 overflow-y-auto p-4 email-content-container ${focusMode ? 'focus-mode' : ''}`}>
               
               {/* Paste URL/Text Input Section - Full width when sidebar is hidden */}
               {!isSidebarVisible && (
@@ -1876,6 +2071,28 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       </button>
                     </div>
                   )}
+
+                  {/* Focus Mode Toggle Buttons */}
+                  <div className="inline-flex ml-3 rounded-lg border border-gray-200 overflow-hidden">
+                    <button
+                      onClick={toggleFocusMode}
+                      className={`px-3 py-1 text-sm transition-colors content-toggle-button ${
+                        focusMode ? 'active' : ''
+                      }`}
+                      title="Focus mode - highlight links by dimming other text"
+                    >
+                      Focus
+                    </button>
+                    <button
+                      onClick={toggleHyperFocusMode}
+                      className={`px-3 py-1 text-sm transition-colors content-toggle-button ${
+                        hyperFocusMode ? 'active' : ''
+                      }`}
+                      title="Hyper focus mode - show only meaningful links first"
+                    >
+                      Hyper
+                    </button>
+                  </div>
                 </div>
               </div>
               
@@ -1885,29 +2102,79 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     <Loader2 size={20} className="animate-spin" />
                     Loading email content...
                   </div>
-                ) : emailContent ? (
-                  showHtmlContent && emailContent.htmlBody ? (
-                    <div 
-                      className="email-html-content"
-                      dangerouslySetInnerHTML={{
-                        __html: sanitizeEmailHTML(emailContent.htmlBody)
-                      }}
-                    />
-                  ) : (
-                    <div 
-                      className="email-html-content"
-                      dangerouslySetInnerHTML={{
-                        __html: linkService.convertTextUrlsToHTML(emailContent.body)
-                      }}
-                    />
-                  )
                 ) : (
-                  <div 
-                    className="email-html-content"
-                    dangerouslySetInnerHTML={{
-                      __html: linkService.convertTextUrlsToHTML(currentEmail.body)
-                    }}
-                  />
+                  <>
+                    {/* Hyper Focus Mode: Show links with titles first */}
+                    {hyperFocusMode && (
+                      <>
+                        {(() => {
+                          const linksWithTitles = getLinksWithTitles();
+                          return linksWithTitles.length > 0 ? (
+                            <div className="hyper-focus-links-container">
+                              <h3>
+                                🔗 Links in this Email ({linksWithTitles.length})
+                              </h3>
+                              {linksWithTitles.map((link, index) => (
+                                <div 
+                                  key={index}
+                                  className="hyper-focus-link-item"
+                                  onClick={() => handleLinkClick(link)}
+                                >
+                                  <div className="hyper-focus-link-domain">
+                                    {link.domain}
+                                  </div>
+                                  <div className="hyper-focus-link-title">
+                                    {link.text}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="hyper-focus-links-container">
+                              <h3>
+                                🔗 No meaningful links found
+                              </h3>
+                              <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
+                                This email doesn't contain links with descriptive titles.
+                              </p>
+                            </div>
+                          );
+                        })()}
+                        
+                        <div className="hyper-focus-separator">
+                          📧 Email Content Below
+                        </div>
+                      </>
+                    )}
+
+                    {/* Email Content */}
+                    <div>
+                      {emailContent ? (
+                        showHtmlContent && emailContent.htmlBody ? (
+                          <div 
+                            className="email-html-content"
+                            dangerouslySetInnerHTML={{
+                              __html: sanitizeEmailHTML(emailContent.htmlBody)
+                            }}
+                          />
+                        ) : (
+                          <div 
+                            className="email-html-content"
+                            dangerouslySetInnerHTML={{
+                              __html: linkService.convertTextUrlsToHTML(emailContent.body)
+                            }}
+                          />
+                        )
+                      ) : (
+                        <div 
+                          className="email-html-content"
+                          dangerouslySetInnerHTML={{
+                            __html: linkService.convertTextUrlsToHTML(currentEmail.body)
+                          }}
+                        />
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
               </div>
