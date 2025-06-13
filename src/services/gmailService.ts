@@ -303,8 +303,11 @@ class GmailService {
     }
 
     try {
-      // Build URL with pagination parameters - exclude spam, starred emails, and only show inbox messages
-      let url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=is:unread -is:spam -is:starred in:inbox&maxResults=${maxResults}`;
+      // Get the configurable Gmail query from environment configuration
+      const gmailQuery = environmentConfigService.getGmailQuery();
+      
+      // Build URL with pagination parameters using the configurable query
+      let url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(gmailQuery)}&maxResults=${maxResults}`;
       if (pageToken) {
         url += `&pageToken=${encodeURIComponent(pageToken)}`;
       }

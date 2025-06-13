@@ -4,7 +4,12 @@ export interface EnvironmentConfig {
   googleRedirectUri: string;
   ollamaBaseUrl: string;
   saveForLaterMode: boolean;
+  gmailQuery: string;
 }
+
+// Import email cache service for clearing cache when Gmail query changes
+import { emailCacheService } from './emailCacheService';
+import { deepAnalysisCache } from './deepAnalysisCache';
 
 class EnvironmentConfigService {
   private readonly CONFIG_KEY = 'environment-configuration';
@@ -25,16 +30,36 @@ class EnvironmentConfigService {
    * Update environment configuration
    */
   setConfiguration(config: EnvironmentConfig): void {
+    // Check if Gmail query has changed
+    const gmailQueryChanged = this.config.gmailQuery !== config.gmailQuery;
+    
     this.config = { ...config };
     this.saveConfiguration();
+    
+    // Clear email cache if Gmail query has changed
+    if (gmailQueryChanged) {
+      emailCacheService.forceRefresh();
+      deepAnalysisCache.clearCache();
+      console.log('Gmail query changed in environment config - email and analysis caches cleared');
+    }
   }
 
   /**
    * Update specific configuration field
    */
-  updateConfigField(field: keyof EnvironmentConfig, value: string): void {
+  updateConfigField<K extends keyof EnvironmentConfig>(field: K, value: EnvironmentConfig[K]): void {
+    // Check if Gmail query is being changed
+    const gmailQueryChanged = field === 'gmailQuery' && this.config.gmailQuery !== value;
+    
     this.config[field] = value;
     this.saveConfiguration();
+    
+    // Clear email cache if Gmail query has changed
+    if (gmailQueryChanged) {
+      emailCacheService.forceRefresh();
+      deepAnalysisCache.clearCache();
+      console.log('Gmail query changed via updateConfigField - email and analysis caches cleared');
+    }
   }
 
   /**
@@ -80,6 +105,13 @@ class EnvironmentConfigService {
    */
   getSaveForLaterMode(): boolean {
     return this.config.saveForLaterMode;
+  }
+
+  /**
+   * Get Gmail query setting
+   */
+  getGmailQuery(): string {
+    return this.config.gmailQuery;
   }
 
   /**
@@ -139,7 +171,8 @@ class EnvironmentConfigService {
       googleClientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
       googleRedirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth-callback.html`,
       ollamaBaseUrl: import.meta.env.VITE_OLLAMA_BASE_URL || 'http://localhost:11434',
-      saveForLaterMode: false
+      saveForLaterMode: false,
+      gmailQuery: 'is:unread -is:spam -is:starred in:inbox'
     };
   }
 
@@ -150,7 +183,8 @@ class EnvironmentConfigService {
       typeof config.googleClientSecret === 'string' &&
       typeof config.googleRedirectUri === 'string' &&
       typeof config.ollamaBaseUrl === 'string' &&
-      typeof config.saveForLaterMode === 'boolean'
+      typeof config.saveForLaterMode === 'boolean' &&
+      typeof config.gmailQuery === 'string'
     );
   }
 }

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, RotateCcw, Download, Upload, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { Save, RotateCcw, Download, Upload, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { environmentConfigService } from '../services/environmentConfigService';
+import { emailCacheService } from '../services/emailCacheService';
+import { deepAnalysisCache } from '../services/deepAnalysisCache';
 import type { EnvironmentConfig } from '../services/environmentConfigService';
 
 interface EnvironmentConfigProps {
@@ -15,7 +17,6 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
   onSwitchToOAuthSetup
 }) => {
   const [config, setConfig] = useState<EnvironmentConfig>(environmentConfigService.getConfiguration());
-  const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSecrets, setShowSecrets] = useState(false);
   const [importText, setImportText] = useState('');
@@ -61,10 +62,14 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
       }
     }
 
+    if (!config.gmailQuery.trim()) {
+      errors.gmailQuery = 'Gmail query is required';
+    }
+
     setValidationErrors(errors);
   };
 
-  const handleConfigChange = (field: keyof EnvironmentConfig, value: string) => {
+  const handleConfigChange = (field: keyof EnvironmentConfig, value: string | boolean) => {
     const newConfig = { ...config, [field]: value };
     setConfig(newConfig);
   };
@@ -77,8 +82,20 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
 
     setIsSaving(true);
     try {
+      // Get the current configuration to check if Gmail query has changed
+      const currentConfig = environmentConfigService.getConfiguration();
+      const gmailQueryChanged = currentConfig.gmailQuery !== config.gmailQuery;
+      
+      // Save the new configuration
       environmentConfigService.setConfiguration(config);
       onConfigChange?.(config);
+      
+      // Clear email cache if Gmail query has changed
+      if (gmailQueryChanged) {
+        emailCacheService.forceRefresh();
+        deepAnalysisCache.clearCache();
+        console.log('Gmail query changed - email and analysis caches cleared');
+      }
       
       // Refresh the page to apply new configuration
       if (confirm('Configuration saved! The page will refresh to apply changes. Continue?')) {
@@ -308,6 +325,30 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
         {/* Content Processing Settings */}
         <div className="space-y-3">
           <h4 className="font-medium text-gray-700 border-b pb-1">Content Processing</h4>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Gmail Query
+              <span className="text-gray-500 font-normal ml-1">(filters which emails to fetch)</span>
+            </label>
+            <input
+              type="text"
+              value={config.gmailQuery}
+              onChange={(e) => handleConfigChange('gmailQuery', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md text-sm ${
+                validationErrors.gmailQuery ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="is:unread -is:spam -is:starred in:inbox"
+            />
+            {validationErrors.gmailQuery && (
+              <p className="text-red-600 text-xs mt-1">{validationErrors.gmailQuery}</p>
+            )}
+            <p className="text-gray-500 text-xs mt-1">
+              Use Gmail search syntax. Examples: "is:unread", "from:example.com", "has:attachment", "-is:spam"
+              <br />
+              <span className="text-amber-600">Note: Changing this will clear the email cache.</span>
+            </p>
+          </div>
           
           <div className="flex items-center gap-3">
             <input
