@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Zap, Star, Link, Award, Bookmark } from 'lucide-react';
+import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Zap, Star, Link, Award, Bookmark, Trophy } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration, QualityAssessmentResult } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
 import { emailLogService } from '../utils/emailLogService';
 import { flashCardService } from '../services/flashCardService';
 import { deepAnalysisCache } from '../services/deepAnalysisCache';
+import { emailScoringService } from '../services/emailScoringService';
+import { environmentConfigService } from '../services/environmentConfigService';
 import { EmailModal } from './EmailModal';
 import { EmailLogModal } from './EmailLogModal';
 import { FlashCardsModal } from './FlashCardsModal';
@@ -195,6 +197,8 @@ export const Dashboard: React.FC = () => {
   const handleCloseModal = () => {
     setShowEmailModal(false);
     loadViewedEmails(); // Refresh viewed emails list
+    // Force re-render to update sender ranks after potential scoring changes
+    setEmails(prevEmails => [...prevEmails]);
   };
 
   const handleEmailMarkedAsRead = (emailId: string) => {
@@ -410,6 +414,42 @@ export const Dashboard: React.FC = () => {
           {contentType === 'full-email' ? 'Full' : 
            contentType === 'links-only' ? 'Links' : 'Mixed'}
         </span>
+      </div>
+    );
+  };
+
+  // Helper function to render sender rank badge
+  const renderSenderRank = (senderEmail: string) => {
+    const scoringConfig = environmentConfigService.getScoringConfig();
+    
+    if (!scoringConfig.enabled) {
+      return null;
+    }
+
+    const rank = emailScoringService.getSenderRank(senderEmail);
+    const score = emailScoringService.getSenderScore(senderEmail);
+    
+    if (!rank.allTimeRank || rank.allTimeRank === 0) {
+      return null; // No rank if sender has no score
+    }
+
+    const getRankColor = (position: number, total: number) => {
+      const percentage = position / total;
+      if (percentage <= 0.1) return 'bg-yellow-100 text-yellow-700 border-yellow-200'; // Top 10%
+      if (percentage <= 0.25) return 'bg-orange-100 text-orange-700 border-orange-200'; // Top 25%
+      if (percentage <= 0.5) return 'bg-blue-100 text-blue-700 border-blue-200'; // Top 50%
+      return 'bg-gray-100 text-gray-700 border-gray-200'; // Lower 50%
+    };
+
+    return (
+      <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border ${getRankColor(rank.allTimeRank, rank.totalSenders)}`}>
+        <Trophy size={10} />
+        <span>#{rank.allTimeRank}</span>
+        {score && (
+          <span className="ml-1 text-xs opacity-75">
+            ({score.totalScore}pt)
+          </span>
+        )}
       </div>
     );
   };
@@ -649,6 +689,9 @@ export const Dashboard: React.FC = () => {
 
                       {/* Quality Assessment Badges */}
                       {renderQualityBadge(email.id)}
+                      
+                      {/* Sender Rank Badge */}
+                      {renderSenderRank(email.from)}
                     </div>
                   ))}
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Zap, Filter, AlertCircle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Zap, Filter, AlertCircle, Trophy } from 'lucide-react';
 import type { ParsedEmail, ExtractedLink, LinkSummary, FlashCard, ModelConfiguration } from '../types';
 import { linkService } from '../services/linkService';
 import { ollamaService } from '../services/ollamaService';
@@ -16,6 +16,7 @@ import { FlashCardsModal } from './FlashCardsModal';
 import { DeepAnalysisSidebar } from './DeepAnalysisSidebar';
 import { RegexChecker } from './RegexChecker';
 import { environmentConfigService } from '../services/environmentConfigService';
+import { emailScoringService } from '../services/emailScoringService';
 
 interface EmailModalProps {
   emails: ParsedEmail[];
@@ -97,9 +98,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const [regexCheckerUrl, setRegexCheckerUrl] = useState<string>('');
 
   // Save for later mode state
-  const [saveForLaterMode, setSaveForLaterMode] = useState<boolean>(() => 
-    environmentConfigService.getSaveForLaterMode()
-  );
+  const saveForLaterMode = environmentConfigService.getSaveForLaterMode();
 
   // Focus modes state with localStorage persistence
   const [focusMode, setFocusMode] = useState<boolean>(() => {
@@ -841,6 +840,22 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           finalUrl ? new URL(finalUrl).hostname : new URL(link.url).hostname
         );
         
+        // Add scoring points for link save if enabled (same as link open)
+        try {
+          const scoringConfig = environmentConfigService.getScoringConfig();
+          if (scoringConfig.enabled && currentEmail?.from) {
+            await emailScoringService.addLinkOpenPoints(
+              currentEmail.from,
+              currentEmail.from, // Using sender email as name for now
+              finalUrl || link.url,
+              currentEmail.id
+            );
+            console.log(`Added ${scoringConfig.linkOpenPoints} points to ${currentEmail.from} for saving link for later`);
+          }
+        } catch (error) {
+          console.error('Failed to add scoring points for saving link for later:', error);
+        }
+        
         // Show notification instead of creating a tab
         showNotification(`Link content saved for later review: ${finalUrl ? new URL(finalUrl).hostname : new URL(link.url).hostname}`, 'success');
         
@@ -913,6 +928,22 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       
       // Save completed summary to IndexedDB
       await tabSummaryStorage.saveLinkSummary(link.url, updatedSummary, content, finalUrl ? new URL(finalUrl).hostname : new URL(link.url).hostname);
+      
+      // Add scoring points for link open if enabled
+      try {
+        const scoringConfig = environmentConfigService.getScoringConfig();
+        if (scoringConfig.enabled && currentEmail?.from) {
+          await emailScoringService.addLinkOpenPoints(
+            currentEmail.from,
+            currentEmail.from, // Using sender email as name for now
+            finalUrl || link.url,
+            currentEmail.id
+          );
+          console.log(`Added ${scoringConfig.linkOpenPoints} points to ${currentEmail.from} for link open`);
+        }
+      } catch (error) {
+        console.error('Failed to add scoring points for link open:', error);
+      }
     } catch (error) {
       // Create error summary
       const errorSummary = {
@@ -959,6 +990,21 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           emailContent.body, 
           `Email: ${currentEmail.subject}`
         );
+        
+        // Add scoring points for email save if enabled (same as email summary)
+        try {
+          const scoringConfig = environmentConfigService.getScoringConfig();
+          if (scoringConfig.enabled && currentEmail.from) {
+            await emailScoringService.addEmailSummaryPoints(
+              currentEmail.from, 
+              currentEmail.from, // Using sender email as name for now, could extract name from "Name <email>" format
+              currentEmail.id
+            );
+            console.log(`Added ${scoringConfig.emailSummaryPoints} points to ${currentEmail.from} for saving email for later`);
+          }
+        } catch (error) {
+          console.error('Failed to add scoring points for saving email for later:', error);
+        }
         
         showNotification('Email saved for later review', 'success');
       } catch (error) {
@@ -1032,6 +1078,21 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         emailContent.body, 
         `Email: ${currentEmail.subject}`
       );
+      
+      // Add scoring points for email summary if enabled
+      try {
+        const scoringConfig = environmentConfigService.getScoringConfig();
+        if (scoringConfig.enabled && currentEmail.from) {
+          await emailScoringService.addEmailSummaryPoints(
+            currentEmail.from, 
+            currentEmail.from, // Using sender email as name for now, could extract name from "Name <email>" format
+            currentEmail.id
+          );
+          console.log(`Added ${scoringConfig.emailSummaryPoints} points to ${currentEmail.from} for email summary`);
+        }
+      } catch (error) {
+        console.error('Failed to add scoring points for email summary:', error);
+      }
     } catch (error) {
       // Create error summary
       const errorSummary = {
@@ -1861,6 +1922,31 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 )}
               </div>
             )}
+            {/* Sender Rank Badge */}
+            {(() => {
+              const scoringConfig = environmentConfigService.getScoringConfig();
+              if (!scoringConfig.enabled) return null;
+              
+              const rank = emailScoringService.getSenderRank(currentEmail.from);
+              const score = emailScoringService.getSenderScore(currentEmail.from);
+              
+              if (!rank.allTimeRank || rank.allTimeRank === 0) return null;
+              
+              const getRankColor = (position: number, total: number) => {
+                const percentage = position / total;
+                if (percentage <= 0.1) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                if (percentage <= 0.25) return 'bg-orange-100 text-orange-800 border-orange-200';
+                if (percentage <= 0.5) return 'bg-blue-100 text-blue-800 border-blue-200';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
+              };
+              
+              return (
+                <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border ${getRankColor(rank.allTimeRank, rank.totalSenders)}`} title={`Sender rank: #${rank.allTimeRank} of ${rank.totalSenders} senders (${score?.totalScore || 0} points)`}>
+                  <Trophy size={10} />
+                  <span>#{rank.allTimeRank}</span>
+                </div>
+              );
+            })()}
           </h2>
           <div className="flex items-center gap-2">
             {/* Keyboard shortcuts info */}

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { X, Settings, Palette, MessageSquare, HardDrive, Key, Activity, Filter } from 'lucide-react';
+import { X, Settings, Palette, MessageSquare, HardDrive, Key, Activity, Filter, Trophy } from 'lucide-react';
 import { EnvironmentConfigPanel } from './EnvironmentConfigPanel';
 import { ModelConfigPanel } from './ModelConfigPanel';
 import { PromptConfigPanel } from './PromptConfigPanel';
 import { StorageConfigPanel } from './StorageConfigPanel';
 import { PerformanceConfigPanel } from './PerformanceConfigPanel';
 import { UrlFilterConfigPanel } from './UrlFilterConfigPanel';
+import { EmailScoringDashboard } from './EmailScoringDashboard';
 import { OAuthSetupGuide } from './OAuthSetupGuide';
 import { environmentConfigService } from '../services/environmentConfigService';
 
@@ -15,7 +16,7 @@ interface ConfigurationModalProps {
   initialTab?: string;
 }
 
-type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'performance' | 'url-filters' | 'storage';
+type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'performance' | 'url-filters' | 'storage' | 'scoring';
 
 interface Tab {
   id: TabId;
@@ -114,6 +115,14 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       icon: HardDrive,
       component: (
         <StorageConfigPanel />
+      )
+    },
+    {
+      id: 'scoring',
+      label: 'Email Scoring',
+      icon: Trophy,
+      component: (
+        <EmailScoringDashboard />
       )
     }
   ];

@@ -224,3 +224,41 @@ export interface UrlFilterConfigPanelProps {
   onConfigChange?: (patterns: UrlFilterPattern[]) => void;
   className?: string;
 }
+
+// Email Scoring System types
+export interface SenderScore {
+  senderEmail: string;
+  senderName?: string;
+  totalScore: number;
+  emailSummaryCount: number;
+  linkOpenCount: number;
+  lastActivity: number;
+  firstActivity: number;
+}
+
+export interface ScoringAction {
+  id: string;
+  senderEmail: string;
+  actionType: 'email_summary' | 'link_open';
+  points: number;
+  timestamp: number;
+  emailId?: string;
+  linkUrl?: string;
+}
+
+export interface ScoringConfig {
+  enabled: boolean;
+  emailSummaryPoints: number;
+  linkOpenPoints: number;
+}
+
+export interface SenderLeaderboard {
+  allTime: SenderScore[];
+  last90Days: SenderScore[];
+}
+
+export interface SenderRank {
+  allTimeRank: number;
+  last90DaysRank: number;
+  totalSenders: number;
+}

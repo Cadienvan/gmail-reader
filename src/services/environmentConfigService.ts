@@ -5,6 +5,9 @@ export interface EnvironmentConfig {
   ollamaBaseUrl: string;
   saveForLaterMode: boolean;
   gmailQuery: string;
+  scoringEnabled: boolean;
+  emailSummaryPoints: number;
+  linkOpenPoints: number;
 }
 
 // Import email cache service for clearing cache when Gmail query changes
@@ -115,6 +118,24 @@ class EnvironmentConfigService {
   }
 
   /**
+   * Get scoring configuration
+   */
+  getScoringConfig(): { enabled: boolean; emailSummaryPoints: number; linkOpenPoints: number } {
+    return {
+      enabled: this.config.scoringEnabled,
+      emailSummaryPoints: this.config.emailSummaryPoints,
+      linkOpenPoints: this.config.linkOpenPoints
+    };
+  }
+
+  /**
+   * Check if scoring is enabled
+   */
+  isScoringEnabled(): boolean {
+    return this.config.scoringEnabled;
+  }
+
+  /**
    * Export configuration as JSON string
    */
   exportConfiguration(): string {
@@ -172,7 +193,10 @@ class EnvironmentConfigService {
       googleRedirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth-callback.html`,
       ollamaBaseUrl: import.meta.env.VITE_OLLAMA_BASE_URL || 'http://localhost:11434',
       saveForLaterMode: false,
-      gmailQuery: 'is:unread -is:spam -is:starred in:inbox'
+      gmailQuery: 'is:unread -is:spam -is:starred in:inbox',
+      scoringEnabled: true, // Enable by default for easier testing
+      emailSummaryPoints: 10,
+      linkOpenPoints: 3
     };
   }
 
@@ -184,7 +208,10 @@ class EnvironmentConfigService {
       typeof config.googleRedirectUri === 'string' &&
       typeof config.ollamaBaseUrl === 'string' &&
       typeof config.saveForLaterMode === 'boolean' &&
-      typeof config.gmailQuery === 'string'
+      typeof config.gmailQuery === 'string' &&
+      typeof config.scoringEnabled === 'boolean' &&
+      typeof config.emailSummaryPoints === 'number' &&
+      typeof config.linkOpenPoints === 'number'
     );
   }
 }

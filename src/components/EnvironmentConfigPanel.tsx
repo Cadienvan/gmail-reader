@@ -69,7 +69,7 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
     setValidationErrors(errors);
   };
 
-  const handleConfigChange = (field: keyof EnvironmentConfig, value: string | boolean) => {
+  const handleConfigChange = (field: keyof EnvironmentConfig, value: string | boolean | number) => {
     const newConfig = { ...config, [field]: value };
     setConfig(newConfig);
   };
@@ -366,6 +366,72 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
             When enabled, content will be saved for later review instead of being immediately summarized. 
             The "Summarize email" button becomes "Save for later", and links are saved without generating summaries.
           </p>
+        </div>
+
+        {/* Email Scoring System */}
+        <div className="space-y-3">
+          <h4 className="font-medium text-gray-700 border-b pb-1">Email Quality Benchmark</h4>
+          
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="scoringEnabled"
+              checked={config.scoringEnabled}
+              onChange={(e) => handleConfigChange('scoringEnabled', e.target.checked)}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="scoringEnabled" className="text-sm text-gray-700 cursor-pointer">
+              Enable email quality scoring
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 ml-6">
+            Track sender engagement by scoring your interactions. Helps identify which senders provide the most valuable content.
+          </p>
+
+          {config.scoringEnabled && (
+            <div className="ml-6 space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Summary Points
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={config.emailSummaryPoints}
+                    onChange={(e) => handleConfigChange('emailSummaryPoints', parseInt(e.target.value) || 10)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Points awarded when clicking "Summarize Email"
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Link Open Points
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={config.linkOpenPoints}
+                    onChange={(e) => handleConfigChange('linkOpenPoints', parseInt(e.target.value) || 3)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Points awarded when opening a link for AI summary
+                  </p>
+                </div>
+              </div>
+              
+              <div className="text-xs text-blue-700 bg-blue-100 p-2 rounded">
+                <strong>How it works:</strong> Senders get points when you interact with their content. 
+                Higher scores indicate more valuable content. View rankings in Configuration → Email Scoring Dashboard.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Import/Export */}
