@@ -571,7 +571,54 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     }
   }, [emailContent]);
 
-  // Additional useEffect to handle dynamically loaded content
+  // Effect to re-scan email content for any missed URLs after rendering
+  useEffect(() => {
+    if (emailContent) {
+      // Add a small delay to ensure DOM is fully rendered
+      const timeout = setTimeout(() => {
+        const emailContentElement = document.querySelector('.email-content-container');
+        if (emailContentElement) {
+          // Find all anchor tags that might have been dynamically created
+          const anchors = emailContentElement.querySelectorAll('a[href]');
+          const foundUrls: ExtractedLink[] = [];
+          
+          anchors.forEach(anchor => {
+            const href = (anchor as HTMLAnchorElement).href;
+            const text = anchor.textContent || href;
+            
+            try {
+              const urlObj = new URL(href);
+              const extractedLink: ExtractedLink = {
+                url: href,
+                text: text,
+                domain: urlObj.hostname
+              };
+              foundUrls.push(extractedLink);
+            } catch (error) {
+              // Invalid URL, skip
+            }
+          });
+          
+          // Check if we have new URLs that weren't in our extracted links
+          const existingUrls = new Set(extractedLinks.map(link => link.url));
+          const newUrls = foundUrls.filter(link => !existingUrls.has(link.url));
+          
+          if (newUrls.length > 0) {
+            console.log(`Found ${newUrls.length} additional URLs in rendered content:`, newUrls.map(l => l.domain));
+            setExtractedLinks(prev => {
+              // Deduplicate and merge
+              const combined = [...prev, ...newUrls];
+              return combined.filter((link, index, self) => 
+                index === self.findIndex(l => l.url === link.url)
+              );
+            });
+          }
+        }
+      }, 500); // Wait 500ms for DOM to settle
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [emailContent, showHtmlContent]);
   useEffect(() => {
     if (emailContent) {
       // Wait for DOM to be fully updated
@@ -695,9 +742,17 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const extractLinksFromContent = (body: string, htmlBody?: string) => {
     // Extract links from email content
     const textLinks = linkService.extractLinksFromText(body);
-    const htmlLinks = htmlBody 
-      ? linkService.extractLinksFromHTML(htmlBody)
-      : [];
+    
+    // For HTML content, extract from the provided HTML
+    // For plain text content, convert text URLs to HTML first, then extract
+    let htmlLinks: ExtractedLink[] = [];
+    if (htmlBody) {
+      htmlLinks = linkService.extractLinksFromHTML(htmlBody);
+    } else {
+      // Convert plain text URLs to HTML and extract links
+      const textAsHtml = linkService.convertTextUrlsToHTML(body);
+      htmlLinks = linkService.extractLinksFromHTML(textAsHtml);
+    }
     
     // Combine and deduplicate links
     const allLinks = [...textLinks, ...htmlLinks];
@@ -705,6 +760,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       index === self.findIndex(l => l.url === link.url)
     );
     
+    console.log(`Extracted ${uniqueLinks.length} unique links from email content:`, uniqueLinks.map(l => l.domain));
     setExtractedLinks(uniqueLinks);
   };
 
@@ -1838,18 +1894,20 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       }}
                     />
                   ) : (
-                    <ReactMarkdown 
-                      rehypePlugins={[rehypeRaw, rehypeSanitize]}
-                    >
-                      {emailContent.body}
-                    </ReactMarkdown>
+                    <div 
+                      className="email-html-content"
+                      dangerouslySetInnerHTML={{
+                        __html: linkService.convertTextUrlsToHTML(emailContent.body)
+                      }}
+                    />
                   )
                 ) : (
-                  <ReactMarkdown 
-                    rehypePlugins={[rehypeRaw, rehypeSanitize]}
-                  >
-                    {currentEmail.body}
-                  </ReactMarkdown>
+                  <div 
+                    className="email-html-content"
+                    dangerouslySetInnerHTML={{
+                      __html: linkService.convertTextUrlsToHTML(currentEmail.body)
+                    }}
+                  />
                 )}
               </div>
               </div>

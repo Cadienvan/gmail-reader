@@ -370,10 +370,19 @@ class DeepAnalysisService {
     console.log(`Creating tabs for high-quality email: ${email.subject}`);
     
     try {
-      // Extract links from email content
+      // Extract links from email content with enhanced detection
       const textLinks = linkService.extractLinksFromText(emailContent.body);
-      const htmlLinks = emailContent.htmlBody ? 
-        linkService.extractLinksFromHTML(emailContent.htmlBody) : [];
+      
+      // For HTML content, use the HTML directly
+      // For plain text content, convert text URLs to HTML first, then extract
+      let htmlLinks: ExtractedLink[] = [];
+      if (emailContent.htmlBody) {
+        htmlLinks = linkService.extractLinksFromHTML(emailContent.htmlBody);
+      } else {
+        // Convert plain text URLs to HTML and extract links
+        const textAsHtml = linkService.convertTextUrlsToHTML(emailContent.body);
+        htmlLinks = linkService.extractLinksFromHTML(textAsHtml);
+      }
       
       // Combine and deduplicate links
       const allLinks = [...textLinks, ...htmlLinks];

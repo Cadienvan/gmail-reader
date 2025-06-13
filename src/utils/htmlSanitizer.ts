@@ -4,15 +4,137 @@
  */
 
 /**
+ * Converts plain text URLs to anchor tags in HTML content
+ */
+function convertTextUrlsToAnchors(html: string): string {
+  // Enhanced URL regex patterns for better detection
+  const protocols = ['https?://', 'ftp://'];
+  const domain = '[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*';
+  const port = '(?::[0-9]{1,5})?';
+  const path = '(?:/[^\\s<>"\'()]*)?';
+  
+  // Pattern for URLs with protocols
+  const protocolUrlRegex = new RegExp(`(?:${protocols.join('|')})${domain}${port}${path}`, 'gi');
+  
+  // Pattern for domain-only URLs (www.example.com, example.com)
+  const domainOnlyRegex = new RegExp(`\\b(?:www\\.)?${domain}\\.[a-zA-Z]{2,}${port}${path}\\b`, 'gi');
+  
+  // Convert to DOM to safely process
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  
+  // Find all text nodes and convert URLs to links
+  const walker = document.createTreeWalker(
+    doc.body || doc,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: (node) => {
+        // Skip text nodes that are already inside anchor tags
+        const parent = node.parentElement;
+        if (parent?.tagName === 'A' || parent?.closest('a')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        // Only accept nodes that contain URLs
+        const text = node.textContent || '';
+        return (protocolUrlRegex.test(text) || domainOnlyRegex.test(text))
+          ? NodeFilter.FILTER_ACCEPT 
+          : NodeFilter.FILTER_REJECT;
+      }
+    }
+  );
+
+  const textNodesToProcess: { node: Text; protocolMatches: string[]; domainMatches: string[] }[] = [];
+  let textNode: Text | null;
+  
+  // Collect all text nodes that need processing
+  while (textNode = walker.nextNode() as Text) {
+    const text = textNode.textContent || '';
+    const protocolMatches = Array.from(text.matchAll(protocolUrlRegex)).map(match => match[0]);
+    const domainMatches = Array.from(text.matchAll(domainOnlyRegex)).map(match => match[0]);
+    
+    if (protocolMatches.length > 0 || domainMatches.length > 0) {
+      textNodesToProcess.push({ node: textNode, protocolMatches, domainMatches });
+    }
+  }
+
+  // Process collected nodes (this avoids iterator invalidation)
+  textNodesToProcess.forEach(({ node, protocolMatches, domainMatches }) => {
+    if (!node.parentNode) return;
+    
+    let currentText = node.textContent || '';
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    
+    // Combine all matches and sort by position in text
+    const allMatches: { url: string; index: number; needsProtocol: boolean }[] = [];
+    
+    protocolMatches.forEach(url => {
+      const urlIndex = currentText.indexOf(url);
+      if (urlIndex !== -1) {
+        allMatches.push({ url, index: urlIndex, needsProtocol: false });
+      }
+    });
+    
+    domainMatches.forEach(url => {
+      const urlIndex = currentText.indexOf(url);
+      if (urlIndex !== -1) {
+        // Check if this domain is not already part of a protocol URL
+        const isPartOfProtocolUrl = protocolMatches.some(protocolUrl => protocolUrl.includes(url));
+        if (!isPartOfProtocolUrl) {
+          allMatches.push({ url, index: urlIndex, needsProtocol: true });
+        }
+      }
+    });
+    
+    // Sort by position in text
+    allMatches.sort((a, b) => a.index - b.index);
+
+    allMatches.forEach(({ url, needsProtocol }) => {
+      const urlIndex = currentText.indexOf(url, lastIndex);
+      if (urlIndex === -1) return;
+
+      // Add text before URL
+      if (urlIndex > lastIndex) {
+        fragment.appendChild(document.createTextNode(currentText.substring(lastIndex, urlIndex)));
+      }
+
+      // Create anchor tag for URL
+      const anchor = document.createElement('a');
+      const href = needsProtocol ? `https://${url}` : url;
+      anchor.href = href;
+      anchor.textContent = url;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      fragment.appendChild(anchor);
+
+      lastIndex = urlIndex + url.length;
+    });
+
+    // Add remaining text
+    if (lastIndex < currentText.length) {
+      fragment.appendChild(document.createTextNode(currentText.substring(lastIndex)));
+    }
+
+    // Replace the original text node
+    node.parentNode.replaceChild(fragment, node);
+  });
+
+  return doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
+}
+
+/**
  * Sanitizes HTML content by removing dangerous elements while preserving
  * email styling in an isolated container
  */
 export function sanitizeEmailHTML(html: string): string {
   if (!html) return '';
 
+  // First convert plain text URLs to anchor tags
+  const htmlWithAnchors = convertTextUrlsToAnchors(html);
+
   // Create a temporary DOM element to parse the HTML
   const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
+  const doc = parser.parseFromString(htmlWithAnchors, 'text/html');
 
   // Remove script tags and other potentially harmful elements
   const dangerousElements = doc.querySelectorAll('script, link[rel="stylesheet"], meta, title, object, embed, iframe[src*="javascript:"]');

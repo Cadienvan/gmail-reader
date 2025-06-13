@@ -49,18 +49,105 @@ class LinkService {
       }
     }
   }
-  extractLinksFromText(text: string): ExtractedLink[] {
-    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
-    const matches = text.match(urlRegex) || [];
+  /**
+   * Converts plain text URLs to anchor tags and returns HTML
+   */
+  convertTextUrlsToHTML(text: string): string {
+    if (!text) return text;
     
-    return matches
+    // Enhanced URL regex patterns for better detection
+    const protocols = ['https?://', 'ftp://'];
+    const domain = '[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*';
+    const port = '(?::[0-9]{1,5})?';
+    const path = '(?:/[^\\s<>"\'()]*)?';
+    
+    // Pattern for URLs with protocols
+    const protocolUrlRegex = new RegExp(`((?:${protocols.join('|')})${domain}${port}${path})`, 'gi');
+    
+    // Pattern for domain-only URLs (www.example.com, example.com)
+    const domainOnlyRegex = new RegExp(`(\\b(?:www\\.)?${domain}\\.[a-zA-Z]{2,}${port}${path}\\b)`, 'gi');
+    
+    // Escape HTML entities first
+    const escapeHtml = (str: string) => {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    };
+    
+    let result = text;
+    
+    // First, process URLs with protocols
+    result = result.replace(protocolUrlRegex, (match) => {
+      return `<a href="${escapeHtml(match)}" target="_blank" rel="noopener noreferrer">${escapeHtml(match)}</a>`;
+    });
+    
+    // Then, process domain-only URLs (but avoid double-processing)
+    result = result.replace(domainOnlyRegex, (match) => {
+      // Check if this text is already inside an anchor tag
+      const beforeMatch = result.substring(0, result.indexOf(match));
+      const anchorTagCount = (beforeMatch.match(/<a\b/gi) || []).length;
+      const closingTagCount = (beforeMatch.match(/<\/a>/gi) || []).length;
+      
+      // If we're inside an anchor tag, don't process
+      if (anchorTagCount > closingTagCount) {
+        return match;
+      }
+      
+      const normalizedUrl = match.startsWith('http') ? match : `https://${match}`;
+      return `<a href="${escapeHtml(normalizedUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(match)}</a>`;
+    });
+    
+    // Preserve line breaks
+    result = result.replace(/\n/g, '<br>');
+    
+    return result;
+  }
+
+  extractLinksFromText(text: string): ExtractedLink[] {
+    // Enhanced URL regex patterns for better detection
+    const protocols = ['https?://', 'ftp://'];
+    const domain = '[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*';
+    const port = '(?::[0-9]{1,5})?';
+    const path = '(?:/[^\\s<>"{}|\\\\^`\\[\\]]*)?';
+    
+    // Pattern for URLs with protocols
+    const protocolUrlRegex = new RegExp(`(?:${protocols.join('|')})${domain}${port}${path}`, 'gi');
+    
+    // Pattern for domain-only URLs (www.example.com, example.com)
+    const domainOnlyRegex = new RegExp(`\\b(?:www\\.)?${domain}\\.[a-zA-Z]{2,}${port}${path}\\b`, 'gi');
+    
+    const allMatches: string[] = [];
+    
+    // Find protocol URLs
+    const protocolMatches = text.match(protocolUrlRegex) || [];
+    allMatches.push(...protocolMatches);
+    
+    // Find domain-only URLs (but exclude ones already found with protocols)
+    const domainMatches = text.match(domainOnlyRegex) || [];
+    domainMatches.forEach(match => {
+      // Only add if it's not part of an already found URL with protocol
+      const isAlreadyIncluded = protocolMatches.some(protocolMatch => 
+        protocolMatch.includes(match)
+      );
+      if (!isAlreadyIncluded) {
+        allMatches.push(match);
+      }
+    });
+    
+    return allMatches
       .filter(url => !urlFilterService.shouldFilterUrl(url)) // Filter out URLs that match patterns
       .map(url => {
         try {
-          const urlObj = new URL(url);
+          // Normalize URL - add https:// if no protocol
+          let normalizedUrl = url;
+          if (!url.match(/^https?:\/\//i) && !url.match(/^ftp:\/\//i)) {
+            normalizedUrl = 'https://' + url;
+          }
+          
+          const urlObj = new URL(normalizedUrl);
           return {
-            url: url,
-            text: url,
+            url: normalizedUrl,
+            text: url, // Keep original text as found in email
             domain: urlObj.hostname
           };
         } catch (error) {
