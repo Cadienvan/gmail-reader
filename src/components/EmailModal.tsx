@@ -1910,18 +1910,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-xl font-semibold truncate flex-1 mr-4 flex items-center gap-2">
-            {currentEmail.subject}
-            {isHighQualityEmail && (
-              <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full" title={emailQualityResult ? `Quality: ${emailQualityResult.qualityScore}% | Diversity: ${emailQualityResult.diversityScore}%` : 'High Quality Email'}>
-                <Zap size={12} />
-                <span>High Quality</span>
-                {emailQualityResult && (
-                  <span className="ml-1 text-xs opacity-75">
-                    {emailQualityResult.qualityScore}%
-                  </span>
-                )}
-              </div>
-            )}
             {/* Sender Rank Badge */}
             {(() => {
               const scoringConfig = environmentConfigService.getScoringConfig();
@@ -1947,6 +1935,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 </div>
               );
             })()}
+            {currentEmail.subject}
+            {isHighQualityEmail && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full" title={emailQualityResult ? `Quality: ${emailQualityResult.qualityScore}% | Diversity: ${emailQualityResult.diversityScore}%` : 'High Quality Email'}>
+                <Zap size={12} />
+                <span>High Quality</span>
+                {emailQualityResult && (
+                  <span className="ml-1 text-xs opacity-75">
+                    {emailQualityResult.qualityScore}%
+                  </span>
+                )}
+              </div>
+            )}
           </h2>
           <div className="flex items-center gap-2">
             {/* Keyboard shortcuts info */}
