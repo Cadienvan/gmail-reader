@@ -8,6 +8,7 @@ import { flashCardService } from '../services/flashCardService';
 import { deepAnalysisCache } from '../services/deepAnalysisCache';
 import { emailScoringService } from '../services/emailScoringService';
 import { environmentConfigService } from '../services/environmentConfigService';
+import { emailCacheService } from '../services/emailCacheService';
 import { EmailModal } from './EmailModal';
 import { EmailLogModal } from './EmailLogModal';
 import { FlashCardsModal } from './FlashCardsModal';
@@ -135,9 +136,37 @@ export const Dashboard: React.FC = () => {
       handleRetry();
     }
   };
+
+  const refreshEmails = async () => {
+    setIsLoading(true);
+    setError(null);
+    setRetryCount(0);
+    setIsRetrying(false);
+    
+    try {
+      // Force clear the email cache to ensure fresh data
+      console.log('Refresh emails: Starting cache clear...');
+      emailCacheService.forceRefresh();
+      console.log('Refresh emails: Email cache cleared - fetching fresh emails from Gmail');
+      await fetchEmailsWithForceRefresh();
+      console.log('Refresh emails: Successfully fetched fresh emails');
+    } catch (error) {
+      console.error('Failed to refresh emails:', error);
+      handleRetry();
+    }
+  };
   
   const fetchEmails = async (token?: string): Promise<void> => {
     const result = await gmailService.getUnreadEmails(token);
+    setEmails(result.emails);
+    setNextPageToken(result.nextPageToken);
+    setIsLoading(false);
+    setIsRetrying(false);
+    setRetryCount(0);
+  };
+
+  const fetchEmailsWithForceRefresh = async (token?: string): Promise<void> => {
+    const result = await gmailService.getUnreadEmails(token, 50, true);
     setEmails(result.emails);
     setNextPageToken(result.nextPageToken);
     setIsLoading(false);
@@ -599,7 +628,7 @@ export const Dashboard: React.FC = () => {
                     Deep Analysis
                   </button>
                   <button
-                    onClick={loadEmails}
+                    onClick={refreshEmails}
                     disabled={isLoading || isRetrying}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                   >

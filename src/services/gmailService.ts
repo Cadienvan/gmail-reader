@@ -300,6 +300,8 @@ class GmailService {
         console.log('Using cached emails for page:', pageToken || 'first');
         return cachedResult;
       }
+    } else {
+      console.log('GmailService: Force refresh enabled - bypassing cache and fetching fresh data from Gmail API');
     }
 
     try {
@@ -312,7 +314,7 @@ class GmailService {
         url += `&pageToken=${encodeURIComponent(pageToken)}`;
       }
 
-      console.log('Fetching emails from Gmail API for page:', pageToken || 'first');
+      console.log('GmailService: Fetching emails from Gmail API for page:', pageToken || 'first', forceRefresh ? '(force refresh)' : '');
 
       // First get the list of unread message IDs
       const listResponse = await this.makeAuthenticatedRequest(url);
@@ -349,6 +351,8 @@ class GmailService {
       
       // Cache the results
       emailCacheService.cacheEmails(parsedEmails, pageToken, listData.nextPageToken);
+      
+      console.log('GmailService: Successfully fetched', parsedEmails.length, 'emails from Gmail API', forceRefresh ? '(force refresh)' : '');
       
       return { 
         emails: parsedEmails,
@@ -508,6 +512,12 @@ class GmailService {
           method: 'POST'
         }
       );
+
+      if (response.ok) {
+        // Immediately remove the email from cache to prevent it from appearing on refresh
+        emailCacheService.removeEmailFromCache(emailId);
+        console.log('Email deleted and removed from cache:', emailId);
+      }
 
       return response.ok;
     } catch (error) {

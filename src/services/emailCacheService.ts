@@ -158,11 +158,14 @@ class EmailCacheService {
       if (pageToken) {
         const cacheKey = this.getCacheKey(pageToken);
         localStorage.removeItem(cacheKey);
+        console.log('EmailCacheService: Cleared cache for page:', pageToken);
       } else {
         // Clear all email cache
         const allCacheKeys = this.getAllCacheKeys();
+        console.log('EmailCacheService: Clearing all cache keys:', allCacheKeys.length, 'keys found');
         allCacheKeys.forEach(key => localStorage.removeItem(key));
         localStorage.removeItem(this.METADATA_KEY);
+        console.log('EmailCacheService: All email cache and metadata cleared');
       }
     } catch (error) {
       console.error('Failed to invalidate cache:', error);
@@ -196,7 +199,52 @@ class EmailCacheService {
    * Force refresh cache (clear and mark for reload)
    */
   forceRefresh(): void {
+    console.log('EmailCacheService: Force refresh initiated - clearing all cache');
     this.invalidateCache();
+    console.log('EmailCacheService: All cache cleared successfully');
+  }
+
+  /**
+   * Remove a specific email from cache (useful when email is deleted)
+   */
+  removeEmailFromCache(emailId: string): void {
+    try {
+      const allCacheKeys = this.getAllCacheKeys();
+      let emailRemoved = false;
+      
+      for (const cacheKey of allCacheKeys) {
+        const cachedData = localStorage.getItem(cacheKey);
+        if (cachedData) {
+          const parsed: CachedEmailData = JSON.parse(cachedData);
+          
+          // Check if cache is still valid
+          if (Date.now() - parsed.timestamp <= this.CACHE_DURATION) {
+            const emailIndex = parsed.emails.findIndex(e => e.id === emailId);
+            if (emailIndex !== -1) {
+              // Remove the email from the cache
+              parsed.emails.splice(emailIndex, 1);
+              localStorage.setItem(cacheKey, JSON.stringify(parsed));
+              emailRemoved = true;
+              console.log('Removed deleted email from cache:', emailId);
+              
+              // Update metadata count
+              const metadata = this.getCacheMetadata();
+              if (metadata) {
+                metadata.totalCachedEmails = Math.max(0, metadata.totalCachedEmails - 1);
+                localStorage.setItem(this.METADATA_KEY, JSON.stringify(metadata));
+              }
+              break;
+            }
+          }
+        }
+      }
+      
+      if (!emailRemoved) {
+        console.log('Email not found in cache for removal:', emailId);
+      }
+    } catch (error) {
+      console.error('Failed to remove email from cache:', error);
+    }
   }
 
   /**
