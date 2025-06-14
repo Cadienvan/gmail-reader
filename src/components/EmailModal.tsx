@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Zap, Filter, AlertCircle, Trophy } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Zap, Filter, AlertCircle, Trophy, Calendar } from 'lucide-react';
 import type { ParsedEmail, ExtractedLink, LinkSummary, FlashCard, ModelConfiguration } from '../types';
 import { linkService } from '../services/linkService';
 import { ollamaService } from '../services/ollamaService';
@@ -1927,11 +1927,51 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 if (percentage <= 0.5) return 'bg-blue-100 text-blue-800 border-blue-200';
                 return 'bg-gray-100 text-gray-800 border-gray-200';
               };
+
+              const allTimeTooltip = `All-time rank: #${rank.allTimeRank} of ${rank.totalSenders} senders`;
+              const last90DaysTooltip = rank.last90DaysRank > 0 
+                ? `Last 90 days rank: #${rank.last90DaysRank}`
+                : `No activity in last 90 days`;
+              const pointsTooltip = score ? `${score.totalScore} total points` : '';
+              const fullTooltip = [allTimeTooltip, last90DaysTooltip, pointsTooltip].filter(Boolean).join(' | ');
               
               return (
-                <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border ${getRankColor(rank.allTimeRank, rank.totalSenders)}`} title={`Sender rank: #${rank.allTimeRank} of ${rank.totalSenders} senders (${score?.totalScore || 0} points)`}>
-                  <Trophy size={10} />
-                  <span>#{rank.allTimeRank}</span>
+                <div className="flex items-center gap-1">
+                  {/* All-time rank */}
+                  <div 
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border ${getRankColor(rank.allTimeRank, rank.totalSenders)}`} 
+                    title={fullTooltip}
+                  >
+                    <Trophy size={10} />
+                    <span>#{rank.allTimeRank}</span>
+                    {score && (
+                      <span className="ml-1 text-xs opacity-75">
+                        ({score.totalScore}pt)
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* 90-day rank badge if different or no activity */}
+                  {rank.last90DaysRank > 0 && rank.last90DaysRank !== rank.allTimeRank && (
+                    <div 
+                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs border bg-blue-100 text-blue-800 border-blue-200"
+                      title={`Last 90 days: #${rank.last90DaysRank}`}
+                    >
+                      <Calendar size={10} />
+                      <span>#{rank.last90DaysRank}</span>
+                    </div>
+                  )}
+                  
+                  {/* No recent activity indicator */}
+                  {rank.last90DaysRank === 0 && (
+                    <div 
+                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs border bg-gray-100 text-gray-500 border-gray-200"
+                      title="No activity in last 90 days"
+                    >
+                      <Calendar size={10} />
+                      <span>-</span>
+                    </div>
+                  )}
                 </div>
               );
             })()}
