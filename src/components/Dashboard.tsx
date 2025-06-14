@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Zap, Star, Link, Award, Bookmark, Trophy, Calendar } from 'lucide-react';
+import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Zap, Star, Link, Award, Bookmark, Trophy, Calendar, X } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration, QualityAssessmentResult } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
@@ -9,6 +9,7 @@ import { deepAnalysisCache } from '../services/deepAnalysisCache';
 import { emailScoringService } from '../services/emailScoringService';
 import { environmentConfigService } from '../services/environmentConfigService';
 import { emailCacheService } from '../services/emailCacheService';
+import { ollamaWarningService } from '../services/ollamaWarningService';
 import { EmailModal } from './EmailModal';
 import { EmailLogModal } from './EmailLogModal';
 import { FlashCardsModal } from './FlashCardsModal';
@@ -45,6 +46,7 @@ export const Dashboard: React.FC = () => {
   const [currentEmailIndex, setCurrentEmailIndex] = useState(0);
   const [allFlashCards, setAllFlashCards] = useState<FlashCard[]>([]);
   const [isLoadingFlashCards, setIsLoadingFlashCards] = useState(false);
+  const [isOllamaWarningDismissed, setIsOllamaWarningDismissed] = useState(() => ollamaWarningService.isWarningDismissed());
 
   useEffect(() => {
     checkOllamaStatus();
@@ -70,6 +72,11 @@ export const Dashboard: React.FC = () => {
     setOllamaStatus('checking');
     const isAvailable = await ollamaService.isServiceAvailable();
     setOllamaStatus(isAvailable ? 'available' : 'unavailable');
+  };
+
+  const handleDismissOllamaWarning = () => {
+    ollamaWarningService.dismissWarning();
+    setIsOllamaWarningDismissed(true);
   };
 
   const loadViewedEmails = () => {
@@ -695,21 +702,40 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              {ollamaStatus === 'unavailable' && (
+              {ollamaStatus === 'unavailable' && !isOllamaWarningDismissed && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle size={20} className="text-yellow-600 mt-0.5" />
-                    <div>
-                      <h3 className="font-medium text-yellow-800">Ollama Service Required</h3>
-                      <p className="text-yellow-700 text-sm mt-1">
-                        Please ensure Ollama is running locally on port 11434 with the deepseek-r1:1.5b model installed.
-                        Link summaries will not work without this service.
-                      </p>
-                      <div className="mt-2 text-xs text-yellow-600">
-                        <code>ollama pull deepseek-r1:1.5b</code>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle size={20} className="text-yellow-600 mt-0.5" />
+                      <div>
+                        <h3 className="font-medium text-yellow-800">Ollama Service Required</h3>
+                        <p className="text-yellow-700 text-sm mt-1">
+                          Please ensure Ollama is running locally on port 11434 with the deepseek-r1:1.5b model installed.
+                          Link summaries will not work without this service.
+                        </p>
+                        <div className="mt-2 text-xs text-yellow-600">
+                          <code>ollama pull deepseek-r1:1.5b</code>
+                        </div>
                       </div>
                     </div>
+                    {environmentConfigService.getSaveForLaterMode() && (
+                      <button
+                        onClick={handleDismissOllamaWarning}
+                        className="p-1 hover:bg-yellow-100 rounded transition-colors"
+                        title="Don't show this warning for 30 days. Since you're using 'Save for later' mode, you might not need Ollama immediately."
+                      >
+                        <X size={16} className="text-yellow-600" />
+                      </button>
+                    )}
                   </div>
+                  {environmentConfigService.getSaveForLaterMode() && (
+                    <div className="mt-3 pt-3 border-t border-yellow-200">
+                      <p className="text-xs text-yellow-600">
+                        💡 Since you're using "Save for later" mode, you can dismiss this warning. 
+                        Content will be saved without requiring Ollama to be running.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
