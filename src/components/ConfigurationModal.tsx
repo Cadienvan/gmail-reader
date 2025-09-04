@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Settings, Palette, MessageSquare, HardDrive, Key, Activity, Filter, Trophy } from 'lucide-react';
+import { X, Settings, Palette, MessageSquare, HardDrive, Key, Activity, Filter, Trophy, Zap } from 'lucide-react';
 import { EnvironmentConfigPanel } from './EnvironmentConfigPanel';
 import { ModelConfigPanel } from './ModelConfigPanel';
 import { PromptConfigPanel } from './PromptConfigPanel';
@@ -8,6 +8,7 @@ import { PerformanceConfigPanel } from './PerformanceConfigPanel';
 import { UrlFilterConfigPanel } from './UrlFilterConfigPanel';
 import { EmailScoringDashboard } from './EmailScoringDashboard';
 import { OAuthSetupGuide } from './OAuthSetupGuide';
+import { RulesConfigPanel } from './RulesConfigPanel';
 import { environmentConfigService } from '../services/environmentConfigService';
 
 interface ConfigurationModalProps {
@@ -16,7 +17,7 @@ interface ConfigurationModalProps {
   initialTab?: string;
 }
 
-type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'performance' | 'url-filters' | 'storage' | 'scoring';
+type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'performance' | 'url-filters' | 'storage' | 'scoring' | 'rules';
 
 interface Tab {
   id: TabId;
@@ -123,6 +124,18 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       icon: Trophy,
       component: (
         <EmailScoringDashboard />
+      )
+    },
+    {
+      id: 'rules',
+      label: 'Rules',
+      icon: Zap,
+      component: (
+        <RulesConfigPanel
+          onConfigChange={(config) => {
+            console.log('Rules configuration updated:', config);
+          }}
+        />
       )
     }
   ];

@@ -17,6 +17,8 @@ import { DeepAnalysisSidebar } from './DeepAnalysisSidebar';
 import { RegexChecker } from './RegexChecker';
 import { environmentConfigService } from '../services/environmentConfigService';
 import { emailScoringService } from '../services/emailScoringService';
+import { ruleEngineService } from '../services/ruleEngineService';
+import type { RuleContext } from '../types';
 
 interface EmailModalProps {
   emails: ParsedEmail[];
@@ -550,6 +552,30 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     };
   }, [isOpen, currentIndex, emails.length, currentEmail, isCurrentEmailRead, isMarkingAsRead, showConfirmDialog, showDeleteConfirm]);
 
+  // Rule navigation event listener
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleRuleNavigation = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { direction } = customEvent.detail;
+      
+      console.log(`[Rule Navigation] Received navigation event: ${direction}`);
+      
+      if (direction === 'next') {
+        executeAction('next');
+      } else if (direction === 'previous') {
+        executeAction('prev');
+      }
+    };
+
+    window.addEventListener('rule-navigation', handleRuleNavigation);
+
+    return () => {
+      window.removeEventListener('rule-navigation', handleRuleNavigation);
+    };
+  }, [isOpen]);
+
   // Add click handler for links in email content
   useEffect(() => {
     const handleEmailLinkClick = (event: Event) => {
@@ -753,7 +779,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         setShowHtmlContent(true);
       }
       
-      extractLinksFromContent(currentEmail.body, currentEmail.htmlBody);
+      await extractLinksFromContent(currentEmail.body, currentEmail.htmlBody);
       return;
     }
 
@@ -768,7 +794,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         setShowHtmlContent(true);
       }
       
-      extractLinksFromContent(content.body, content.htmlBody);
+      await extractLinksFromContent(content.body, content.htmlBody);
     } catch (error) {
       console.error('Failed to load email content:', error);
       // Fallback to existing content
@@ -783,13 +809,45 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         setShowHtmlContent(true);
       }
       
-      extractLinksFromContent(currentEmail.body, currentEmail.htmlBody);
+      await extractLinksFromContent(currentEmail.body, currentEmail.htmlBody);
     } finally {
       setIsLoadingContent(false);
     }
   };
 
-  const extractLinksFromContent = (body: string, htmlBody?: string) => {
+  const executeEmailRules = async (email: ParsedEmail, extractedLinks: ExtractedLink[]) => {
+    try {
+      // Extract sender information
+      const senderInfo = emailScoringService.extractSenderInfo(email.from);
+      
+      // Get sender score
+      const senderScore = emailScoringService.getSenderScore(senderInfo.email)?.totalScore || 0;
+
+      // Create rule context
+      const context: RuleContext = {
+        email,
+        senderInfo,
+        extractedLinks,
+        senderScore,
+        variables: {}
+      };
+
+      // Execute all enabled rules
+      const results = await ruleEngineService.executeRules(context);
+      
+      // Log results if any rules were triggered
+      const firedRules = results.filter(r => r.matched);
+      if (firedRules.length > 0) {
+        console.log(`🔥 ${firedRules.length} rules fired for email "${email.subject}":`, 
+          firedRules.map(r => r.ruleName));
+      }
+
+    } catch (error) {
+      console.error('Error executing email rules:', error);
+    }
+  };
+
+  const extractLinksFromContent = async (body: string, htmlBody?: string) => {
     // Extract links from email content
     const textLinks = linkService.extractLinksFromText(body);
     
@@ -812,6 +870,19 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     
     console.log(`Extracted ${uniqueLinks.length} unique links from email content:`, uniqueLinks.map(l => l.domain));
     setExtractedLinks(uniqueLinks);
+
+    // Execute rules after email processing is complete
+    if (currentEmail) {
+      // If content was just loaded (not the placeholder), execute deferred rules
+      if (body !== '(Content will be loaded when opened)') {
+        console.log('deferred rules');
+        // Execute deferred rules that were waiting for content
+        await ruleEngineService.executeRulesForLoadedContent(currentEmail.id, body, htmlBody);
+      }
+      
+      // Execute all rules normally
+      executeEmailRules(currentEmail, uniqueLinks);
+    }
   };
 
   const handleLinkClick = async (link: ExtractedLink) => {

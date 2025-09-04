@@ -18,6 +18,7 @@ import { VoiceCommands } from './VoiceCommands';
 import { ConfigurationModal } from './ConfigurationModal';
 import { DeepAnalysisSidebar } from './DeepAnalysisSidebar';
 import { SavedForLaterModal } from './SavedForLaterModal';
+import { RulesDebugFloater } from './RulesDebugFloater';
 
 export const Dashboard: React.FC = () => {
   const [emails, setEmails] = useState<ParsedEmail[]>([]);
@@ -43,6 +44,7 @@ export const Dashboard: React.FC = () => {
   const [showConfigurationModal, setShowConfigurationModal] = useState(false);
   const [showDeepAnalysisSidebar, setShowDeepAnalysisSidebar] = useState(false);
   const [showSavedForLaterModal, setShowSavedForLaterModal] = useState(false);
+  const [showRulesDebugFloater, setShowRulesDebugFloater] = useState(true);
   const [currentEmailIndex, setCurrentEmailIndex] = useState(0);
   const [allFlashCards, setAllFlashCards] = useState<FlashCard[]>([]);
   const [isLoadingFlashCards, setIsLoadingFlashCards] = useState(false);
@@ -841,7 +843,7 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Modals */}
-        <EmailModal
+        {showEmailModal && <EmailModal
           emails={emails}
           currentIndex={currentEmailIndex}
           isOpen={showEmailModal}
@@ -850,7 +852,7 @@ export const Dashboard: React.FC = () => {
           onPrev={handlePrevEmail}
           onEmailMarkedAsRead={handleEmailMarkedAsRead}
           onEmailDeleted={handleEmailDeleted}
-        />
+        />}
 
         <EmailLogModal
           isOpen={showLogModal}
@@ -906,6 +908,11 @@ export const Dashboard: React.FC = () => {
         onToggle={() => setShowDeepAnalysisSidebar(!showDeepAnalysisSidebar)}
         className="fixed right-0 top-0 h-full z-40"
       />
+      
+      {/* Rules Debug Floater - Monitor rule execution in real-time */}
+      {showRulesDebugFloater && (
+        <RulesDebugFloater onClose={() => setShowRulesDebugFloater(false)} />
+      )}
     </div>
   );
 };

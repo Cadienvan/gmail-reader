@@ -262,3 +262,83 @@ export interface SenderRank {
   last90DaysRank: number;
   totalSenders: number;
 }
+
+// Rules System types
+export interface RuleCondition {
+  id: string;
+  type: 'sender_email' | 'sender_name' | 'subject' | 'content' | 'content_regex' | 'url_contains' | 'sender_score' | 'has_links' | 'link_domain';
+  operator: 'equals' | 'contains' | 'starts_with' | 'ends_with' | 'regex_match' | 'greater_than' | 'less_than' | 'exists' | 'not_exists';
+  value: string | number | boolean;
+  caseSensitive?: boolean;
+}
+
+export interface RuleAction {
+  id: string;
+  type: 'javascript_code' | 'open_url' | 'save_variable' | 'log_message' | 'add_score' | 'mark_email' | 'notify' | 'delete_email' | 'mark_as_read' | 'request_summary' | 'goto_next_email' | 'goto_previous_email';
+  parameters: Record<string, any>;
+  description?: string;
+}
+
+export interface RuleContext {
+  email: ParsedEmail;
+  senderInfo: {
+    email: string;
+    name?: string;
+  };
+  extractedLinks: ExtractedLink[];
+  senderScore?: number;
+  variables: Record<string, any>; // Variables saved from previous conditions
+}
+
+export interface Rule {
+  id: string;
+  name: string;
+  description?: string;
+  enabled: boolean;
+  conditions: RuleCondition[];
+  actions: RuleAction[];
+  logicOperator: 'AND' | 'OR'; // How to combine multiple conditions
+  createdAt: number;
+  lastModified: number;
+  executionCount: number;
+  lastExecuted?: number;
+}
+
+export interface RuleExecutionResult {
+  ruleId: string;
+  ruleName: string;
+  matched: boolean;
+  conditionResults: Array<{
+    conditionId: string;
+    type: string;
+    matched: boolean;
+    actualValue?: any;
+    expectedValue?: any;
+    error?: string;
+  }>;
+  actionResults: Array<{
+    actionId: string;
+    type: string;
+    success: boolean;
+    result?: any;
+    error?: string;
+  }>;
+  executionTime: number;
+  variables: Record<string, any>;
+}
+
+export interface RulesDebugLog {
+  id: string;
+  timestamp: number;
+  emailId: string;
+  emailSubject: string;
+  emailFrom: string;
+  results: RuleExecutionResult[];
+  totalRulesChecked: number;
+  totalRulesFired: number;
+}
+
+export interface RulesConfig {
+  debugMode: boolean;
+  debugRetentionDays: number; // How long to keep debug logs
+}
