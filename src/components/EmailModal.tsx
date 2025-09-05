@@ -430,6 +430,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   useEffect(() => {
     if (currentEmail) {
+      console.log(`[EmailModal] Loading new email at index ${currentIndex}: "${currentEmail.subject}" from ${currentEmail.from}`);
+      
       // Reset email-specific states but keep tabs open
       setExtractedLinks([]);
       // Don't reset linkSummaries - keep them for all emails
@@ -455,7 +457,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       // Log the viewed email
       emailLogService.addViewedEmail(currentEmail);
     }
-  }, [currentEmail]);
+  }, [currentEmail, currentIndex]); // Added currentIndex as dependency to ensure rules trigger on deletion
   
   // Note: Removed auto-loading of all saved tabs to prevent "saved for later" content from appearing in email modal
   // Tabs will be loaded on-demand when user clicks on links or through deep analysis for high-quality emails
@@ -766,8 +768,11 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const loadEmailContent = async () => {
     if (!currentEmail) return;
 
+    console.log(`[loadEmailContent] Loading content for email: "${currentEmail.subject}"`);
+
     // Check if email already has content (was fetched with format=full)
     if (currentEmail.body !== '(Content will be loaded when opened)') {
+      console.log(`[loadEmailContent] Email already has content loaded, using cached content`);
       const content = {
         body: currentEmail.body,
         htmlBody: currentEmail.htmlBody
@@ -784,6 +789,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     }
 
     // Fetch full content from Gmail API
+    console.log(`[loadEmailContent] Fetching email content from Gmail API...`);
     setIsLoadingContent(true);
     try {
       const content = await gmailService.getEmailContent(currentEmail.id);
@@ -817,6 +823,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   const executeEmailRules = async (email: ParsedEmail, extractedLinks: ExtractedLink[]) => {
     try {
+      console.log(`[Rules] Executing rules for email: "${email.subject}" from ${email.from}`);
+      
       // Extract sender information
       const senderInfo = emailScoringService.extractSenderInfo(email.from);
       
@@ -840,6 +848,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       if (firedRules.length > 0) {
         console.log(`🔥 ${firedRules.length} rules fired for email "${email.subject}":`, 
           firedRules.map(r => r.ruleName));
+      } else {
+        console.log(`[Rules] No rules matched for email "${email.subject}"`);
       }
 
     } catch (error) {
@@ -848,6 +858,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   };
 
   const extractLinksFromContent = async (body: string, htmlBody?: string) => {
+    console.log(`[Email Content] Extracting links from email content...`);
+    
     // Extract links from email content
     const textLinks = linkService.extractLinksFromText(body);
     
@@ -873,15 +885,20 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
     // Execute rules after email processing is complete
     if (currentEmail) {
+      console.log(`[Email Content] Preparing to execute rules for email: "${currentEmail.subject}"`);
+      
       // If content was just loaded (not the placeholder), execute deferred rules
       if (body !== '(Content will be loaded when opened)') {
-        console.log('deferred rules');
+        console.log('Executing deferred rules for loaded content...');
         // Execute deferred rules that were waiting for content
         await ruleEngineService.executeRulesForLoadedContent(currentEmail.id, body, htmlBody);
       }
       
       // Execute all rules normally
+      console.log('Executing normal rules for email...');
       executeEmailRules(currentEmail, uniqueLinks);
+    } else {
+      console.log('[Email Content] Warning: currentEmail is null, skipping rule execution');
     }
   };
 

@@ -251,10 +251,14 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleEmailDeleted = (emailId: string) => {
+    console.log(`[Dashboard] Email deleted: ${emailId}, updating email list and index`);
+    
     // Remove the deleted email from the emails array
     setEmails(prevEmails => {
       const emailIndex = prevEmails.findIndex(email => email.id === emailId);
       const filteredEmails = prevEmails.filter(email => email.id !== emailId);
+      
+      console.log(`[Dashboard] Found email at index ${emailIndex}, filtered emails count: ${filteredEmails.length}`);
       
       // If this was the last email in the list, handle navigation
       if (filteredEmails.length === 0) {
@@ -272,14 +276,20 @@ export const Dashboard: React.FC = () => {
       // If we deleted an email before the current index, adjust the current index
       if (emailIndex < currentEmailIndex) {
         newIndex = currentEmailIndex - 1;
+        console.log(`[Dashboard] Deleted email was before current, adjusting index from ${currentEmailIndex} to ${newIndex}`);
       }
       // If we deleted the email at the current index, stay at the same index
       // unless it was the last email in the list
       else if (emailIndex === currentEmailIndex && currentEmailIndex >= filteredEmails.length) {
         newIndex = Math.max(0, filteredEmails.length - 1);
+        console.log(`[Dashboard] Deleted current email at end of list, adjusting index from ${currentEmailIndex} to ${newIndex}`);
+      }
+      else if (emailIndex === currentEmailIndex) {
+        console.log(`[Dashboard] Deleted current email, staying at index ${currentEmailIndex} to view next email`);
       }
       
       // Update the current email index
+      console.log(`[Dashboard] Setting new email index to ${newIndex}, new email will be: "${filteredEmails[newIndex]?.subject}"`);
       setCurrentEmailIndex(newIndex);
       
       return filteredEmails;
