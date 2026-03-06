@@ -212,7 +212,7 @@ class TabSummaryStorageService {
   }
 
   // Email metadata methods for deep analysis
-  async saveEmailMetadata(emailId: string, metadata: EmailMetadata): Promise<void> {
+  async saveEmailMetadata(metadata: EmailMetadata): Promise<void> {
     await this.ensureInitialized();
     
     return new Promise((resolve, reject) => {

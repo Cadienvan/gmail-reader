@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Bug, CheckCircle, AlertCircle, Zap, Play, XCircle, ArrowRight } from 'lucide-react';
+import { X, Bug, CheckCircle, AlertCircle, Zap, XCircle, ArrowRight } from 'lucide-react';
 import { rulesService } from '../services/rulesService';
 import type { RulesDebugLog, RuleExecutionResult } from '../types';
 

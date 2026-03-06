@@ -5,7 +5,8 @@ import type {
   DeepAnalysisConfig,
   LinkSummary,
   EmailSender,
-  SenderSelectionConfig
+  SenderSelectionConfig,
+  ExtractedLink
 } from '../types';
 import { gmailService } from './gmailService';
 import { ollamaService } from './ollamaService';
@@ -461,7 +462,7 @@ class DeepAnalysisService {
       };
       
       // Save email metadata for later retrieval
-      await tabSummaryStorage.saveEmailMetadata(email.id, emailMetadata);
+      await tabSummaryStorage.saveEmailMetadata(emailMetadata);
       
     } catch (error) {
       console.error(`Failed to create tabs for email ${email.id}:`, error);

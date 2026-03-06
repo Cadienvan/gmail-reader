@@ -11,7 +11,7 @@ import {
   CheckSquare,
   Square
 } from 'lucide-react';
-import type { SenderSelectionModalProps, SenderSelectionConfig, EmailSender } from '../types';
+import type { SenderSelectionModalProps, SenderSelectionConfig } from '../types';
 
 export const SenderSelectionModal: React.FC<SenderSelectionModalProps> = ({
   isOpen,
@@ -44,7 +44,6 @@ export const SenderSelectionModal: React.FC<SenderSelectionModalProps> = ({
   // Update select all state when individual selections change
   useEffect(() => {
     const allSelected = senderConfigs.length > 0 && senderConfigs.every(config => config.include);
-    const noneSelected = senderConfigs.every(config => !config.include);
     setSelectAll(allSelected);
   }, [senderConfigs]);
 

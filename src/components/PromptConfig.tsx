@@ -16,13 +16,16 @@ export const PromptConfig: React.FC<PromptConfigProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [editingSummary, setEditingSummary] = useState(false);
   const [editingFlashCard, setEditingFlashCard] = useState(false);
+  const [editingQualityAssessment, setEditingQualityAssessment] = useState(false);
   const [tempSummaryPrompt, setTempSummaryPrompt] = useState(config.summaryPrompt);
   const [tempFlashCardPrompt, setTempFlashCardPrompt] = useState(config.flashCardPrompt);
+  const [tempQualityAssessmentPrompt, setTempQualityAssessmentPrompt] = useState(config.qualityAssessmentPrompt);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setTempSummaryPrompt(config.summaryPrompt);
     setTempFlashCardPrompt(config.flashCardPrompt);
+    setTempQualityAssessmentPrompt(config.qualityAssessmentPrompt);
   }, [config]);
 
   const handleSaveConfig = async () => {
@@ -30,7 +33,8 @@ export const PromptConfig: React.FC<PromptConfigProps> = ({
     try {
       const newConfig: PromptConfiguration = {
         summaryPrompt: tempSummaryPrompt,
-        flashCardPrompt: tempFlashCardPrompt
+        flashCardPrompt: tempFlashCardPrompt,
+        qualityAssessmentPrompt: tempQualityAssessmentPrompt
       };
       
       ollamaService.setPromptConfiguration(newConfig);
@@ -38,6 +42,7 @@ export const PromptConfig: React.FC<PromptConfigProps> = ({
       onConfigChange?.(newConfig);
       setEditingSummary(false);
       setEditingFlashCard(false);
+      setEditingQualityAssessment(false);
     } catch (error) {
       console.error('Failed to save prompt configuration:', error);
     } finally {
@@ -52,13 +57,15 @@ export const PromptConfig: React.FC<PromptConfigProps> = ({
       setConfig(defaultConfig);
       setTempSummaryPrompt(defaultConfig.summaryPrompt);
       setTempFlashCardPrompt(defaultConfig.flashCardPrompt);
+      setTempQualityAssessmentPrompt(defaultConfig.qualityAssessmentPrompt);
       onConfigChange?.(defaultConfig);
       setEditingSummary(false);
       setEditingFlashCard(false);
+      setEditingQualityAssessment(false);
     }
   };
 
-  const hasChanges = tempSummaryPrompt !== config.summaryPrompt || tempFlashCardPrompt !== config.flashCardPrompt;
+  const hasChanges = tempSummaryPrompt !== config.summaryPrompt || tempFlashCardPrompt !== config.flashCardPrompt || tempQualityAssessmentPrompt !== config.qualityAssessmentPrompt;
 
   return (
     <div className={`relative ${className}`}>
@@ -161,6 +168,42 @@ export const PromptConfig: React.FC<PromptConfigProps> = ({
                     {config.flashCardPrompt.length > 200 
                       ? config.flashCardPrompt.substring(0, 200) + '...' 
                       : config.flashCardPrompt}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            {/* Quality Assessment Prompt Configuration */}
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-700">Quality Assessment Prompt</h4>
+                <button
+                  onClick={() => setEditingQualityAssessment(!editingQualityAssessment)}
+                  className="flex items-center gap-1 px-2 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                >
+                  <Edit size={14} />
+                  {editingQualityAssessment ? 'View' : 'Edit'}
+                </button>
+              </div>
+              
+              {editingQualityAssessment ? (
+                <div>
+                  <textarea
+                    value={tempQualityAssessmentPrompt}
+                    onChange={(e) => setTempQualityAssessmentPrompt(e.target.value)}
+                    className="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-sm resize-vertical"
+                    placeholder="Enter your quality assessment prompt here. Use {CONTENT} as a placeholder for the content to be assessed."
+                  />
+                  <p className="text-sm text-gray-600 mt-2">
+                    Use <code className="bg-gray-100 px-1 rounded">{'{CONTENT}'}</code> as a placeholder where the content should be inserted.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-gray-50 p-3 rounded border max-h-32 overflow-y-auto">
+                  <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                    {config.qualityAssessmentPrompt.length > 200 
+                      ? config.qualityAssessmentPrompt.substring(0, 200) + '...' 
+                      : config.qualityAssessmentPrompt}
                   </pre>
                 </div>
               )}
