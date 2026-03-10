@@ -12,7 +12,6 @@ export interface EnvironmentConfig {
 
 // Import email cache service for clearing cache when Gmail query changes
 import { emailCacheService } from './emailCacheService';
-import { deepAnalysisCache } from './deepAnalysisCache';
 
 class EnvironmentConfigService {
   private readonly CONFIG_KEY = 'environment-configuration';
@@ -42,8 +41,7 @@ class EnvironmentConfigService {
     // Clear email cache if Gmail query has changed
     if (gmailQueryChanged) {
       emailCacheService.forceRefresh();
-      deepAnalysisCache.clearCache();
-      console.log('Gmail query changed in environment config - email and analysis caches cleared');
+      console.log('Gmail query changed in environment config - email cache cleared');
     }
   }
 
@@ -60,8 +58,7 @@ class EnvironmentConfigService {
     // Clear email cache if Gmail query has changed
     if (gmailQueryChanged) {
       emailCacheService.forceRefresh();
-      deepAnalysisCache.clearCache();
-      console.log('Gmail query changed via updateConfigField - email and analysis caches cleared');
+      console.log('Gmail query changed via updateConfigField - email cache cleared');
     }
   }
 

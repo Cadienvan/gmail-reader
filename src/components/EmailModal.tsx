@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Zap, Filter, AlertCircle, Trophy, Calendar } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Filter, AlertCircle, Trophy, Calendar } from 'lucide-react';
 import type { ParsedEmail, ExtractedLink, LinkSummary, FlashCard, ModelConfiguration } from '../types';
 import { linkService } from '../services/linkService';
 import { ollamaService } from '../services/ollamaService';
@@ -7,13 +7,11 @@ import { gmailService } from '../services/gmailService';
 import { emailLogService } from '../utils/emailLogService';
 import { flashCardService } from '../services/flashCardService';
 import { tabSummaryStorage } from '../services/tabSummaryStorage';
-import { deepAnalysisService } from '../services/deepAnalysisService';
 import { sanitizeEmailHTML } from '../utils/htmlSanitizer';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import { FlashCardsModal } from './FlashCardsModal';
-import { DeepAnalysisSidebar } from './DeepAnalysisSidebar';
 import { RegexChecker } from './RegexChecker';
 import { environmentConfigService } from '../services/environmentConfigService';
 import { emailScoringService } from '../services/emailScoringService';
@@ -85,16 +83,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     return saved !== null ? JSON.parse(saved) : true;
   });
 
-  // Deep analysis sidebar state with localStorage persistence
-  const [showDeepAnalysisSidebar, setShowDeepAnalysisSidebar] = useState<boolean>(() => {
-    const saved = localStorage.getItem('emailModal_deepAnalysisSidebarVisible');
-    return saved !== null ? JSON.parse(saved) : false;
-  });
-
-  // Deep analysis functionality
-  const [isHighQualityEmail, setIsHighQualityEmail] = useState<boolean>(false);
-  const [emailQualityResult, setEmailQualityResult] = useState<any>(null);
-
   // Regex checker state
   const [showRegexChecker, setShowRegexChecker] = useState<boolean>(false);
   const [regexCheckerUrl, setRegexCheckerUrl] = useState<string>('');
@@ -145,13 +133,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     const newVisibility = !isSummaryVisible;
     setIsSummaryVisible(newVisibility);
     localStorage.setItem('emailModal_summaryVisible', JSON.stringify(newVisibility));
-  };
-
-  // Deep analysis sidebar toggle function
-  const toggleDeepAnalysisSidebar = () => {
-    const newVisibility = !showDeepAnalysisSidebar;
-    setShowDeepAnalysisSidebar(newVisibility);
-    localStorage.setItem('emailModal_deepAnalysisSidebarVisible', JSON.stringify(newVisibility));
   };
 
   // Focus modes toggle functions
@@ -450,17 +431,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       // Load email content if not already loaded
       loadEmailContent();
 
-      // Check if current email is high quality from deep analysis
-      checkEmailQuality(currentEmail.id);
-      loadHighQualityTabs(currentEmail.id);
-
       // Log the viewed email
       emailLogService.addViewedEmail(currentEmail);
     }
   }, [currentEmail, currentIndex]); // Added currentIndex as dependency to ensure rules trigger on deletion
   
   // Note: Removed auto-loading of all saved tabs to prevent "saved for later" content from appearing in email modal
-  // Tabs will be loaded on-demand when user clicks on links or through deep analysis for high-quality emails
+  // Tabs will be loaded on-demand when user clicks on links
   
   // Cleanup effect for AbortControllers
   useEffect(() => {
@@ -1562,78 +1539,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     }
   };
 
-  // Deep analysis functions
-  const checkEmailQuality = async (emailId: string) => {
-    try {
-      const qualityResult = deepAnalysisService.getEmailQualityResult(emailId);
-      setEmailQualityResult(qualityResult);
-      setIsHighQualityEmail(qualityResult?.isHighQuality || false);
-    } catch (error) {
-      console.error('Failed to check email quality:', error);
-    }
-  };
-
-  const loadHighQualityTabs = async (emailId: string) => {
-    try {
-      // Check if this email has been processed by deep analysis
-      const metadata = await tabSummaryStorage.getEmailMetadata(emailId);
-      if (!metadata) return;
-
-      // If email was marked as high quality, load its pre-processed tabs
-      if (metadata.qualityScore >= deepAnalysisService.getConfig().qualityThreshold) {
-        console.log(`Loading pre-processed tabs for high-quality email: ${metadata.subject}`);
-        
-        // Get all saved tabs that might belong to this email
-        const savedTabs = await tabSummaryStorage.getAllTabs();
-        
-        // Filter out "saved for later" content (items without summaries or with specific "saved for later" summaries)
-        const properTabs = savedTabs.filter(tab => 
-          tab.summary && // Must have a summary
-          tab.summary !== 'Email saved for later review' && // Not email saved for later
-          tab.summary !== 'Link content saved for later review' // Not link saved for later
-        );
-        
-        // Filter tabs that were likely created around the time this email was processed
-        const emailProcessTime = metadata.processedAt;
-        const timeWindow = 60 * 60 * 1000; // 1 hour window
-        
-        const relatedTabs = properTabs.filter(tab => 
-          Math.abs(tab.lastOpened - emailProcessTime) < timeWindow
-        );
-
-        // Load the related tabs into the current session
-        const newSummaries = new Map(linkSummaries);
-        const newActiveUrls: string[] = [];
-
-        for (const tab of relatedTabs.slice(0, 5)) { // Limit to 5 tabs to avoid overwhelming
-          if (tab.summaryReady && tab.summary) {
-            const linkSummary = tabSummaryStorage.toLinkSummary(tab);
-            newSummaries.set(tab.url, linkSummary);
-            newActiveUrls.push(tab.url);
-          }
-        }
-
-        if (newActiveUrls.length > 0) {
-          setLinkSummaries(newSummaries);
-          setActiveSummaryUrls(prev => [...new Set([...prev, ...newActiveUrls])]);
-          
-          // Set first tab as current if no tab is currently active
-          if (!currentTabUrl && newActiveUrls.length > 0) {
-            setCurrentTabUrl(newActiveUrls[0]);
-          }
-          
-          console.log(`Auto-loaded ${newActiveUrls.length} tabs for high-quality email`);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load high-quality tabs:', error);
-      // Don't throw the error, just log it to prevent blocking the email modal
-      if (error instanceof Error && error.message.includes('VersionError')) {
-        console.warn('Database version conflict detected. Please refresh the page to resolve.');
-      }
-    }
-  };
-
   if (!isOpen || !currentEmail) return null;
 
   const activeSummary = getActiveSummary();
@@ -2064,17 +1969,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               );
             })()}
             {currentEmail.subject}
-            {isHighQualityEmail && (
-              <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full" title={emailQualityResult ? `Quality: ${emailQualityResult.qualityScore}% | Diversity: ${emailQualityResult.diversityScore}%` : 'High Quality Email'}>
-                <Zap size={12} />
-                <span>High Quality</span>
-                {emailQualityResult && (
-                  <span className="ml-1 text-xs opacity-75">
-                    {emailQualityResult.qualityScore}%
-                  </span>
-                )}
-              </div>
-            )}
           </h2>
           <div className="flex items-center gap-2">
             {/* Keyboard shortcuts info */}
@@ -2166,16 +2060,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             >
               <ChevronRight size={20} />
             </button>
-            
-            {/* Deep Analysis Button */}
-            <button
-              onClick={toggleDeepAnalysisSidebar}
-              className={`p-2 rounded hover:bg-gray-100 ${showDeepAnalysisSidebar ? 'bg-purple-100 text-purple-700' : ''}`}
-              title="Deep Analysis"
-            >
-              <Zap size={20} />
-            </button>
-            
+
             <button
               onClick={() => handleNavigationWithConfirm('close')}
               className="p-2 rounded hover:bg-gray-100"
@@ -2849,14 +2734,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         </div>
       )}
       </div>
-      
-      {/* Deep Analysis Sidebar */}
-      <DeepAnalysisSidebar
-        isVisible={showDeepAnalysisSidebar}
-        onToggle={toggleDeepAnalysisSidebar}
-        className="fixed top-0 right-0 z-50"
-      />
-      
+
       {/* Flash Cards Modal */}
       <FlashCardsModal
         isOpen={isFlashCardsModalOpen}

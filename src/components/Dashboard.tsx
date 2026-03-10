@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Zap, Star, Link, Award, Bookmark, Trophy, Calendar, X } from 'lucide-react';
-import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration, QualityAssessmentResult } from '../types';
+import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, Trophy, Calendar, X } from 'lucide-react';
+import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
 import { emailLogService } from '../utils/emailLogService';
 import { flashCardService } from '../services/flashCardService';
-import { deepAnalysisCache } from '../services/deepAnalysisCache';
 import { emailScoringService } from '../services/emailScoringService';
 import { environmentConfigService } from '../services/environmentConfigService';
 import { emailCacheService } from '../services/emailCacheService';
@@ -16,9 +15,10 @@ import { FlashCardsModal } from './FlashCardsModal';
 import { FlashCardImportExport } from './FlashCardImportExport';
 import { VoiceCommands } from './VoiceCommands';
 import { ConfigurationModal } from './ConfigurationModal';
-import { DeepAnalysisSidebar } from './DeepAnalysisSidebar';
 import { SavedForLaterModal } from './SavedForLaterModal';
 import { RulesDebugFloater } from './RulesDebugFloater';
+import { gempestService } from '../services/gempestService';
+import { Sparkles, StopCircle } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const [emails, setEmails] = useState<ParsedEmail[]>([]);
@@ -42,12 +42,13 @@ export const Dashboard: React.FC = () => {
   const [showFlashCardGameModal, setShowFlashCardGameModal] = useState(false);
   const [showImportExportModal, setShowImportExportModal] = useState(false);
   const [showConfigurationModal, setShowConfigurationModal] = useState(false);
-  const [showDeepAnalysisSidebar, setShowDeepAnalysisSidebar] = useState(false);
   const [showSavedForLaterModal, setShowSavedForLaterModal] = useState(false);
   const [showRulesDebugFloater, setShowRulesDebugFloater] = useState(true);
   const [currentEmailIndex, setCurrentEmailIndex] = useState(0);
   const [allFlashCards, setAllFlashCards] = useState<FlashCard[]>([]);
   const [isLoadingFlashCards, setIsLoadingFlashCards] = useState(false);
+  const [isGempestRunning, setIsGempestRunning] = useState(false);
+  const [gempestStatus, setGempestStatus] = useState("");
   const [isOllamaWarningDismissed, setIsOllamaWarningDismissed] = useState(() => ollamaWarningService.isWarningDismissed());
 
   useEffect(() => {
@@ -418,54 +419,6 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Helper function to get quality assessment for an email
-  const getEmailQuality = (emailId: string): QualityAssessmentResult | null => {
-    return deepAnalysisCache.getResult(emailId);
-  };
-
-  // Helper function to render quality badge
-  const renderQualityBadge = (emailId: string) => {
-    const quality = getEmailQuality(emailId);
-    
-    if (!quality) {
-      return null;
-    }
-
-    const { isHighQuality, qualityScore, hasLinks, contentType } = quality;
-
-    return (
-      <div className="flex items-center gap-2 ml-2">
-        {isHighQuality && (
-          <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-            <Star size={12} />
-            High Quality
-          </div>
-        )}
-        
-        <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-          <Award size={12} />
-          {qualityScore}%
-        </div>
-        
-        {hasLinks && (
-          <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
-            <Link size={12} />
-            Links
-          </div>
-        )}
-        
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          contentType === 'full-email' ? 'bg-green-100 text-green-700' :
-          contentType === 'links-only' ? 'bg-orange-100 text-orange-700' :
-          'bg-gray-100 text-gray-700'
-        }`}>
-          {contentType === 'full-email' ? 'Full' : 
-           contentType === 'links-only' ? 'Links' : 'Mixed'}
-        </span>
-      </div>
-    );
-  };
-
   // Helper function to render sender rank badge
   const renderSenderRank = (senderEmail: string) => {
     const scoringConfig = environmentConfigService.getScoringConfig();
@@ -598,9 +551,33 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-1">Quick Actions</h2>
-              <p className="text-gray-600 text-sm">Available features and tools</p>
+              {gempestStatus ? (
+                <p className="text-sm font-medium text-emerald-600 animate-pulse">{gempestStatus}</p>
+              ) : (
+                <p className="text-gray-600 text-sm">Available features and tools</p>
+              )}
             </div>
             <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  if (isGempestRunning) {
+                    gempestService.stop();
+                    setIsGempestRunning(false);
+                  } else {
+                    setIsGempestRunning(true);
+                    setGempestStatus("Starting Gempest...");
+                    gempestService.onProgress = setGempestStatus;
+                    gempestService.start(emails).then(() => {
+                      setIsGempestRunning(false);
+                      setGempestStatus("");
+                    });
+                  }
+                }}
+                className={`flex items-center gap-2 px-5 py-2.5 ${isGempestRunning ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-lg shadow-md transition-all duration-200`}
+              >
+                {isGempestRunning ? <StopCircle size={18} /> : <Sparkles size={18} />}
+                {isGempestRunning ? 'Stop Gempest' : 'Run Gempest'}
+              </button>
               <button
                 onClick={() => setShowImportExportModal(true)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 shadow-md transition-all duration-200"
@@ -671,15 +648,6 @@ export const Dashboard: React.FC = () => {
                   >
                     <Bookmark size={16} />
                     Saved for later
-                  </button>
-                  <button
-                    onClick={() => setShowDeepAnalysisSidebar(!showDeepAnalysisSidebar)}
-                    disabled={ollamaStatus === 'unavailable'}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Start Deep Analysis with sender selection - choose which senders to analyze and specify content types"
-                  >
-                    <Zap size={16} />
-                    Deep Analysis
                   </button>
                   <button
                     onClick={refreshEmails}
@@ -789,9 +757,6 @@ export const Dashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Quality Assessment Badges */}
-                      {renderQualityBadge(email.id)}
-                      
                       {/* Sender Rank Badge */}
                       {renderSenderRank(email.from)}
                     </div>
@@ -911,14 +876,7 @@ export const Dashboard: React.FC = () => {
         />
         </div>
       </div>
-      
-      {/* Deep Analysis Sidebar - Positioned as a lateral sidebar */}
-      <DeepAnalysisSidebar
-        isVisible={showDeepAnalysisSidebar}
-        onToggle={() => setShowDeepAnalysisSidebar(!showDeepAnalysisSidebar)}
-        className="fixed right-0 top-0 h-full z-40"
-      />
-      
+
       {/* Rules Debug Floater - Monitor rule execution in real-time */}
       {showRulesDebugFloater && (
         <RulesDebugFloater onClose={() => setShowRulesDebugFloater(false)} />

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Save, RotateCcw, Download, Upload, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { environmentConfigService } from '../services/environmentConfigService';
 import { emailCacheService } from '../services/emailCacheService';
-import { deepAnalysisCache } from '../services/deepAnalysisCache';
 import type { EnvironmentConfig } from '../services/environmentConfigService';
 
 interface EnvironmentConfigProps {
@@ -93,8 +92,7 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
       // Clear email cache if Gmail query has changed
       if (gmailQueryChanged) {
         emailCacheService.forceRefresh();
-        deepAnalysisCache.clearCache();
-        console.log('Gmail query changed - email and analysis caches cleared');
+        console.log('Gmail query changed - email cache cleared');
       }
       
       // Refresh the page to apply new configuration

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Settings, Palette, MessageSquare, HardDrive, Key, Activity, Filter, Trophy, Zap } from 'lucide-react';
+import { X, Settings, Palette, MessageSquare, HardDrive, Key, Activity, Filter, Trophy, Zap, Sparkles } from 'lucide-react';
+import { GempestConfigPanel } from "./GempestConfigPanel";
 import { EnvironmentConfigPanel } from './EnvironmentConfigPanel';
 import { ModelConfigPanel } from './ModelConfigPanel';
 import { PromptConfigPanel } from './PromptConfigPanel';
@@ -17,7 +18,7 @@ interface ConfigurationModalProps {
   initialTab?: string;
 }
 
-type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'performance' | 'url-filters' | 'storage' | 'scoring' | 'rules';
+type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'performance' | 'url-filters' | 'storage' | 'scoring' | 'rules' | 'gempest';
 
 interface Tab {
   id: TabId;
@@ -136,6 +137,15 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             console.log('Rules configuration updated:', config);
           }}
         />
+      )
+    }
+    ,
+    {
+      id: "gempest",
+      label: "Gempest",
+      icon: Sparkles,
+      component: (
+        <GempestConfigPanel />
       )
     }
   ];

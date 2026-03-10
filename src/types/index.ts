@@ -133,7 +133,7 @@ export interface PerformanceConfiguration {
 
 export interface QueuedRequest {
   id: string;
-  type: 'summary' | 'flashcard' | 'improved-summary' | 'quality';
+  type: 'summary' | 'flashcard' | 'improved-summary';
   content: string;
   resolve: (result: string | any) => void;
   reject: (error: Error) => void;
@@ -144,69 +144,6 @@ export interface QueuedRequest {
 export interface PromptConfiguration {
   summaryPrompt: string;
   flashCardPrompt: string;
-  qualityAssessmentPrompt: string;
-}
-
-export interface DeepAnalysisProgress {
-  totalEmails: number;
-  processedEmails: number;
-  currentPage: number;
-  qualityResults: QualityAssessmentResult[];
-  isRunning: boolean;
-  currentlyProcessingEmailId?: string;
-  currentlyProcessingEmailSubject?: string;
-  startTime?: number;
-  endTime?: number;
-  error?: string;
-}
-
-export interface QualityAssessmentResult {
-  emailId: string;
-  subject: string;
-  from: string;
-  hasLinks: boolean;
-  contentType: 'full-email' | 'links-only' | 'mixed';
-  qualityScore: number;
-  diversityScore: number;
-  reasoning: string;
-  isHighQuality: boolean;
-  processedAt: number;
-}
-
-export interface DeepAnalysisConfig {
-  enabled: boolean;
-  qualityThreshold: number;
-  diversityThreshold: number;
-  maxPagesToProcess: number;
-  autoCreateTabs: boolean;
-}
-
-// New types for sender selection feature
-export interface EmailSender {
-  email: string;
-  name?: string;
-  emailCount: number;
-  lastEmailDate: number;
-  sampleSubjects: string[];
-}
-
-export interface SenderSelectionConfig {
-  email: string;
-  name?: string;
-  include: boolean;
-  contentType: 'full-text' | 'links-only' | 'mixed';
-  emailCount: number;
-  lastEmailDate: number;
-  sampleSubjects: string[];
-}
-
-export interface SenderSelectionModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: (senderConfig: SenderSelectionConfig[]) => void;
-  senders: EmailSender[];
-  isLoading?: boolean;
-  title?: string;
 }
 
 // URL Filter types
