@@ -110,7 +110,6 @@ VITE_GOOGLE_REDIRECT_URI=http://localhost:5173/auth-callback.html
 1. **Start the Application**: `npm run dev`
 2. **Check Ollama Status**: Ensure green "Ollama service ready" indicator
 3. **Connect Gmail**: Click "Connect Gmail" (or use demo mode)
-4. **Start Traversal**: Click "Start Traversal" to begin email navigation
 
 ### Navigation Options
 
@@ -120,8 +119,8 @@ VITE_GOOGLE_REDIRECT_URI=http://localhost:5173/auth-callback.html
 
 #### Voice Commands 🎤
 Click the microphone button and say:
-- **English**: "next", "previous", "start traversal", "stop", "show log", "refresh"
-- **Italian**: "successivo", "precedente", "inizia navigazione", "ferma", "mostra storia", "aggiorna"
+- **English**: "next", "previous", "show log", "refresh"
+- **Italian**: "successivo", "precedente", "mostra storia", "aggiorna"
 
 ### AI Features
 

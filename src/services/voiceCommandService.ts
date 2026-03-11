@@ -1,4 +1,4 @@
-// Voice Command Service for Gmail Email Traversal
+// Voice Command Service for Gmail Email
 // Provides speech recognition and voice commands for hands-free navigation
 
 // TypeScript interfaces for Speech Recognition API
@@ -61,8 +61,6 @@ export interface VoiceCommand {
 export interface VoiceCommandCallbacks {
   onNext: () => void;
   onPrevious: () => void;
-  onStartTraversal: () => void;
-  onStopTraversal: () => void;
   onShowLog: () => void;
   onShowFlashCards: () => void;
   onClose: () => void;
@@ -85,18 +83,6 @@ class VoiceCommandService {
       action: 'previous', 
       description: 'Navigate to previous email',
       examples: 'previous, precedente, indietro, prima'
-    },
-    {
-      pattern: /\b(start|inizia|comincia|apri)\s+(traversal|navigazione|email)\b/i,
-      action: 'startTraversal',
-      description: 'Start email traversal',
-      examples: 'start traversal, inizia navigazione, comincia email, apri email'
-    },
-    {
-      pattern: /\b(stop|ferma|chiudi|esci)\s*(traversal|navigazione|email)?\b/i,
-      action: 'stopTraversal',
-      description: 'Stop email traversal',
-      examples: 'stop traversal, ferma navigazione, chiudi email, esci'
     },
     {
       pattern: /\b(show|mostra|visualizza|apri)\s+(log|storia|cronologia|history)\b/i,
@@ -255,12 +241,6 @@ class VoiceCommandService {
         break;
       case 'previous':
         this.callbacks.onPrevious();
-        break;
-      case 'startTraversal':
-        this.callbacks.onStartTraversal();
-        break;
-      case 'stopTraversal':
-        this.callbacks.onStopTraversal();
         break;
       case 'showLog':
         this.callbacks.onShowLog();

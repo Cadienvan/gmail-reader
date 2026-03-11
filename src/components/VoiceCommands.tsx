@@ -5,8 +5,6 @@ import { voiceCommandService, type VoiceCommand } from '../services/voiceCommand
 interface VoiceCommandsProps {
   onNext: () => void;
   onPrevious: () => void;
-  onStartTraversal: () => void;
-  onStopTraversal: () => void;
   onShowLog: () => void;
   onShowFlashCards: () => void;
   onClose: () => void;
@@ -16,8 +14,6 @@ interface VoiceCommandsProps {
 export const VoiceCommands: React.FC<VoiceCommandsProps> = ({
   onNext,
   onPrevious,
-  onStartTraversal,
-  onStopTraversal,
   onShowLog,
   onShowFlashCards,
   onClose,
@@ -34,8 +30,6 @@ export const VoiceCommands: React.FC<VoiceCommandsProps> = ({
     voiceCommandService.setCallbacks({
       onNext,
       onPrevious,
-      onStartTraversal,
-      onStopTraversal,
       onShowLog,
       onShowFlashCards,
       onClose,
@@ -46,7 +40,7 @@ export const VoiceCommands: React.FC<VoiceCommandsProps> = ({
     return () => {
       voiceCommandService.stopListening();
     };
-  }, [onNext, onPrevious, onStartTraversal, onStopTraversal, onShowLog, onShowFlashCards, onClose, onRefresh]);
+  }, [onNext, onPrevious, onShowLog, onShowFlashCards, onClose, onRefresh]);
 
   const toggleVoiceCommands = () => {
     const newState = voiceCommandService.toggleListening();
