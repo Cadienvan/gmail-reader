@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Award, Users, TrendingUp, Calendar, Mail, ExternalLink, Download, Trash2, BarChart3 } from 'lucide-react';
+import { Trophy, Medal, Award, Users, TrendingUp, Calendar, Mail, ExternalLink, Download, Trash2, BarChart3, Settings } from 'lucide-react';
 import { emailScoringService } from '../services/emailScoringService';
+import { environmentConfigService } from '../services/environmentConfigService';
+import type { EnvironmentConfig } from '../services/environmentConfigService';
 import type { SenderLeaderboard, SenderScore } from '../types';
 
 interface EmailScoringDashboardProps {
@@ -9,6 +11,8 @@ interface EmailScoringDashboardProps {
 
 export const EmailScoringDashboard: React.FC<EmailScoringDashboardProps> = ({ className = '' }) => {
   const [leaderboard, setLeaderboard] = useState<SenderLeaderboard>({ allTime: [], last90Days: [] });
+  const [envConfig, setEnvConfig] = useState<EnvironmentConfig>(environmentConfigService.getConfiguration());
+  const [showSettings, setShowSettings] = useState(false);
   const [statistics, setStatistics] = useState({
     totalActions: 0,
     totalSenders: 0,
@@ -80,6 +84,12 @@ export const EmailScoringDashboard: React.FC<EmailScoringDashboardProps> = ({ cl
     }
   };
 
+  const handleEnvConfigChange = (field: keyof EnvironmentConfig, value: string | boolean | number) => {
+    const newConfig = { ...envConfig, [field]: value };
+    setEnvConfig(newConfig);
+    environmentConfigService.setConfiguration(newConfig);
+  };
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString();
   };
@@ -126,6 +136,13 @@ export const EmailScoringDashboard: React.FC<EmailScoringDashboardProps> = ({ cl
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
+            >
+              <Settings size={14} />
+              Settings
+            </button>
+            <button
               onClick={() => setShowExportImport(!showExportImport)}
               className="flex items-center gap-1 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm"
             >
@@ -140,6 +157,73 @@ export const EmailScoringDashboard: React.FC<EmailScoringDashboardProps> = ({ cl
             </button>
           </div>
         </div>
+
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+            <h4 className="font-medium text-gray-900 mb-3">Email Quality Benchmark Settings</h4>
+            
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="scoringEnabled"
+                  checked={envConfig.scoringEnabled}
+                  onChange={(e) => handleEnvConfigChange('scoringEnabled', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="scoringEnabled" className="text-sm text-gray-700 cursor-pointer">
+                  Enable email quality scoring
+                </label>
+              </div>
+
+              {envConfig.scoringEnabled && (
+                <div className="ml-6 space-y-3 p-3 bg-white rounded-lg border border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Summary Points
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={envConfig.emailSummaryPoints}
+                        onChange={(e) => handleEnvConfigChange('emailSummaryPoints', parseInt(e.target.value) || 10)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Points awarded when clicking "Summarize Email"
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Link Open Points
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={envConfig.linkOpenPoints}
+                        onChange={(e) => handleEnvConfigChange('linkOpenPoints', parseInt(e.target.value) || 3)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Points awarded when opening a link for AI summary
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded mt-3">
+                    <strong>How it works:</strong> Senders get points when you interact with their content. 
+                    Higher scores indicate more valuable content.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Export/Import Panel */}
         {showExportImport && (

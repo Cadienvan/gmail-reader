@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Filter, AlertCircle, Trophy, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Filter, AlertCircle, Trophy, Calendar, StopCircle } from 'lucide-react';
 import type { ParsedEmail, ExtractedLink, LinkSummary, FlashCard, ModelConfiguration } from '../types';
 import { linkService } from '../services/linkService';
 import { ollamaService } from '../services/ollamaService';
@@ -28,6 +28,9 @@ interface EmailModalProps {
   onEmailMarkedAsRead?: (emailId: string) => void;
   onEmailDeleted?: (emailId: string) => void;
   gempestStatus?: string;
+  gempestSummaries?: Map<string, LinkSummary>;
+  isGempestRunning?: boolean;
+  onStopGempest?: () => void;
 }
 
 export const EmailModal: React.FC<EmailModalProps> = ({
@@ -39,7 +42,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   onPrev,
   onEmailMarkedAsRead,
   onEmailDeleted,
-  gempestStatus
+  gempestStatus,
+  gempestSummaries,
+  isGempestRunning,
+  onStopGempest
 }) => {
   const [extractedLinks, setExtractedLinks] = useState<ExtractedLink[]>([]);
   const [linkSummaries, setLinkSummaries] = useState<Map<string, LinkSummary>>(new Map());
@@ -49,9 +55,60 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'close' | 'next' | 'prev' | null>(null);
-  const [activeSummaryUrls, setActiveSummaryUrls] = useState<string[]>([]);
-  const [currentTabUrl, setCurrentTabUrl] = useState<string | null>(null);
+  const [activeSummaryUrls, setActiveSummaryUrls] = useState<string[]>(() => {
+    const saved = localStorage.getItem('emailModal_activeTabUrls');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [currentTabUrl, setCurrentTabUrl] = useState<string | null>(() => {
+    return localStorage.getItem('emailModal_currentTabUrl');
+  });
   const [currentModel, setCurrentModel] = useState<ModelConfiguration>(() => ollamaService.getModelConfiguration());
+
+  // Save active tabs and current tab to localStorage
+  useEffect(() => {
+    localStorage.setItem('emailModal_activeTabUrls', JSON.stringify(activeSummaryUrls));
+    if (activeSummaryUrls.length === 0) {
+      localStorage.removeItem('emailModal_currentTabUrl');
+    }
+  }, [activeSummaryUrls]);
+
+  useEffect(() => {
+    if (currentTabUrl) {
+      localStorage.setItem('emailModal_currentTabUrl', currentTabUrl);
+    } else {
+      localStorage.removeItem('emailModal_currentTabUrl');
+    }
+  }, [currentTabUrl]);
+
+  // Load existing tab data from IDB on mount
+  useEffect(() => {
+    const loadTabs = async () => {
+      if (activeSummaryUrls.length === 0) return;
+      
+      const newSummaries = new Map<string, LinkSummary>();
+      for (const url of activeSummaryUrls) {
+        const tab = await tabSummaryStorage.getTab(url);
+        if (tab) {
+          newSummaries.set(url, tabSummaryStorage.toLinkSummary(tab));
+        }
+      }
+      
+      if (newSummaries.size > 0) {
+        setLinkSummaries(prev => {
+          const next = new Map(prev);
+          newSummaries.forEach((val, key) => next.set(key, val));
+          return next;
+        });
+      }
+    };
+    
+    // Track if we already loaded to avoid rewriting existing populated state
+    const alreadyHasData = Array.from(linkSummaries.values()).length > 0;
+    if (!alreadyHasData) {
+      loadTabs();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   // Email deletion state
   const [isDeletingEmail, setIsDeletingEmail] = useState(false);
@@ -72,6 +129,23 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   
   // Content display state
   const [showHtmlContent, setShowHtmlContent] = useState(false);
+
+  // Track which gempest summaries we've already opened as tabs
+  const openedGempestSummaries = useRef<Set<string>>(new Set());
+
+  // When Gempest produces a new summary, open it as a tab
+  useEffect(() => {
+    if (!gempestSummaries) return;
+    gempestSummaries.forEach((summary, url) => {
+      if (openedGempestSummaries.current.has(url)) return;
+      openedGempestSummaries.current.add(url);
+      setLinkSummaries(prev => new Map(prev).set(url, summary));
+      setActiveSummaryUrls(prev => {
+        if (prev.includes(url)) return prev;
+        return [...prev, url];
+      });
+    });
+  }, [gempestSummaries]);
   
   // Sidebar visibility state with localStorage persistence
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(() => {
@@ -1545,6 +1619,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   const activeSummary = getActiveSummary();
 
+  const getTabUrl = () => {
+    try {
+    return activeSummary.finalUrl ? new URL(activeSummary.finalUrl).hostname : new URL(activeSummary.url).hostname;
+    } catch (error) {
+      return activeSummary.url || 'Unknown';
+    }
+  }
+
   return (
     <>      <style>
         {`
@@ -2074,9 +2156,20 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
         {/* Gempest Status Banner */}
         {gempestStatus && (
-          <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-200 flex items-center gap-2">
-            <span className="text-emerald-600 animate-pulse">✨</span>
-            <span className="text-sm font-medium text-emerald-700">{gempestStatus}</span>
+          <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-600 animate-pulse">✨</span>
+              <span className="text-sm font-medium text-emerald-700">{gempestStatus}</span>
+            </div>
+            {isGempestRunning && onStopGempest && (
+              <button
+                onClick={onStopGempest}
+                className="flex items-center gap-1 px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <StopCircle size={14} />
+                Stop Gempest
+              </button>
+            )}
           </div>
         )}
 
@@ -2507,7 +2600,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       <div className="text-sm text-gray-700 font-medium">
                         {activeSummary.url.startsWith('email:') ? 'Email Summary' :
                          activeSummary.url.startsWith('text://') ? 'Pasted Text Summary' :
-                         (activeSummary.finalUrl ? new URL(activeSummary.finalUrl).hostname : new URL(activeSummary.url).hostname)}
+                         (getTabUrl() || 'Summary')}
                       </div>
                     ) : null}
                   </div>
@@ -2539,7 +2632,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                           </>
                         ) : (
                           <>
-                            <span className="truncate">{activeSummary.finalUrl ? new URL(activeSummary.finalUrl).hostname : new URL(activeSummary.url).hostname}</span>
+                            <span className="truncate">{getTabUrl() || 'Summary'}</span>
                             <button
                               onClick={() => window.open(activeSummary.finalUrl || activeSummary.url, '_blank')}
                               className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex-shrink-0"

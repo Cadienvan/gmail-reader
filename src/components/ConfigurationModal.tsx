@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
-import { X, Settings, Palette, MessageSquare, HardDrive, Key, Activity, Filter, Trophy, Zap, Sparkles } from 'lucide-react';
+import { X, Key, Cpu, Settings, Sparkles } from 'lucide-react';
 import { GempestConfigPanel } from "./GempestConfigPanel";
-import { EnvironmentConfigPanel } from './EnvironmentConfigPanel';
-import { ModelConfigPanel } from './ModelConfigPanel';
-import { PromptConfigPanel } from './PromptConfigPanel';
-import { StorageConfigPanel } from './StorageConfigPanel';
-import { PerformanceConfigPanel } from './PerformanceConfigPanel';
-import { UrlFilterConfigPanel } from './UrlFilterConfigPanel';
-import { EmailScoringDashboard } from './EmailScoringDashboard';
-import { OAuthSetupGuide } from './OAuthSetupGuide';
-import { RulesConfigPanel } from './RulesConfigPanel';
+import { OAuthPanel } from './OAuthPanel';
+import { LocalAIConfigPanel } from './LocalAIConfigPanel';
+import { PreferencesPanel } from './PreferencesPanel';
 import { environmentConfigService } from '../services/environmentConfigService';
 
 interface ConfigurationModalProps {
@@ -18,7 +12,7 @@ interface ConfigurationModalProps {
   initialTab?: string;
 }
 
-type TabId = 'oauth-setup' | 'environment' | 'models' | 'prompts' | 'performance' | 'url-filters' | 'storage' | 'scoring' | 'rules' | 'gempest';
+type TabId = 'oauth' | 'local-ai' | 'preferences' | 'gempest';
 
 interface Tab {
   id: TabId;
@@ -38,108 +32,30 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     
     // If OAuth is not configured, start with OAuth setup
     const isConfigured = environmentConfigService.isConfigurationComplete();
-    return isConfigured ? 'environment' : 'oauth-setup';
+    return isConfigured ? 'oauth' : 'oauth';
   };
 
   const [activeTab, setActiveTab] = useState<TabId>(getDefaultTab);
 
   const tabs: Tab[] = [
     {
-      id: 'oauth-setup',
-      label: 'OAuth Setup',
+      id: 'oauth',
+      label: 'OAuth',
       icon: Key,
-      component: <OAuthSetupGuide />
+      component: <OAuthPanel />
     },
     {
-      id: 'environment',
-      label: 'Environment',
+      id: 'local-ai',
+      label: 'Local AI',
+      icon: Cpu,
+      component: <LocalAIConfigPanel />
+    },
+    {
+      id: 'preferences',
+      label: 'Preferences',
       icon: Settings,
-      component: (
-        <EnvironmentConfigPanel
-          onConfigChange={(config) => {
-            console.log('Environment configuration updated:', config);
-          }}
-          onSwitchToOAuthSetup={() => setActiveTab('oauth-setup')}
-        />
-      )
+      component: <PreferencesPanel />
     },
-    {
-      id: 'models',
-      label: 'AI Models',
-      icon: Palette,
-      component: (
-        <ModelConfigPanel
-          onConfigChange={(config) => {
-            console.log('Model configuration updated:', config);
-          }}
-        />
-      )
-    },
-    {
-      id: 'prompts',
-      label: 'AI Prompts',
-      icon: MessageSquare,
-      component: (
-        <PromptConfigPanel
-          onConfigChange={(config) => {
-            console.log('Prompt configuration updated:', config);
-          }}
-        />
-      )
-    },
-    {
-      id: 'performance',
-      label: 'Performance',
-      icon: Activity,
-      component: (
-        <PerformanceConfigPanel
-          onConfigChange={(config) => {
-            console.log('Performance configuration updated:', config);
-          }}
-        />
-      )
-    },
-    {
-      id: 'url-filters',
-      label: 'URL Filters',
-      icon: Filter,
-      component: (
-        <UrlFilterConfigPanel
-          onConfigChange={(patterns) => {
-            console.log('URL filter configuration updated:', patterns);
-          }}
-        />
-      )
-    },
-    {
-      id: 'storage',
-      label: 'Storage',
-      icon: HardDrive,
-      component: (
-        <StorageConfigPanel />
-      )
-    },
-    {
-      id: 'scoring',
-      label: 'Email Scoring',
-      icon: Trophy,
-      component: (
-        <EmailScoringDashboard />
-      )
-    },
-    {
-      id: 'rules',
-      label: 'Rules',
-      icon: Zap,
-      component: (
-        <RulesConfigPanel
-          onConfigChange={(config) => {
-            console.log('Rules configuration updated:', config);
-          }}
-        />
-      )
-    }
-    ,
     {
       id: "gempest",
       label: "Gempest",

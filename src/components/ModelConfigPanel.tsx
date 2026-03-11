@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { ollamaService } from '../services/ollamaService';
+import { environmentConfigService } from '../services/environmentConfigService';
+import type { EnvironmentConfig } from '../services/environmentConfigService';
 import type { ModelConfiguration, OllamaModel } from '../types';
 
 interface ModelConfigPanelProps {
@@ -13,6 +15,7 @@ export const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
   className = ''
 }) => {
   const [config, setConfig] = useState<ModelConfiguration>(ollamaService.getModelConfiguration());
+  const [envConfig, setEnvConfig] = useState<EnvironmentConfig>(environmentConfigService.getConfiguration());
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -38,6 +41,12 @@ export const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
     setConfig(newConfig);
     ollamaService.setModelConfiguration(newConfig);
     onConfigChange?.(newConfig);
+  };
+
+  const handleEnvConfigChange = (value: string) => {
+    const newEnvConfig = { ...envConfig, ollamaBaseUrl: value };
+    setEnvConfig(newEnvConfig);
+    environmentConfigService.setConfiguration(newEnvConfig);
   };
 
   const handleRefresh = async () => {
@@ -79,6 +88,23 @@ export const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
             <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
             Refresh
           </button>
+        </div>
+
+        {/* AI Configuration */}
+        <div className="space-y-3 pb-4 border-b border-gray-200">
+          <h4 className="font-medium text-gray-700">AI Configuration</h4>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ollama Base URL
+            </label>
+            <input
+              type="text"
+              value={envConfig.ollamaBaseUrl}
+              onChange={(e) => handleEnvConfigChange(e.target.value)}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+              placeholder="http://localhost:11434"
+            />
+          </div>
         </div>
 
         {/* Model Selection */}

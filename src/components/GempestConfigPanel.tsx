@@ -1,12 +1,33 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2 } from 'lucide-react';
-import { gempestService, type GempestConfig, GEMINI_MODELS, type GeminiModel } from '../services/gempestService';
+import { gempestService, fetchGeminiModels, type GempestConfig, type GeminiModel } from '../services/gempestService';
 
 export const GempestConfigPanel: React.FC = () => {
   const [config, setConfig] = useState<GempestConfig>(gempestService.getConfig());
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [geminiModels, setGeminiModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+
+  const loadModels = useCallback(async (apiKey: string) => {
+    if (!apiKey) return;
+    setLoadingModels(true);
+    try {
+      const models = await fetchGeminiModels(apiKey);
+      setGeminiModels(models);
+    } catch (e) {
+      console.error('Failed to load Gemini models', e);
+    } finally {
+      setLoadingModels(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadModels(config.apiKey);
+  // Only run on mount with the initial key
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
@@ -27,6 +48,7 @@ export const GempestConfigPanel: React.FC = () => {
     try {
       const ok = await gempestService.testGemini(config.apiKey);
       setTestStatus(ok ? 'success' : 'error');
+      if (ok) loadModels(config.apiKey);
     } catch (e) {
       setTestStatus('error');
     }
@@ -55,6 +77,7 @@ export const GempestConfigPanel: React.FC = () => {
                   setConfig(prev => ({ ...prev, apiKey: e.target.value }));
                   setTestStatus('idle');
                 }}
+                onBlur={(e) => loadModels(e.target.value)}
                 placeholder="AIzaSy..."
                 className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />
@@ -92,18 +115,39 @@ export const GempestConfigPanel: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Gemini Model
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              Model Selection (per task)
+              {loadingModels && <Loader2 size={14} className="animate-spin text-gray-400" />}
             </label>
-            <select
-              value={config.model || 'gemini-2.5-flash'}
-              onChange={(e) => setConfig(prev => ({ ...prev, model: e.target.value as GeminiModel }))}
-              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              {GEMINI_MODELS.map(m => (
-                <option key={m} value={m}>{m}</option>
+            {geminiModels.length === 0 && !loadingModels && (
+              <p className="text-xs text-gray-400 mb-2">
+                {config.apiKey ? 'Could not load models. Check your API key.' : 'Enter your API key above to load available models.'}
+              </p>
+            )}
+            <div className="space-y-3">
+              {([
+                { label: 'Classification (newsletter detection)', field: 'classificationModel' },
+                { label: 'Email Summary', field: 'emailSummaryModel' },
+                { label: 'Link Summary', field: 'linkSummaryModel' },
+              ] as { label: string; field: keyof GempestConfig }[]).map(({ label, field }) => (
+                <div key={field}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                  <select
+                    value={(config[field] as GeminiModel) || ''}
+                    onChange={(e) => setConfig(prev => ({ ...prev, [field]: e.target.value as GeminiModel }))}
+                    disabled={geminiModels.length === 0}
+                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    {config[field] && !geminiModels.includes(config[field] as string) && (
+                      <option value={config[field] as string}>{config[field] as string}</option>
+                    )}
+                    {geminiModels.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
               ))}
-            </select>
+            </div>
           </div>
 
           <div>
@@ -120,6 +164,21 @@ export const GempestConfigPanel: React.FC = () => {
               <option value="delete">Delete Automatically</option>
             </select>
             <p className="mt-1 text-sm text-gray-500">What to do with the original email after generating summaries.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Delay between emails (seconds)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={config.delayBetweenEmails ?? 0}
+              onChange={(e) => setConfig(prev => ({ ...prev, delayBetweenEmails: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
+              className="w-32 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+            <p className="mt-1 text-sm text-gray-500">Add a pause between processing each email to avoid hitting API rate limits (RPM). Set to 0 for no delay.</p>
           </div>
         </div>
       </div>
@@ -158,6 +217,18 @@ export const GempestConfigPanel: React.FC = () => {
               value={config.linkSummaryPrompt}
               onChange={(e) => setConfig(prev => ({ ...prev, linkSummaryPrompt: e.target.value }))}
               rows={2}
+              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Useful Link Identification Prompt
+            </label>
+            <p className="text-xs text-gray-500 mb-1">Used to batch-filter links in newsletters before summarizing — the model returns only the URLs worth reading.</p>
+            <textarea
+              value={config.linkFilterPrompt || ''}
+              onChange={(e) => setConfig(prev => ({ ...prev, linkFilterPrompt: e.target.value }))}
+              rows={4}
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
             />
           </div>
