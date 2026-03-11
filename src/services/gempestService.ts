@@ -35,6 +35,7 @@ class GempestService {
   private isRunning: boolean = false;
   private abortController: AbortController | null = null;
   public onProgress?: (status: string) => void;
+  public onEmailIndexChange?: (index: number) => void;
 
   constructor() {
     const stored = localStorage.getItem('gempest_config');
@@ -66,28 +67,51 @@ class GempestService {
     }
   }
 
-  async runPrompt(prompt: string, text: string): Promise<string> {
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async runPrompt(prompt: string, text: string, retries = 3): Promise<string> {
     if (!this.config.apiKey) throw new Error("Gemini API Key missing");
     
     // Quick truncate if too large
     const safeText = text.slice(0, 30000); 
 
     const model = this.config.model || 'gemini-2.5-flash';
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.config.apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${prompt}\n\n${safeText}` }] }]
-      }),
-      signal: this.abortController?.signal
-    });
 
-    if (!response.ok) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.config.apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${prompt}\n\n${safeText}` }] }]
+        }),
+        signal: this.abortController?.signal
+      });
+
+      if (response.status === 503) {
+        const data = await response.json().catch(() => null);
+        const msg = data?.error?.message || 'Service temporarily unavailable';
+        if (attempt < retries) {
+          this.updateProgress(`⚠️ 503 UNAVAILABLE: ${msg} — Retrying in 10s (${attempt}/${retries})...`);
+          await this.delay(10000);
+          continue;
+        }
+        // Final attempt also 503 — stop Gempest
+        this.updateProgress(`❌ 503 UNAVAILABLE after ${retries} retries. Stopping Gempest.`);
+        this.stop();
+        throw new Error(`503 UNAVAILABLE: ${msg}`);
+      }
+
+      if (!response.ok) {
         throw new Error(`Gemini API Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
     }
 
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    throw new Error('Unexpected: exhausted retries without returning');
   }
 
   stop() {
@@ -111,10 +135,31 @@ class GempestService {
     this.abortController = new AbortController();
 
     try {
-      for (const email of emailsToProcess) {
+      for (let i = 0; i < emailsToProcess.length; i++) {
         if (!this.isRunning) break;
+        const email = emailsToProcess[i];
+
+        // Notify UI which email we're on
+        if (this.onEmailIndexChange) {
+          this.onEmailIndexChange(i);
+        }
         
-        this.updateProgress(`Checking: ${email.subject}`);
+        this.updateProgress(`[${i + 1}/${emailsToProcess.length}] Loading: ${email.subject}`);
+
+        // Load full email content from Gmail API if not already loaded
+        if (!email.body || email.body === '(Content will be loaded when opened)') {
+          try {
+            const content = await gmailService.getEmailContent(email.id);
+            email.body = content.body;
+            email.htmlBody = content.htmlBody;
+          } catch (e) {
+            console.error('Failed to load email content for', email.id, e);
+            this.updateProgress(`⚠️ Failed to load content for: ${email.subject}, skipping.`);
+            continue;
+          }
+        }
+
+        this.updateProgress(`[${i + 1}/${emailsToProcess.length}] Classifying: ${email.subject}`);
 
         // 1. Determine email type (Newsletter full / Newsletter link list / Other)
         const typeStr = await this.runPrompt(this.config.newsletterTypePrompt, email.body || email.snippet || "");
@@ -205,6 +250,10 @@ class GempestService {
 
   isCurrentlyRunning() {
       return this.isRunning;
+  }
+
+  hasApiKey(): boolean {
+      return !!this.config.apiKey;
   }
 }
 

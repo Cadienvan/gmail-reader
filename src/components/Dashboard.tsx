@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Play, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, Trophy, Calendar, X } from 'lucide-react';
+import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, Trophy, Calendar, X } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
@@ -538,23 +538,37 @@ export const Dashboard: React.FC = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => {
+                  if (!gempestService.hasApiKey()) {
+                    setShowConfigurationModal(true);
+                    return;
+                  }
                   if (isGempestRunning) {
                     gempestService.stop();
                     setIsGempestRunning(false);
                   } else {
                     setIsGempestRunning(true);
                     setGempestStatus("Starting Gempest...");
-                    gempestService.onProgress = setGempestStatus;
+                    gempestService.onProgress = (msg: string) => setGempestStatus(msg);
+                    gempestService.onEmailIndexChange = (idx: number) => setCurrentEmailIndex(idx);
+                    setCurrentEmailIndex(0);
+                    setShowEmailModal(true);
                     gempestService.start(emails).then(() => {
                       setIsGempestRunning(false);
-                      setGempestStatus("");
                     });
                   }
                 }}
-                className={`flex items-center gap-2 px-5 py-2.5 ${isGempestRunning ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-lg shadow-md transition-all duration-200`}
+                disabled={!isAuthenticated || emails.length === 0}
+                title={!gempestService.hasApiKey() ? 'Click to configure Gemini API key in Settings' : isGempestRunning ? 'Stop Gempest' : 'Run Gempest'}
+                className={`flex items-center gap-2 px-5 py-2.5 ${
+                  !gempestService.hasApiKey()
+                    ? 'bg-gray-400 hover:bg-gray-500'
+                    : isGempestRunning
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                } text-white rounded-lg shadow-md transition-all duration-200 disabled:opacity-50`}
               >
                 {isGempestRunning ? <StopCircle size={18} /> : <Sparkles size={18} />}
-                {isGempestRunning ? 'Stop Gempest' : 'Run Gempest'}
+                {!gempestService.hasApiKey() ? 'Setup Gempest' : isGempestRunning ? 'Stop Gempest' : 'Run Gempest'}
               </button>
               <button
                 onClick={() => setShowImportExportModal(true)}
@@ -648,6 +662,26 @@ export const Dashboard: React.FC = () => {
                         Refresh Emails
                       </>
                     )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (isGempestRunning) {
+                        gempestService.stop();
+                        setIsGempestRunning(false);
+                      } else {
+                        setIsGempestRunning(true);
+                        setGempestStatus("Starting Gempest...");
+                        gempestService.onProgress = setGempestStatus;
+                        gempestService.start(emails).then(() => {
+                          setIsGempestRunning(false);
+                          setGempestStatus("");
+                        });
+                      }
+                    }}
+                    className={`flex items-center gap-2 px-5 py-2.5 ${isGempestRunning ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-lg shadow-md transition-all duration-200`}
+                  >
+                    {isGempestRunning ? <StopCircle size={18} /> : <Sparkles size={18} />}
+                    {isGempestRunning ? 'Stop Gempest' : 'Run Gempest'}
                   </button>
                 </div>
               </div>
@@ -797,6 +831,7 @@ export const Dashboard: React.FC = () => {
           onPrev={handlePrevEmail}
           onEmailMarkedAsRead={handleEmailMarkedAsRead}
           onEmailDeleted={handleEmailDeleted}
+          gempestStatus={gempestStatus}
         />}
 
         <EmailLogModal

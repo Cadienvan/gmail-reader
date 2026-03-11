@@ -27,6 +27,7 @@ interface EmailModalProps {
   onPrev: () => void;
   onEmailMarkedAsRead?: (emailId: string) => void;
   onEmailDeleted?: (emailId: string) => void;
+  gempestStatus?: string;
 }
 
 export const EmailModal: React.FC<EmailModalProps> = ({
@@ -37,7 +38,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   onNext,
   onPrev,
   onEmailMarkedAsRead,
-  onEmailDeleted
+  onEmailDeleted,
+  gempestStatus
 }) => {
   const [extractedLinks, setExtractedLinks] = useState<ExtractedLink[]>([]);
   const [linkSummaries, setLinkSummaries] = useState<Map<string, LinkSummary>>(new Map());
@@ -2069,6 +2071,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Gempest Status Banner */}
+        {gempestStatus && (
+          <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-200 flex items-center gap-2">
+            <span className="text-emerald-600 animate-pulse">✨</span>
+            <span className="text-sm font-medium text-emerald-700">{gempestStatus}</span>
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
