@@ -1292,28 +1292,29 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       setIsGeneratingFlashCards(null);
     }
     
-    // Remove from IndexedDB
+    // Update state synchronously for immediate UI feedback and accurate localStorage
+    setActiveSummaryUrls(prev => {
+      const newUrls = prev.filter(url => url !== urlToRemove);
+      
+      // If we're closing the current tab, switch to another tab or set to null
+      // We pass the function to the setter so we have the most up-to-date state
+      setCurrentTabUrl(current => {
+        if (urlToRemove === current) {
+          return newUrls.length > 0 ? newUrls[0] : null;
+        }
+        return current;
+      });
+      
+      return newUrls;
+    });
+
+    // Remove from IndexedDB asynchronously 
     try {
       // Delete from IndexedDB when a tab is closed so it doesn't reappear on refresh
       await tabSummaryStorage.deleteTab(urlToRemove);
     } catch (error) {
       console.error('Failed to delete tab from storage:', error);
     }
-    
-    setActiveSummaryUrls(prev => {
-      const newUrls = prev.filter(url => url !== urlToRemove);
-      
-      // If we're closing the current tab, switch to another tab or set to null
-      if (urlToRemove === currentTabUrl) {
-        if (newUrls.length > 0) {
-          setCurrentTabUrl(newUrls[0]);
-        } else {
-          setCurrentTabUrl(null);
-        }
-      }
-      
-      return newUrls;
-    });
   };
 
   const handleTabSwitch = (url: string) => {
@@ -2581,7 +2582,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                               <AlertCircle size={14} className="flex-shrink-0 text-red-700 animate-pulse" />
                             )}
                             {isEmailTab && !summary?.error && <Mail size={12} className="flex-shrink-0" />}
-                            <span className="truncate">{domain}</span>
                             <span
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -2592,6 +2592,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                             >
                               <X size={12} />
                             </span>
+                            <span className="truncate">{domain}</span>
                           </button>
                         );
                       })
