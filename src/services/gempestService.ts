@@ -1,6 +1,7 @@
 import { gmailService } from './gmailService';
 import { linkService } from './linkService';
 import { tabSummaryStorage } from './tabSummaryStorage';
+import { memoryService } from './memoryService';
 import type { ParsedEmail, LinkSummary } from '../types';
 
 export type GeminiModel = string;
@@ -40,6 +41,8 @@ export interface GempestConfig {
   linkSummaryPrompt: string;
   postAction: 'mark_read' | 'delete' | 'none';
   delayBetweenEmails: number; // seconds
+  memoryEnabled: boolean;
+  memoryPhraseGeneratorPrompt: string;
 }
 
 const DEFAULT_CONFIG: GempestConfig = {
@@ -52,7 +55,9 @@ const DEFAULT_CONFIG: GempestConfig = {
   linkFilterPrompt: 'Determine which of the given links is a valid URL, removing all the subscribe, unsubscribe, follow, online read, sponsorized urls and just keeping the real URLs. Reply ONLY with a JSON array of the URL strings to keep, e.g. ["https://...", "https://..."].',
   linkSummaryPrompt: 'Summarize the following article content clearly and concisely:',
   postAction: 'none',
-  delayBetweenEmails: 0
+  delayBetweenEmails: 0,
+  memoryEnabled: false,
+  memoryPhraseGeneratorPrompt: 'Based on the following summary, write a single concise phrase of 5 to 30 words that represents the core concept, methodology, or topic covered. This phrase will be used to flag content the user already knows well and wants to deprioritize in future reading. Reply with only the phrase, no punctuation at the end, no quotes, no explanation.'
 };
 
 class GempestService {
@@ -259,12 +264,13 @@ class GempestService {
 
         if (isFullText) {
             this.updateProgress(`Summarizing Full Text: ${email.subject}`);
-            const summary = await this.runPrompt(this.config.emailSummaryPrompt, email.body || email.snippet || "", this.config.emailSummaryModel);
+            const memoryList = this.config.memoryEnabled ? memoryService.getFormattedList() : '';
+            const emailPrompt = this.config.emailSummaryPrompt.replace('[MEMORY_LIST]', memoryList);
+            const summary = await this.runPrompt(emailPrompt, email.body || email.snippet || "", this.config.emailSummaryModel);
             
             if (summary.trim().toUpperCase().includes('[CLOSE]')) {
               this.updateProgress(`Skipped (low value): ${email.subject}`);
             } else {
-              // Save to tabSummaryStorage
               const emailTabId = `email-${email.id}`;
               const emailTabSummary: LinkSummary = {
                 url: emailTabId,
@@ -272,6 +278,16 @@ class GempestService {
                 loading: false,
                 modelUsed: 'short'
               };
+              if (this.config.memoryEnabled) {
+                try {
+                  this.updateProgress(`Generating memory phrase for: ${email.subject}`);
+                  const phrase = await this.runPrompt(this.config.memoryPhraseGeneratorPrompt, summary, this.config.emailSummaryModel);
+                  if (phrase) emailTabSummary.pendingMemoryPhrase = phrase;
+                  console.log('[Gempest] Memory phrase generated:', phrase);
+                } catch (e) {
+                  console.warn('[Gempest] Memory phrase generation failed, continuing.', e);
+                }
+              }
               await tabSummaryStorage.saveLinkSummary(emailTabId, emailTabSummary, email.body, email.subject);
               if (this.onSummaryReady) this.onSummaryReady(emailTabId, emailTabSummary);
               this.updateProgress(`Done summarizing full text: ${email.subject}`);
@@ -307,7 +323,9 @@ class GempestService {
                     try {
                         const contentObj = await linkService.fetchLinkContent(url);
                         if (contentObj && contentObj.content) {
-                            const linkSummaryText = await this.runPrompt(this.config.linkSummaryPrompt, contentObj.content, this.config.linkSummaryModel);
+                            const memoryListLink = this.config.memoryEnabled ? memoryService.getFormattedList() : '';
+                            const linkPrompt = this.config.linkSummaryPrompt.replace('[MEMORY_LIST]', memoryListLink);
+                            const linkSummaryText = await this.runPrompt(linkPrompt, contentObj.content, this.config.linkSummaryModel);
                             if (linkSummaryText.trim().toUpperCase().includes('[CLOSE]')) {
                                 this.updateProgress(`Skipped (low value): ${label}`);
                             } else {
@@ -317,6 +335,16 @@ class GempestService {
                                     summary: linkSummaryText,
                                     loading: false
                                 };
+                                if (this.config.memoryEnabled) {
+                                  try {
+                                    this.updateProgress(`Generating memory phrase for: ${label}`);
+                                    const phrase = await this.runPrompt(this.config.memoryPhraseGeneratorPrompt, linkSummaryText, this.config.linkSummaryModel);
+                                    if (phrase) linkSummaryData.pendingMemoryPhrase = phrase;
+                                    console.log('[Gempest] Memory phrase generated:', phrase);
+                                  } catch (e) {
+                                    console.warn('[Gempest] Memory phrase generation failed, continuing.', e);
+                                  }
+                                }
                                 await tabSummaryStorage.saveLinkSummary(url, linkSummaryData, contentObj.content, label);
                                 if (this.onSummaryReady) this.onSummaryReady(url, linkSummaryData);
                             }

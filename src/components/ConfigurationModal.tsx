@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { X, Key, Cpu, Settings, Sparkles } from 'lucide-react';
+import { X, Key, Cpu, Settings, Sparkles, MoreHorizontal } from 'lucide-react';
 import { GempestConfigPanel } from "./GempestConfigPanel";
 import { OAuthPanel } from './OAuthPanel';
 import { LocalAIConfigPanel } from './LocalAIConfigPanel';
 import { PreferencesPanel } from './PreferencesPanel';
 import { environmentConfigService } from '../services/environmentConfigService';
+import { MorePanel } from './MorePanel';
 
 interface ConfigurationModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ interface ConfigurationModalProps {
   initialTab?: string;
 }
 
-type TabId = 'oauth' | 'local-ai' | 'preferences' | 'gempest';
+type TabId = 'oauth' | 'local-ai' | 'preferences' | 'gempest' | 'more';
 
 interface Tab {
   id: TabId;
@@ -63,6 +64,12 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       component: (
         <GempestConfigPanel />
       )
+    },
+    {
+      id: 'more',
+      label: 'More',
+      icon: MoreHorizontal,
+      component: <MorePanel />
     }
   ];
 

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2 } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2, Pencil, Trash2, Check, X } from 'lucide-react';
 import { gempestService, fetchGeminiModels, type GempestConfig, type GeminiModel } from '../services/gempestService';
+import { memoryService } from '../services/memoryService';
 
 export const GempestConfigPanel: React.FC = () => {
   const [config, setConfig] = useState<GempestConfig>(gempestService.getConfig());
@@ -9,6 +10,9 @@ export const GempestConfigPanel: React.FC = () => {
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [geminiModels, setGeminiModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [memoryList, setMemoryList] = useState<string[]>(() => memoryService.getMemoryList());
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState('');
 
   const loadModels = useCallback(async (apiKey: string) => {
     if (!apiKey) return;
@@ -151,6 +155,30 @@ export const GempestConfigPanel: React.FC = () => {
           </div>
 
           <div>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={!!config.memoryEnabled}
+                  onChange={(e) => setConfig(prev => ({ ...prev, memoryEnabled: e.target.checked }))}
+                />
+                <div
+                  className={`w-10 h-6 rounded-full transition-colors ${config.memoryEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}
+                />
+                <div
+                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.memoryEnabled ? 'translate-x-4' : 'translate-x-0'}`}
+                />
+              </div>
+              <span className="text-sm font-medium text-gray-700">Enable Memory Feature</span>
+            </label>
+            <p className="mt-1 text-sm text-gray-500">
+              When enabled, after each summary Gemini generates a short phrase representing what was read.
+              You can accept it to build a memory list of topics to deprioritize in future summaries.
+            </p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Action after successful processing
             </label>
@@ -208,6 +236,9 @@ export const GempestConfigPanel: React.FC = () => {
               rows={2}
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
             />
+            {config.memoryEnabled && (
+              <p className="text-xs text-indigo-600 mt-1">💡 Use <code>[MEMORY_LIST]</code> in this prompt to inject the list of topics the user already knows and wants to deprioritize.</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -219,7 +250,24 @@ export const GempestConfigPanel: React.FC = () => {
               rows={2}
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
             />
+            {config.memoryEnabled && (
+              <p className="text-xs text-indigo-600 mt-1">💡 Use <code>[MEMORY_LIST]</code> in this prompt to inject the list of topics the user already knows and wants to deprioritize.</p>
+            )}
           </div>
+          {config.memoryEnabled && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Memory Phrase Generator Prompt
+              </label>
+              <p className="text-xs text-gray-500 mb-1">Used to distill each summary into a short 5–30 word phrase representing a concept the user already knows. These phrases are sent back as context to reduce re-reading familiar topics.</p>
+              <textarea
+                value={config.memoryPhraseGeneratorPrompt || ''}
+                onChange={(e) => setConfig(prev => ({ ...prev, memoryPhraseGeneratorPrompt: e.target.value }))}
+                rows={3}
+                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Email Useful Link Identification Prompt
@@ -234,6 +282,97 @@ export const GempestConfigPanel: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {config.memoryEnabled && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <h3 className="text-lg font-medium text-gray-900 mb-1 flex items-center gap-2">
+            🧠 Memory List
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">Phrases representing topics you already know. These are sent to Gemini to deprioritize familiar content in future summaries.</p>
+
+          {memoryList.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">No memory phrases yet. Accept phrases from summaries to build your list.</p>
+          ) : (
+            <ul className="space-y-2">
+              {memoryList.map((phrase, index) => (
+                <li key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                  {editingIndex === index ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        className="flex-1 rounded border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            memoryService.updateMemoryItem(index, editingValue);
+                            setMemoryList(memoryService.getMemoryList());
+                            setEditingIndex(null);
+                          } else if (e.key === 'Escape') {
+                            setEditingIndex(null);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          memoryService.updateMemoryItem(index, editingValue);
+                          setMemoryList(memoryService.getMemoryList());
+                          setEditingIndex(null);
+                        }}
+                        className="p-1 text-green-600 hover:text-green-800"
+                        title="Save"
+                      >
+                        <Check size={16} />
+                      </button>
+                      <button
+                        onClick={() => setEditingIndex(null)}
+                        className="p-1 text-gray-400 hover:text-gray-600"
+                        title="Cancel"
+                      >
+                        <X size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm text-gray-700">{phrase}</span>
+                      <button
+                        onClick={() => { setEditingIndex(index); setEditingValue(phrase); }}
+                        className="p-1 text-gray-400 hover:text-indigo-600"
+                        title="Edit"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          memoryService.removeMemoryItem(index);
+                          setMemoryList(memoryService.getMemoryList());
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {memoryList.length > 0 && (
+            <button
+              onClick={() => {
+                memoryService.clearAll();
+                setMemoryList([]);
+              }}
+              className="mt-4 text-sm text-red-600 hover:text-red-800 underline"
+            >
+              Clear All Memory
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex justify-end">
         <button

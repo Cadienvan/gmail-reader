@@ -84,6 +84,7 @@ export interface LinkSummary {
   loading: boolean;
   modelUsed?: 'short' | 'long';
   canUpgrade?: boolean; // true if this was generated with quick model and can be upgraded
+  pendingMemoryPhrase?: string; // AI-generated 5–30 word phrase summarising what was just read, awaiting user acceptance into the memory list
 }
 
 export interface EmailSummary {

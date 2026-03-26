@@ -17,6 +17,7 @@ import { environmentConfigService } from '../services/environmentConfigService';
 import { emailScoringService } from '../services/emailScoringService';
 import { ruleEngineService } from '../services/ruleEngineService';
 import type { RuleContext } from '../types';
+import { memoryService } from '../services/memoryService';
 
 interface EmailModalProps {
   emails: ParsedEmail[];
@@ -163,6 +164,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const [showRegexChecker, setShowRegexChecker] = useState<boolean>(false);
   const [regexCheckerUrl, setRegexCheckerUrl] = useState<string>('');
 
+  // Editable memory phrase state (keyed by tab URL so each tab tracks independently)
+  const [editedMemoryPhrases, setEditedMemoryPhrases] = useState<Map<string, string>>(new Map());
+
+  // Summary panel resize state
+  const [summaryHeight, setSummaryHeight] = useState<number>(() => {
+    const saved = localStorage.getItem('emailModal_summaryHeight');
+    return saved !== null ? parseInt(saved, 10) : 300;
+  });
+  const isDraggingResizer = useRef<boolean>(false);
+  const dragStartY = useRef<number>(0);
+  const dragStartHeight = useRef<number>(0);
+
   // Save for later mode state
   const saveForLaterMode = environmentConfigService.getSaveForLaterMode();
 
@@ -210,6 +223,41 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     setIsSummaryVisible(newVisibility);
     localStorage.setItem('emailModal_summaryVisible', JSON.stringify(newVisibility));
   };
+
+  // Summary panel resize handlers
+  const handleResizerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingResizer.current = true;
+    dragStartY.current = e.clientY;
+    dragStartHeight.current = summaryHeight;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingResizer.current) return;
+      const delta = dragStartY.current - e.clientY;
+      const newHeight = Math.max(80, Math.min(700, dragStartHeight.current + delta));
+      setSummaryHeight(newHeight);
+    };
+    const handleMouseUp = () => {
+      if (!isDraggingResizer.current) return;
+      isDraggingResizer.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('emailModal_summaryHeight', summaryHeight.toString());
+  }, [summaryHeight]);
 
   // Focus modes toggle functions
   const toggleFocusMode = () => {
@@ -1621,8 +1669,9 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const activeSummary = getActiveSummary();
 
   const getTabUrl = () => {
+    if (!activeSummary) return 'Unknown';
     try {
-    return activeSummary.finalUrl ? new URL(activeSummary.finalUrl).hostname : new URL(activeSummary.url).hostname;
+      return activeSummary.finalUrl ? new URL(activeSummary.finalUrl).hostname : new URL(activeSummary.url).hostname;
     } catch (error) {
       return activeSummary.url || 'Unknown';
     }
@@ -2526,12 +2575,26 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             )}
           </div>
 
+          {/* Drag handle to resize summary panel */}
+          {activeSummaryUrls.length > 0 && isSummaryVisible && (
+            <div
+              onMouseDown={handleResizerMouseDown}
+              className="h-2 bg-gray-200 hover:bg-blue-400 active:bg-blue-500 cursor-row-resize transition-colors flex items-center justify-center group flex-shrink-0"
+              title="Drag to resize panel"
+            >
+              <div className="w-10 h-0.5 rounded-full bg-gray-400 group-hover:bg-blue-600 transition-colors" />
+            </div>
+          )}
+
           {/* Bottom row: AI Summary - Full width */}
-          <div className={`border-t bg-gray-50 ${
-            activeSummaryUrls.length > 0 
-              ? (isSummaryVisible ? 'flex-1 min-h-0 overflow-y-auto' : 'h-auto flex-shrink-0')
-              : 'h-[50px] flex-shrink-0'
-          }`}>
+          <div
+            className={`border-t bg-gray-50 ${
+              activeSummaryUrls.length > 0
+                ? isSummaryVisible ? 'flex-shrink-0 overflow-y-auto' : 'h-auto flex-shrink-0'
+                : 'h-[50px] flex-shrink-0'
+            }`}
+            style={activeSummaryUrls.length > 0 && isSummaryVisible ? { height: `${summaryHeight}px` } : undefined}
+          >
             {activeSummaryUrls.length > 0 ? (
               <div className={`${isSummaryVisible ? 'p-4 h-full' : 'p-2'} flex flex-col`}>
                 {/* Tabs and Toggle Button */}
@@ -2678,6 +2741,51 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                         : activeSummary.summary}
                     </ReactMarkdown>
                     
+                    {/* Pending memory phrase banner */}
+                    {activeSummary.pendingMemoryPhrase && (
+                      <div className="mt-4 p-3 rounded-lg bg-indigo-50 border border-indigo-200">
+                        <p className="text-xs font-semibold text-indigo-700 mb-2">🧠 Memory suggestion:</p>
+                        <textarea
+                          className="w-full text-sm text-indigo-900 bg-white border border-indigo-200 rounded-md px-2 py-1.5 mb-3 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          rows={2}
+                          value={editedMemoryPhrases.get(currentTabUrl!) ?? activeSummary.pendingMemoryPhrase}
+                          onChange={(e) => {
+                            const url = currentTabUrl!;
+                            setEditedMemoryPhrases(prev => new Map(prev).set(url, e.target.value));
+                          }}
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              const url = currentTabUrl!;
+                              const phrase = (editedMemoryPhrases.get(url) ?? activeSummary.pendingMemoryPhrase!).trim();
+                              if (!phrase) return;
+                              console.log('[EmailModal] Memory phrase accepted:', phrase);
+                              memoryService.addMemoryItem(phrase);
+                              setEditedMemoryPhrases(prev => { const n = new Map(prev); n.delete(url); return n; });
+                              setLinkSummaries(prev => new Map(prev).set(url, { ...prev.get(url)!, pendingMemoryPhrase: undefined }));
+                            }}
+                            className="inline-flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded-full transition-colors"
+                          >
+                            <span>✓</span>
+                            <span>Add to Memory</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              const url = currentTabUrl!;
+                              console.log('[EmailModal] Memory phrase dismissed');
+                              setEditedMemoryPhrases(prev => { const n = new Map(prev); n.delete(url); return n; });
+                              setLinkSummaries(prev => new Map(prev).set(url, { ...prev.get(url)!, pendingMemoryPhrase: undefined }));
+                            }}
+                            className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 py-1 px-2 transition-colors"
+                          >
+                            <span>✕</span>
+                            <span>Dismiss</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Action buttons */}
                     <div className="mt-4 pt-3 border-t border-gray-200 flex items-center gap-3 flex-wrap">
                       {/* Improve Summary Button - show only if upgrade is available */}
