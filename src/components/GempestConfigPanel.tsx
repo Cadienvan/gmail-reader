@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2, Pencil, Trash2, Check, X } from 'lucide-react';
 import { gempestService, fetchGeminiModels, type GempestConfig, type GeminiModel } from '../services/gempestService';
-import { memoryService, type MemoryListType } from '../services/memoryService';
+import { memoryService } from '../services/memoryService';
 
 interface MemorySectionProps {
   title: string;

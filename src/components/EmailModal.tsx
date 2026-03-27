@@ -17,7 +17,8 @@ import { environmentConfigService } from '../services/environmentConfigService';
 import { emailScoringService } from '../services/emailScoringService';
 import { ruleEngineService } from '../services/ruleEngineService';
 import type { RuleContext } from '../types';
-import { memoryService, MemoryListType } from '../services/memoryService';
+import { memoryService } from '../services/memoryService';
+import type { MemoryListType } from '../services/memoryService';
 
 interface EmailModalProps {
   emails: ParsedEmail[];
