@@ -16,6 +16,7 @@ export interface AppConfigExport {
   };
   gempest: object;
   memoryList?: string[];
+  reinforcingMemoryList?: string[];
   flashCards: object[];
 }
 

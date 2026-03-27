@@ -1,7 +1,81 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2, Pencil, Trash2, Check, X } from 'lucide-react';
 import { gempestService, fetchGeminiModels, type GempestConfig, type GeminiModel } from '../services/gempestService';
-import { memoryService } from '../services/memoryService';
+import { memoryService, type MemoryListType } from '../services/memoryService';
+
+interface MemorySectionProps {
+  title: string;
+  subtitle: string;
+  clearLabel: string;
+  list: string[];
+  editingIndex: number | null;
+  editingValue: string;
+  onStartEdit: (index: number, phrase: string) => void;
+  onCancelEdit: () => void;
+  onEditingValueChange: (value: string) => void;
+  onSaveEdit: (index: number) => void;
+  onDelete: (index: number) => void;
+  onClearAll: () => void;
+}
+
+const MemorySection: React.FC<MemorySectionProps> = ({
+  title, subtitle, clearLabel, list,
+  editingIndex, editingValue,
+  onStartEdit, onCancelEdit, onEditingValueChange, onSaveEdit, onDelete, onClearAll,
+}) => (
+  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+    <h3 className="text-lg font-medium text-gray-900 mb-1 flex items-center gap-2">{title}</h3>
+    <p className="text-sm text-gray-500 mb-4">{subtitle}</p>
+
+    {list.length === 0 ? (
+      <p className="text-sm text-gray-400 italic">No memory phrases yet. Accept phrases from summaries to build your list.</p>
+    ) : (
+      <ul className="space-y-2">
+        {list.map((phrase, index) => (
+          <li key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+            {editingIndex === index ? (
+              <>
+                <input
+                  type="text"
+                  value={editingValue}
+                  onChange={(e) => onEditingValueChange(e.target.value)}
+                  className="flex-1 rounded border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') onSaveEdit(index);
+                    else if (e.key === 'Escape') onCancelEdit();
+                  }}
+                />
+                <button onClick={() => onSaveEdit(index)} className="p-1 text-green-600 hover:text-green-800" title="Save">
+                  <Check size={16} />
+                </button>
+                <button onClick={onCancelEdit} className="p-1 text-gray-400 hover:text-gray-600" title="Cancel">
+                  <X size={16} />
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="flex-1 text-sm text-gray-700">{phrase}</span>
+                <button onClick={() => onStartEdit(index, phrase)} className="p-1 text-gray-400 hover:text-indigo-600" title="Edit">
+                  <Pencil size={14} />
+                </button>
+                <button onClick={() => onDelete(index)} className="p-1 text-gray-400 hover:text-red-600" title="Delete">
+                  <Trash2 size={14} />
+                </button>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+    )}
+
+    {list.length > 0 && (
+      <button onClick={onClearAll} className="mt-4 text-sm text-red-600 hover:text-red-800 underline">
+        {clearLabel}
+      </button>
+    )}
+  </div>
+);
 
 export const GempestConfigPanel: React.FC = () => {
   const [config, setConfig] = useState<GempestConfig>(gempestService.getConfig());
@@ -10,9 +84,12 @@ export const GempestConfigPanel: React.FC = () => {
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [geminiModels, setGeminiModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
-  const [memoryList, setMemoryList] = useState<string[]>(() => memoryService.getMemoryList());
+  const [memoryList, setMemoryList] = useState<string[]>(() => memoryService.getMemoryList('reductive'));
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
+  const [reinforcingList, setReinforcingList] = useState<string[]>(() => memoryService.getMemoryList('reinforcing'));
+  const [reinforcingEditingIndex, setReinforcingEditingIndex] = useState<number | null>(null);
+  const [reinforcingEditingValue, setReinforcingEditingValue] = useState('');
 
   const loadModels = useCallback(async (apiKey: string) => {
     if (!apiKey) return;
@@ -174,7 +251,7 @@ export const GempestConfigPanel: React.FC = () => {
             </label>
             <p className="mt-1 text-sm text-gray-500">
               When enabled, after each summary Gemini generates a short phrase representing what was read.
-              You can accept it to build a memory list of topics to deprioritize in future summaries.
+              You can accept it to build memory lists: <strong>Reductive</strong> to deprioritize familiar topics, or <strong>Reinforcing</strong> to boost topics of interest in future summaries.
             </p>
           </div>
 
@@ -237,7 +314,9 @@ export const GempestConfigPanel: React.FC = () => {
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
             />
             {config.memoryEnabled && (
-              <p className="text-xs text-indigo-600 mt-1">💡 Use <code>[MEMORY_LIST]</code> in this prompt to inject the list of topics the user already knows and wants to deprioritize.</p>
+              <p className="text-xs text-indigo-600 mt-1">
+                💡 Use <code>[MEMORY_LIST]</code> or <code>[REDUCTIVE_MEMORY]</code> to inject topics the user already knows (deprioritized), and <code>[REINFORCING_MEMORY]</code> to inject topics the user wants to see more of (boosted).
+              </p>
             )}
             <p className="text-xs text-blue-600 mt-1">💡 Use <code>[SENDER_EMAIL]</code> in this prompt to inject the sender's email address (e.g. to boost or lower priority for specific senders).</p>
           </div>
@@ -252,7 +331,9 @@ export const GempestConfigPanel: React.FC = () => {
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
             />
             {config.memoryEnabled && (
-              <p className="text-xs text-indigo-600 mt-1">💡 Use <code>[MEMORY_LIST]</code> in this prompt to inject the list of topics the user already knows and wants to deprioritize.</p>
+              <p className="text-xs text-indigo-600 mt-1">
+                💡 Use <code>[MEMORY_LIST]</code> or <code>[REDUCTIVE_MEMORY]</code> to inject topics the user already knows (deprioritized), and <code>[REINFORCING_MEMORY]</code> to inject topics the user wants to see more of (boosted).
+              </p>
             )}
             <p className="text-xs text-blue-600 mt-1">💡 Use <code>[SENDER_EMAIL]</code> in this prompt to inject the sender's email address (e.g. to boost or lower priority for specific senders).</p>
           </div>
@@ -261,7 +342,7 @@ export const GempestConfigPanel: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Memory Phrase Generator Prompt
               </label>
-              <p className="text-xs text-gray-500 mb-1">Used to distill each summary into a short 5–30 word phrase representing a concept the user already knows. These phrases are sent back as context to reduce re-reading familiar topics.</p>
+              <p className="text-xs text-gray-500 mb-1">Used to distill each summary into a short 5–30 word phrase representing a concept from the email. The generated phrase can be filed as either <strong>Reductive</strong> (to deprioritize familiar topics) or <strong>Reinforcing</strong> (to boost topics of interest).</p>
               <textarea
                 value={config.memoryPhraseGeneratorPrompt || ''}
                 onChange={(e) => setConfig(prev => ({ ...prev, memoryPhraseGeneratorPrompt: e.target.value }))}
@@ -287,94 +368,56 @@ export const GempestConfigPanel: React.FC = () => {
       </div>
 
       {config.memoryEnabled && (
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <h3 className="text-lg font-medium text-gray-900 mb-1 flex items-center gap-2">
-            🧠 Memory List
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">Phrases representing topics you already know. These are sent to Gemini to deprioritize familiar content in future summaries.</p>
-
-          {memoryList.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No memory phrases yet. Accept phrases from summaries to build your list.</p>
-          ) : (
-            <ul className="space-y-2">
-              {memoryList.map((phrase, index) => (
-                <li key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                  {editingIndex === index ? (
-                    <>
-                      <input
-                        type="text"
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        className="flex-1 rounded border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            memoryService.updateMemoryItem(index, editingValue);
-                            setMemoryList(memoryService.getMemoryList());
-                            setEditingIndex(null);
-                          } else if (e.key === 'Escape') {
-                            setEditingIndex(null);
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          memoryService.updateMemoryItem(index, editingValue);
-                          setMemoryList(memoryService.getMemoryList());
-                          setEditingIndex(null);
-                        }}
-                        className="p-1 text-green-600 hover:text-green-800"
-                        title="Save"
-                      >
-                        <Check size={16} />
-                      </button>
-                      <button
-                        onClick={() => setEditingIndex(null)}
-                        className="p-1 text-gray-400 hover:text-gray-600"
-                        title="Cancel"
-                      >
-                        <X size={16} />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-sm text-gray-700">{phrase}</span>
-                      <button
-                        onClick={() => { setEditingIndex(index); setEditingValue(phrase); }}
-                        className="p-1 text-gray-400 hover:text-indigo-600"
-                        title="Edit"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          memoryService.removeMemoryItem(index);
-                          setMemoryList(memoryService.getMemoryList());
-                        }}
-                        className="p-1 text-gray-400 hover:text-red-600"
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {memoryList.length > 0 && (
-            <button
-              onClick={() => {
-                memoryService.clearAll();
-                setMemoryList([]);
-              }}
-              className="mt-4 text-sm text-red-600 hover:text-red-800 underline"
-            >
-              Clear All Memory
-            </button>
-          )}
-        </div>
+        <>
+          <MemorySection
+            title="⬇ Reductive Memory"
+            subtitle="Topics you already know — deprioritized in future summaries."
+            clearLabel="Clear All Reductive Memory"
+            list={memoryList}
+            editingIndex={editingIndex}
+            editingValue={editingValue}
+            onStartEdit={(index, phrase) => { setEditingIndex(index); setEditingValue(phrase); }}
+            onCancelEdit={() => setEditingIndex(null)}
+            onEditingValueChange={setEditingValue}
+            onSaveEdit={(index) => {
+              memoryService.updateMemoryItem(index, editingValue, 'reductive');
+              setMemoryList(memoryService.getMemoryList('reductive'));
+              setEditingIndex(null);
+            }}
+            onDelete={(index) => {
+              memoryService.removeMemoryItem(index, 'reductive');
+              setMemoryList(memoryService.getMemoryList('reductive'));
+            }}
+            onClearAll={() => {
+              memoryService.clearAll('reductive');
+              setMemoryList([]);
+            }}
+          />
+          <MemorySection
+            title="⬆ Reinforcing Memory"
+            subtitle="Topics you want to see more of — boosted in future summaries."
+            clearLabel="Clear All Reinforcing Memory"
+            list={reinforcingList}
+            editingIndex={reinforcingEditingIndex}
+            editingValue={reinforcingEditingValue}
+            onStartEdit={(index, phrase) => { setReinforcingEditingIndex(index); setReinforcingEditingValue(phrase); }}
+            onCancelEdit={() => setReinforcingEditingIndex(null)}
+            onEditingValueChange={setReinforcingEditingValue}
+            onSaveEdit={(index) => {
+              memoryService.updateMemoryItem(index, reinforcingEditingValue, 'reinforcing');
+              setReinforcingList(memoryService.getMemoryList('reinforcing'));
+              setReinforcingEditingIndex(null);
+            }}
+            onDelete={(index) => {
+              memoryService.removeMemoryItem(index, 'reinforcing');
+              setReinforcingList(memoryService.getMemoryList('reinforcing'));
+            }}
+            onClearAll={() => {
+              memoryService.clearAll('reinforcing');
+              setReinforcingList([]);
+            }}
+          />
+        </>
       )}
 
       <div className="flex justify-end">

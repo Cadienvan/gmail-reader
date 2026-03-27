@@ -31,6 +31,7 @@ class ConfigExportService {
       },
       gempest: gempestService.getConfig(),
       memoryList: memoryService.getMemoryList(),
+      reinforcingMemoryList: memoryService.getMemoryList('reinforcing'),
       flashCards,
     };
 
@@ -72,6 +73,7 @@ class ConfigExportService {
       { name: 'Email Scoring Actions', count: Array.isArray(emailScoring?.actions) ? (emailScoring!.actions as unknown[]).length : 0, present: !!data.emailScoring },
       { name: 'Gempest', count: data.gempest ? 1 : 0, present: !!data.gempest },
       { name: 'Memory List', count: Array.isArray(data.memoryList) ? (data.memoryList as unknown[]).length : 0, present: Array.isArray(data.memoryList) },
+      { name: 'Reinforcing Memory List', count: Array.isArray(data.reinforcingMemoryList) ? (data.reinforcingMemoryList as unknown[]).length : 0, present: Array.isArray(data.reinforcingMemoryList) },
       { name: 'Flash Cards', count: Array.isArray(data.flashCards) ? data.flashCards.length : 0, present: Array.isArray(data.flashCards) },
     ];
 
@@ -137,6 +139,13 @@ class ConfigExportService {
         data.memoryList.forEach((phrase: string) => memoryService.addMemoryItem(phrase));
         sectionsImported.push('memoryList');
       } catch (e) { errors.push(`memoryList: ${e instanceof Error ? e.message : String(e)}`); }
+    }
+
+    if (Array.isArray(data.reinforcingMemoryList)) {
+      try {
+        data.reinforcingMemoryList.forEach((phrase: string) => memoryService.addMemoryItem(phrase, 'reinforcing'));
+        sectionsImported.push('reinforcingMemoryList');
+      } catch (e) { errors.push(`reinforcingMemoryList: ${e instanceof Error ? e.message : String(e)}`); }
     }
 
     try {

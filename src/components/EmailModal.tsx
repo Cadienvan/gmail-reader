@@ -17,7 +17,7 @@ import { environmentConfigService } from '../services/environmentConfigService';
 import { emailScoringService } from '../services/emailScoringService';
 import { ruleEngineService } from '../services/ruleEngineService';
 import type { RuleContext } from '../types';
-import { memoryService } from '../services/memoryService';
+import { memoryService, MemoryListType } from '../services/memoryService';
 
 interface EmailModalProps {
   emails: ParsedEmail[];
@@ -2744,7 +2744,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     {/* Pending memory phrase banner */}
                     {activeSummary.pendingMemoryPhrase && (
                       <div className="mt-4 p-3 rounded-lg bg-indigo-50 border border-indigo-200">
-                        <p className="text-xs font-semibold text-indigo-700 mb-2">🧠 Memory suggestion:</p>
+                        <p className="text-xs font-semibold text-indigo-700 mb-2">🧠 Memory suggestion — choose where to file it:</p>
                         <textarea
                           className="w-full text-sm text-indigo-900 bg-white border border-indigo-200 rounded-md px-2 py-1.5 mb-3 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           rows={2}
@@ -2760,15 +2760,30 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                               const url = currentTabUrl!;
                               const phrase = (editedMemoryPhrases.get(url) ?? activeSummary.pendingMemoryPhrase!).trim();
                               if (!phrase) return;
-                              console.log('[EmailModal] Memory phrase accepted:', phrase);
-                              memoryService.addMemoryItem(phrase);
+                              console.log('[EmailModal] Memory phrase added to reinforcing:', phrase);
+                              memoryService.addMemoryItem(phrase, 'reinforcing' as MemoryListType);
+                              setEditedMemoryPhrases(prev => { const n = new Map(prev); n.delete(url); return n; });
+                              setLinkSummaries(prev => new Map(prev).set(url, { ...prev.get(url)!, pendingMemoryPhrase: undefined }));
+                            }}
+                            className="inline-flex items-center gap-1 text-xs bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded-full transition-colors"
+                          >
+                            <span>⬆</span>
+                            <span>Reinforcing</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              const url = currentTabUrl!;
+                              const phrase = (editedMemoryPhrases.get(url) ?? activeSummary.pendingMemoryPhrase!).trim();
+                              if (!phrase) return;
+                              console.log('[EmailModal] Memory phrase added to reductive:', phrase);
+                              memoryService.addMemoryItem(phrase, 'reductive' as MemoryListType);
                               setEditedMemoryPhrases(prev => { const n = new Map(prev); n.delete(url); return n; });
                               setLinkSummaries(prev => new Map(prev).set(url, { ...prev.get(url)!, pendingMemoryPhrase: undefined }));
                             }}
                             className="inline-flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded-full transition-colors"
                           >
-                            <span>✓</span>
-                            <span>Add to Memory</span>
+                            <span>⬇</span>
+                            <span>Reductive</span>
                           </button>
                           <button
                             onClick={() => {

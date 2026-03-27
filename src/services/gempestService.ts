@@ -265,9 +265,12 @@ class GempestService {
 
         if (isFullText) {
             this.updateProgress(`Summarizing Full Text: ${email.subject}`);
-            const memoryList = this.config.memoryEnabled ? memoryService.getFormattedList() : '';
+            const reductiveMemory = this.config.memoryEnabled ? memoryService.getFormattedList('reductive') : '';
+            const reinforcingMemory = this.config.memoryEnabled ? memoryService.getFormattedList('reinforcing') : '';
             const emailPrompt = this.config.emailSummaryPrompt
-              .replace('[MEMORY_LIST]', memoryList)
+              .replace('[MEMORY_LIST]', reductiveMemory)
+              .replace('[REDUCTIVE_MEMORY]', reductiveMemory)
+              .replace('[REINFORCING_MEMORY]', reinforcingMemory)
               .replace('[SENDER_EMAIL]', email.from);
             const summary = await this.runPrompt(emailPrompt, email.body || email.snippet || "", this.config.emailSummaryModel);
             
@@ -326,9 +329,12 @@ class GempestService {
                     try {
                         const contentObj = await linkService.fetchLinkContent(url);
                         if (contentObj && contentObj.content) {
-                            const memoryListLink = this.config.memoryEnabled ? memoryService.getFormattedList() : '';
+                            const reductiveMemoryLink = this.config.memoryEnabled ? memoryService.getFormattedList('reductive') : '';
+                            const reinforcingMemoryLink = this.config.memoryEnabled ? memoryService.getFormattedList('reinforcing') : '';
                             const linkPrompt = this.config.linkSummaryPrompt
-                              .replace('[MEMORY_LIST]', memoryListLink)
+                              .replace('[MEMORY_LIST]', reductiveMemoryLink)
+                              .replace('[REDUCTIVE_MEMORY]', reductiveMemoryLink)
+                              .replace('[REINFORCING_MEMORY]', reinforcingMemoryLink)
                               .replace('[SENDER_EMAIL]', email.from);
                             const linkSummaryText = await this.runPrompt(linkPrompt, contentObj.content, this.config.linkSummaryModel);
                             if (linkSummaryText.trim().toUpperCase().includes('[CLOSE]')) {
