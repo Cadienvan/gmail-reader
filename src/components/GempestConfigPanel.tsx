@@ -239,6 +239,7 @@ export const GempestConfigPanel: React.FC = () => {
             {config.memoryEnabled && (
               <p className="text-xs text-indigo-600 mt-1">💡 Use <code>[MEMORY_LIST]</code> in this prompt to inject the list of topics the user already knows and wants to deprioritize.</p>
             )}
+            <p className="text-xs text-blue-600 mt-1">💡 Use <code>[SENDER_EMAIL]</code> in this prompt to inject the sender's email address (e.g. to boost or lower priority for specific senders).</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -253,6 +254,7 @@ export const GempestConfigPanel: React.FC = () => {
             {config.memoryEnabled && (
               <p className="text-xs text-indigo-600 mt-1">💡 Use <code>[MEMORY_LIST]</code> in this prompt to inject the list of topics the user already knows and wants to deprioritize.</p>
             )}
+            <p className="text-xs text-blue-600 mt-1">💡 Use <code>[SENDER_EMAIL]</code> in this prompt to inject the sender's email address (e.g. to boost or lower priority for specific senders).</p>
           </div>
           {config.memoryEnabled && (
             <div>
@@ -279,6 +281,7 @@ export const GempestConfigPanel: React.FC = () => {
               rows={4}
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
             />
+            <p className="text-xs text-blue-600 mt-1">💡 Use <code>[SENDER_EMAIL]</code> in this prompt to inject the sender's email address (e.g. to boost or lower priority for specific senders).</p>
           </div>
         </div>
       </div>

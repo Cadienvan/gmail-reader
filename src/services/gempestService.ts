@@ -189,12 +189,13 @@ class GempestService {
    * Sends the full list of labeled links to Gemini and returns only the URLs
    * that pass the linkFilterPrompt. Falls back to returning all URLs on parse error.
    */
-  private async filterLinks(links: Array<{ url: string; text: string }>): Promise<string[]> {
+  private async filterLinks(links: Array<{ url: string; text: string }>, senderEmail: string): Promise<string[]> {
     if (links.length === 0) return [];
     const linkList = links.map((l, i) => `${i}. [${l.text || l.url}](${l.url})`).join('\n');
+    const linkFilterPrompt = this.config.linkFilterPrompt.replace('[SENDER_EMAIL]', senderEmail);
     let raw = '';
     try {
-      raw = await this.runPrompt(this.config.linkFilterPrompt, linkList, this.config.classificationModel);
+      raw = await this.runPrompt(linkFilterPrompt, linkList, this.config.classificationModel);
       console.log('[Gempest] filterLinks raw response:', raw);
       // Extract JSON array from the response (may be wrapped in markdown code blocks)
       const match = raw.match(/\[[\s\S]*\]/);
@@ -265,7 +266,9 @@ class GempestService {
         if (isFullText) {
             this.updateProgress(`Summarizing Full Text: ${email.subject}`);
             const memoryList = this.config.memoryEnabled ? memoryService.getFormattedList() : '';
-            const emailPrompt = this.config.emailSummaryPrompt.replace('[MEMORY_LIST]', memoryList);
+            const emailPrompt = this.config.emailSummaryPrompt
+              .replace('[MEMORY_LIST]', memoryList)
+              .replace('[SENDER_EMAIL]', email.from);
             const summary = await this.runPrompt(emailPrompt, email.body || email.snippet || "", this.config.emailSummaryModel);
             
             if (summary.trim().toUpperCase().includes('[CLOSE]')) {
@@ -311,7 +314,7 @@ class GempestService {
                   .map(l => ({ url: l.url, text: l.text }));
 
                 this.updateProgress(`Filtering ${linksToFilter.length} links via Gemini...`);
-                const allowedUrls = await this.filterLinks(linksToFilter);
+                const allowedUrls = await this.filterLinks(linksToFilter, email.from);
                 this.updateProgress(`Kept ${allowedUrls.length} of ${linksToFilter.length} links after filtering.`);
 
                 // Iterate over the URLs Gemini returned directly — avoids any URL normalisation mismatch
@@ -324,7 +327,9 @@ class GempestService {
                         const contentObj = await linkService.fetchLinkContent(url);
                         if (contentObj && contentObj.content) {
                             const memoryListLink = this.config.memoryEnabled ? memoryService.getFormattedList() : '';
-                            const linkPrompt = this.config.linkSummaryPrompt.replace('[MEMORY_LIST]', memoryListLink);
+                            const linkPrompt = this.config.linkSummaryPrompt
+                              .replace('[MEMORY_LIST]', memoryListLink)
+                              .replace('[SENDER_EMAIL]', email.from);
                             const linkSummaryText = await this.runPrompt(linkPrompt, contentObj.content, this.config.linkSummaryModel);
                             if (linkSummaryText.trim().toUpperCase().includes('[CLOSE]')) {
                                 this.updateProgress(`Skipped (low value): ${label}`);
