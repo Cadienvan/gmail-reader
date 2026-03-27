@@ -20,6 +20,44 @@ import type { RuleContext } from '../types';
 import { memoryService } from '../services/memoryService';
 import type { MemoryListType } from '../services/memoryService';
 
+const DISMISSED_GEMPEST_URLS_KEY = 'emailModal_dismissedGempestUrls';
+
+function getDismissedGempestUrls(): Set<string> {
+  try {
+    const stored = localStorage.getItem(DISMISSED_GEMPEST_URLS_KEY);
+    if (!stored) return new Set();
+    const parsed: unknown = JSON.parse(stored);
+    if (Array.isArray(parsed) && parsed.every((item): item is string => typeof item === 'string')) {
+      return new Set(parsed);
+    }
+    return new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDismissedGempestUrls(urls: Set<string>): void {
+  try {
+    localStorage.setItem(DISMISSED_GEMPEST_URLS_KEY, JSON.stringify(Array.from(urls)));
+  } catch {
+    // ignore
+  }
+}
+
+function addDismissedGempestUrl(url: string): void {
+  const urls = getDismissedGempestUrls();
+  urls.add(url);
+  saveDismissedGempestUrls(urls);
+}
+
+function clearDismissedGempestUrls(): void {
+  try {
+    localStorage.removeItem(DISMISSED_GEMPEST_URLS_KEY);
+  } catch (error) {
+    console.error('Failed to clear dismissed Gempest URLs:', error);
+  }
+}
+
 interface EmailModalProps {
   emails: ParsedEmail[];
   currentIndex: number;
@@ -134,13 +172,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   // Track which gempest summaries we've already opened as tabs
   const openedGempestSummaries = useRef<Set<string>>(new Set());
+  // Track all URLs that were ever auto-opened from Gempest (not cleared on run/email change)
+  const gempestOriginatedUrls = useRef<Set<string>>(new Set());
 
   // When Gempest produces a new summary, open it as a tab
   useEffect(() => {
     if (!gempestSummaries) return;
+    const dismissed = getDismissedGempestUrls();
     gempestSummaries.forEach((summary, url) => {
       if (openedGempestSummaries.current.has(url)) return;
+      if (dismissed.has(url)) return;
       openedGempestSummaries.current.add(url);
+      gempestOriginatedUrls.current.add(url);
       setLinkSummaries(prev => new Map(prev).set(url, summary));
       setActiveSummaryUrls(prev => {
         if (prev.includes(url)) return prev;
@@ -148,6 +191,17 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       });
     });
   }, [gempestSummaries]);
+
+  // Detect new Gempest run start and clear dismissed URLs
+  const prevGempestRunning = useRef<boolean>(false);
+  useEffect(() => {
+    if (isGempestRunning && !prevGempestRunning.current) {
+      // New Gempest run started - clear dismissed URLs so fresh summaries auto-open
+      clearDismissedGempestUrls();
+      openedGempestSummaries.current.clear();
+    }
+    prevGempestRunning.current = isGempestRunning ?? false;
+  }, [isGempestRunning]);
   
   // Sidebar visibility state with localStorage persistence
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(() => {
@@ -545,6 +599,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       setHoveredLinkUrl(null);
       // Enable HTML view by default if HTML content is available
       setShowHtmlContent(false); // Start with false, will be updated after content loads
+
+      // Clear dismissed Gempest URLs so a new email starts fresh
+      clearDismissedGempestUrls();
+      openedGempestSummaries.current.clear();
       // Don't reset activeSummaryUrls and currentTabUrl - keep tabs open
 
       // Clean up any existing highlights first
@@ -1341,6 +1399,11 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       setIsGeneratingFlashCards(null);
     }
     
+    // If this is a Gempest-originated tab, mark it as dismissed to prevent auto-reopening
+    if (gempestOriginatedUrls.current.has(urlToRemove)) {
+      addDismissedGempestUrl(urlToRemove);
+    }
+
     // Update state synchronously for immediate UI feedback and accurate localStorage
     setActiveSummaryUrls(prev => {
       const newUrls = prev.filter(url => url !== urlToRemove);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, Trophy, Calendar, X } from 'lucide-react';
+import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, Trophy, Calendar, X, LucideDollarSign } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration, LinkSummary } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
@@ -490,6 +490,14 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.open('https://paypal.me/Cadienvan', '_blank')}
+                  className="flex items-center gap-2 px-3 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors text-sm"
+                  title="Donate"
+                >
+                  <LucideDollarSign size={16} />
+                  Donate
+                </button>
                 <button
                   onClick={() => window.open('https://github.com/Cadienvan/gmail-reader', '_blank')}
                   className="flex items-center gap-2 px-3 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 transition-colors text-sm"
