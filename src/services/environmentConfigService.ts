@@ -187,7 +187,7 @@ class EnvironmentConfigService {
     return {
       googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
       googleClientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
-      googleRedirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth-callback.html`,
+      googleRedirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}${import.meta.env.BASE_URL}auth-callback.html`,
       ollamaBaseUrl: import.meta.env.VITE_OLLAMA_BASE_URL || 'http://localhost:11434',
       saveForLaterMode: false,
       gmailQuery: 'is:unread -is:spam -is:starred in:inbox',

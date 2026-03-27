@@ -67,7 +67,7 @@
                         code: code,
                         client_id: localStorage.getItem('gmail_client_id') || '',
                         client_secret: localStorage.getItem('gmail_client_secret') || '',
-                        redirect_uri: window.location.origin + '/auth-callback.html',
+                        redirect_uri: window.location.origin + window.location.pathname,
                         grant_type: 'authorization_code'
                     })
                 })

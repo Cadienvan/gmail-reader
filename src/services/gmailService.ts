@@ -44,7 +44,7 @@ class GmailService {
       this.credentials = {
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
         client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
-        redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth-callback.html`
+        redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}${import.meta.env.BASE_URL}auth-callback.html`
       };
     }
   }
