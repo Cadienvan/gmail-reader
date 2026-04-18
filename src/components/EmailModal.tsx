@@ -1177,6 +1177,12 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       }
       
       // Create updated summary
+      if (summary.trim().toUpperCase().includes('[CLOSE]')) {
+        console.log(`[CLOSE] received for ${link.url}, auto-closing tab`);
+        await handleCloseSummary(link.url);
+        return;
+      }
+
       const updatedSummary = {
         url: link.url,
         finalUrl,
@@ -1226,8 +1232,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             modelUsed: 'short' as const,
             canUpgrade: false
           };
-          setLinkSummaries(prev => new Map(prev).set(link.url, fallbackSummary));
-          await tabSummaryStorage.saveLinkSummary(link.url, fallbackSummary, link.url, link.domain);
+          if (summary.trim().toUpperCase().includes('[CLOSE]')) {
+            console.log(`[CLOSE] received for ${link.url} (Gemini fallback), auto-closing tab`);
+            await handleCloseSummary(link.url);
+          } else {
+            setLinkSummaries(prev => new Map(prev).set(link.url, fallbackSummary));
+            await tabSummaryStorage.saveLinkSummary(link.url, fallbackSummary, link.url, link.domain);
+          }
         } catch (geminiError) {
           console.error('Gemini URL fallback also failed:', geminiError);
           const errorSummary = {
@@ -1363,6 +1374,12 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       }
 
       // Create completed summary
+      if (summary.trim().toUpperCase().includes('[CLOSE]')) {
+        console.log(`[CLOSE] received for email ${emailTabId}, auto-closing tab`);
+        await handleCloseSummary(emailTabId);
+        return;
+      }
+
       const completedSummary = {
         url: emailTabId,
         summary,
@@ -1581,6 +1598,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           summary = await ollamaService.generateSummary(normalizedUrl, controller.signal);
         }
 
+        if (summary.trim().toUpperCase().includes('[CLOSE]')) {
+          console.log(`[CLOSE] received for pasted URL ${fakeUrl}, auto-closing tab`);
+          await handleCloseSummary(fakeUrl);
+          setPasteInput('');
+          return;
+        }
+
         const updatedSummary = {
           url: fakeUrl,
           summary,
@@ -1646,6 +1670,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         }
         
         // Update with the summary
+        if (summary.trim().toUpperCase().includes('[CLOSE]')) {
+          console.log(`[CLOSE] received for pasted text ${fakeUrl}, auto-closing tab`);
+          await handleCloseSummary(fakeUrl);
+          setPasteInput('');
+          return;
+        }
+
         const updatedSummary = {
           url: fakeUrl,
           summary,

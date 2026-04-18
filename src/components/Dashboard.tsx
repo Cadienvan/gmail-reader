@@ -542,6 +542,16 @@ export const Dashboard: React.FC = () => {
             </div>
             <div className="flex gap-3">
               <button
+                onClick={() => {
+                  loadViewedEmails();
+                  setShowLogModal(true);
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 shadow-md transition-all duration-200"
+              >
+                <BookOpen size={18} />
+                View Summaries Log
+              </button>
+              <button
                 onClick={() => setShowImportExportModal(true)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 shadow-md transition-all duration-200"
               >
