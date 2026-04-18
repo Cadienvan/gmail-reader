@@ -1208,19 +1208,52 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         console.error('Failed to add scoring points for link open:', error);
       }
     } catch (error) {
-      // Create error summary
-      const errorSummary = {
-        url: link.url,
-        summary: '',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        loading: false
-      };
-      
-      // Update state
-      setLinkSummaries(prev => new Map(prev).set(link.url, errorSummary));
-      
-      // Save error to IndexedDB
-      await tabSummaryStorage.saveLinkSummary(link.url, errorSummary);
+      // If Gemini is configured, fall back to sending the URL directly for summarization
+      const aiBackendOnError = environmentConfigService.getAiBackend();
+      if (aiBackendOnError === 'gemini') {
+        console.log(`Fetch methods exhausted for ${link.url}, falling back to Gemini URL summarization`);
+        try {
+          const geminiConfig = gempestService.getConfig();
+          const summary = await gempestService.runPrompt(
+            geminiConfig.linkSummaryPrompt,
+            link.url,
+            geminiConfig.linkSummaryModel
+          );
+          const fallbackSummary = {
+            url: link.url,
+            summary,
+            loading: false,
+            modelUsed: 'short' as const,
+            canUpgrade: false
+          };
+          setLinkSummaries(prev => new Map(prev).set(link.url, fallbackSummary));
+          await tabSummaryStorage.saveLinkSummary(link.url, fallbackSummary, link.url, link.domain);
+        } catch (geminiError) {
+          console.error('Gemini URL fallback also failed:', geminiError);
+          const errorSummary = {
+            url: link.url,
+            summary: '',
+            error: error instanceof Error ? error.message : 'Unknown error',
+            loading: false
+          };
+          setLinkSummaries(prev => new Map(prev).set(link.url, errorSummary));
+          await tabSummaryStorage.saveLinkSummary(link.url, errorSummary);
+        }
+      } else {
+        // Create error summary
+        const errorSummary = {
+          url: link.url,
+          summary: '',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          loading: false
+        };
+        
+        // Update state
+        setLinkSummaries(prev => new Map(prev).set(link.url, errorSummary));
+        
+        // Save error to IndexedDB
+        await tabSummaryStorage.saveLinkSummary(link.url, errorSummary);
+      }
     } finally {
       // Clean up the abort controller
       setAbortControllers(prev => {
@@ -2814,7 +2847,9 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 {activeSummary.loading && (
                   <div className="flex items-center gap-2 text-gray-600">
                     <Loader2 size={16} className="animate-spin" />
-                    Generating summary with Ollama ({currentModel.quick})...
+                    {environmentConfigService.getAiBackend() === 'gemini'
+                      ? 'Generating summary with Gemini...'
+                      : `Generating summary with Ollama (${currentModel.quick})...`}
                   </div>
                 )}
                 
