@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, ExternalLink, Trash2, RefreshCw, AlertCircle, FileText, Link, Mail } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import { tabSummaryStorage } from '../services/tabSummaryStorage';
 
 interface SummarizedTab {
@@ -150,15 +153,15 @@ export const TabSummariesModal: React.FC<TabSummariesModalProps> = ({ isOpen, on
                         <span className="text-xs text-gray-400">{formatDate(tab.lastOpened)}</span>
                       </div>
 
-                      <p
-                        className={`mt-1 text-sm text-gray-600 whitespace-pre-wrap ${
-                          expandedUrl === tab.url ? '' : 'line-clamp-3'
-                        }`}
-                      >
-                        {tab.summary}
-                      </p>
+                      <div className={`prose prose-sm max-w-none mt-1 ${expandedUrl === tab.url ? '' : 'line-clamp-3'}`}>
+                        <ReactMarkdown rehypePlugins={[rehypeRaw, rehypeSanitize]}>
+                          {tab.summary.includes('</think>')
+                            ? tab.summary.split('</think>')[1]
+                            : tab.summary}
+                        </ReactMarkdown>
+                      </div>
 
-                      {tab.summary.length > 200 && (
+                      {(tab.summary.split('\n').length > 4 || tab.summary.length > 300) && (
                         <button
                           onClick={() => setExpandedUrl(expandedUrl === tab.url ? null : tab.url)}
                           className="mt-1 text-xs text-blue-600 hover:underline"
