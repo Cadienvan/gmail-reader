@@ -1550,28 +1550,67 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     })();
     
     if (isUrl) {
-      // Handle as URL - add protocol if missing
+      // Handle as URL - send directly to AI backend without fetching content
       let normalizedUrl = pasteInput.trim();
       if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
         normalizedUrl = 'https://' + normalizedUrl;
       }
-      
-      // Create the link object
+
+      const urlContentId = `url-${Date.now()}`;
+      const controller = new AbortController();
+      setAbortControllers(prev => new Map(prev).set(urlContentId, controller));
+
+      const fakeUrl = `paste-url://${urlContentId}`;
+
+      setLinkSummaries(prev => new Map(prev).set(fakeUrl, {
+        url: fakeUrl,
+        summary: '',
+        loading: true
+      }));
+
+      setActiveSummaryUrls(prev => [...prev, fakeUrl]);
+      setCurrentTabUrl(fakeUrl);
+
       try {
-        const extractedLink: ExtractedLink = {
-          url: normalizedUrl,
-          text: normalizedUrl,
-          domain: new URL(normalizedUrl).hostname
+        const aiBackend = environmentConfigService.getAiBackend();
+        let summary: string;
+        if (aiBackend === 'gemini') {
+          const geminiConfig = gempestService.getConfig();
+          summary = await gempestService.runPrompt(geminiConfig.linkSummaryPrompt, normalizedUrl, geminiConfig.linkSummaryModel);
+        } else {
+          summary = await ollamaService.generateSummary(normalizedUrl, controller.signal);
+        }
+
+        const updatedSummary = {
+          url: fakeUrl,
+          summary,
+          loading: false,
+          modelUsed: 'short' as const,
+          canUpgrade: aiBackend === 'local' && ollamaService.canUpgradeSummary()
         };
-        await handleLinkClick(extractedLink);
-        
-        // Show confirmation for user
-        // Reset input and hide the input area on successful processing
+
+        setLinkSummaries(prev => new Map(prev).set(fakeUrl, updatedSummary));
+        await tabSummaryStorage.saveLinkSummary(fakeUrl, updatedSummary, normalizedUrl, 'Pasted URL');
+
         setPasteInput('');
-        // Keep the input area open to allow more pastes
       } catch (error) {
-        console.error('Failed to process URL:', error);
-        alert(`Failed to process URL: ${error instanceof Error ? error.message : 'Invalid URL format'}`);
+        console.error('Failed to generate summary for pasted URL:', error);
+
+        const errorSummary = {
+          url: fakeUrl,
+          summary: '',
+          loading: false,
+          error: error instanceof Error ? error.message : 'Failed to generate summary'
+        };
+
+        setLinkSummaries(prev => new Map(prev).set(fakeUrl, errorSummary));
+        await tabSummaryStorage.saveLinkSummary(fakeUrl, errorSummary, normalizedUrl, 'Pasted URL');
+      } finally {
+        setAbortControllers(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(urlContentId);
+          return newMap;
+        });
       }
     } else {
       // Handle as plain text - need a unique ID for the content
@@ -2734,6 +2773,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                         // Handle special tabs differently
                         const isEmailTab = url.startsWith('email:');
                         const isTextTab = url.startsWith('text://');
+                        const isPasteUrlTab = url.startsWith('paste-url://');
                         let displayUrl, domain;
                         
                         if (isEmailTab) {
@@ -2742,6 +2782,9 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                         } else if (isTextTab) {
                           displayUrl = 'Text Summary';
                           domain = 'Pasted Text';
+                        } else if (isPasteUrlTab) {
+                          displayUrl = 'URL Summary';
+                          domain = 'Pasted URL';
                         } else {
                           displayUrl = summary?.finalUrl || url;
                           try {
@@ -2790,6 +2833,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       <div className="text-sm text-gray-700 font-medium">
                         {activeSummary.url.startsWith('email:') ? 'Email Summary' :
                          activeSummary.url.startsWith('text://') ? 'Pasted Text Summary' :
+                         activeSummary.url.startsWith('paste-url://') ? 'Pasted URL Summary' :
                          (getTabUrl() || 'Summary')}
                       </div>
                     ) : null}
@@ -2819,6 +2863,11 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                           <>
                             <FileText size={14} />
                             <span className="truncate">Pasted Text Summary</span>
+                          </>
+                        ) : activeSummary.url.startsWith('paste-url://') ? (
+                          <>
+                            <FileText size={14} />
+                            <span className="truncate">Pasted URL Summary</span>
                           </>
                         ) : (
                           <>
