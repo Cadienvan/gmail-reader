@@ -14,6 +14,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import { FlashCardsModal } from './FlashCardsModal';
 import { RegexChecker } from './RegexChecker';
 import { environmentConfigService } from '../services/environmentConfigService';
+import { gempestService } from '../services/gempestService';
 import { emailScoringService } from '../services/emailScoringService';
 import { ruleEngineService } from '../services/ruleEngineService';
 import type { RuleContext } from '../types';
@@ -434,7 +435,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
     try {
       // Generate improved summary with detailed model
-      const improvedSummary = await ollamaService.generateImprovedSummary(originalContent, controller.signal);
+      const aiBackend = environmentConfigService.getAiBackend();
+      let improvedSummary: string;
+      if (aiBackend === 'gemini') {
+        const geminiConfig = gempestService.getConfig();
+        improvedSummary = await gempestService.runPrompt(geminiConfig.linkSummaryPrompt, originalContent, geminiConfig.linkSummaryModel);
+      } else {
+        improvedSummary = await ollamaService.generateImprovedSummary(originalContent, controller.signal);
+      }
 
       // Create completed improved summary
       const completedSummary = {
@@ -1158,8 +1166,15 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       // Fetch link content and finalUrl
       const { content, finalUrl } = await linkService.fetchLinkContent(link.url);
       
-      // Generate summary with Ollama
-      const summary = await ollamaService.generateSummary(content, controller.signal);
+      // Generate summary using the configured AI backend
+      const aiBackend = environmentConfigService.getAiBackend();
+      let summary: string;
+      if (aiBackend === 'gemini') {
+        const geminiConfig = gempestService.getConfig();
+        summary = await gempestService.runPrompt(geminiConfig.linkSummaryPrompt, content, geminiConfig.linkSummaryModel);
+      } else {
+        summary = await ollamaService.generateSummary(content, controller.signal);
+      }
       
       // Create updated summary
       const updatedSummary = {
@@ -1168,7 +1183,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         summary,
         loading: false,
         modelUsed: 'short' as const,
-        canUpgrade: ollamaService.canUpgradeSummary()
+        canUpgrade: aiBackend === 'local' && ollamaService.canUpgradeSummary()
       };
       
       // Update state
@@ -1304,8 +1319,15 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     await tabSummaryStorage.saveLinkSummary(emailTabId, loadingSummary);
 
     try {
-      // Generate email summary with Ollama using the loaded content
-      const summary = await ollamaService.generateSummary(emailContent.body, controller.signal);
+      // Generate email summary using the configured AI backend
+      const aiBackend = environmentConfigService.getAiBackend();
+      let summary: string;
+      if (aiBackend === 'gemini') {
+        const geminiConfig = gempestService.getConfig();
+        summary = await gempestService.runPrompt(geminiConfig.emailSummaryPrompt, emailContent.body, geminiConfig.emailSummaryModel);
+      } else {
+        summary = await ollamaService.generateSummary(emailContent.body, controller.signal);
+      }
 
       // Create completed summary
       const completedSummary = {
@@ -1313,7 +1335,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         summary,
         loading: false,
         modelUsed: 'short' as const,
-        canUpgrade: ollamaService.canUpgradeSummary()
+        canUpgrade: aiBackend === 'local' && ollamaService.canUpgradeSummary()
       };
       
       // Update state
@@ -1542,7 +1564,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       
       // Generate summary directly from text
       try {
-        const summary = await ollamaService.generateSummary(pasteInput, controller.signal);
+        const aiBackend = environmentConfigService.getAiBackend();
+        let summary: string;
+        if (aiBackend === 'gemini') {
+          const geminiConfig = gempestService.getConfig();
+          summary = await gempestService.runPrompt(geminiConfig.emailSummaryPrompt, pasteInput, geminiConfig.emailSummaryModel);
+        } else {
+          summary = await ollamaService.generateSummary(pasteInput, controller.signal);
+        }
         
         // Update with the summary
         const updatedSummary = {
@@ -1550,7 +1579,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           summary,
           loading: false,
           modelUsed: 'short' as const,
-          canUpgrade: ollamaService.canUpgradeSummary()
+          canUpgrade: aiBackend === 'local' && ollamaService.canUpgradeSummary()
         };
         
         setLinkSummaries(prev => new Map(prev).set(fakeUrl, updatedSummary));

@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2, Pencil, Trash2, Check, X, AlertTriangle } from 'lucide-react';
 import { gempestService, fetchGeminiModels, type GempestConfig, type GeminiModel } from '../services/gempestService';
 import { memoryService } from '../services/memoryService';
+import { environmentConfigService } from '../services/environmentConfigService';
 
 interface MemorySectionProps {
   title: string;
@@ -90,6 +91,7 @@ export const GempestConfigPanel: React.FC = () => {
   const [reinforcingList, setReinforcingList] = useState<string[]>(() => memoryService.getMemoryList('reinforcing'));
   const [reinforcingEditingIndex, setReinforcingEditingIndex] = useState<number | null>(null);
   const [reinforcingEditingValue, setReinforcingEditingValue] = useState('');
+  const isGeminiBackend = environmentConfigService.getAiBackend() === 'gemini';
 
   const loadModels = useCallback(async (apiKey: string) => {
     if (!apiKey) return;
@@ -137,6 +139,16 @@ export const GempestConfigPanel: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {!isGeminiBackend && (
+        <div className="flex items-start gap-3 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <AlertTriangle size={18} className="text-yellow-600 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-yellow-800">
+            The AI backend is currently set to <strong>Local AI</strong>. Gemini will only be used
+            for automated Gempest runs. To use Gemini for manual link summaries and email
+            summarization, switch to <strong>Use Gemini</strong> in <em>Preferences → Misc</em>.
+          </p>
+        </div>
+      )}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
           ✨ Gempest Configuration

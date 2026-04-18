@@ -25,5 +25,3 @@ dist-ssr
 
 .env
 .env.local
-
-.github/agents

@@ -1,3 +1,5 @@
+export type AiBackend = 'local' | 'gemini';
+
 export interface EnvironmentConfig {
   googleClientId: string;
   googleClientSecret: string;
@@ -8,6 +10,7 @@ export interface EnvironmentConfig {
   scoringEnabled: boolean;
   emailSummaryPoints: number;
   linkOpenPoints: number;
+  aiBackend: AiBackend;
 }
 
 // Import email cache service for clearing cache when Gmail query changes
@@ -133,6 +136,13 @@ class EnvironmentConfigService {
   }
 
   /**
+   * Get the AI backend preference ('local' or 'gemini')
+   */
+  getAiBackend(): AiBackend {
+    return this.config.aiBackend ?? 'local';
+  }
+
+  /**
    * Export configuration as JSON string
    */
   exportConfiguration(): string {
@@ -193,7 +203,8 @@ class EnvironmentConfigService {
       gmailQuery: 'is:unread -is:spam -is:starred in:inbox',
       scoringEnabled: true, // Enable by default for easier testing
       emailSummaryPoints: 10,
-      linkOpenPoints: 3
+      linkOpenPoints: 3,
+      aiBackend: 'local'
     };
   }
 
@@ -209,6 +220,7 @@ class EnvironmentConfigService {
       typeof config.scoringEnabled === 'boolean' &&
       typeof config.emailSummaryPoints === 'number' &&
       typeof config.linkOpenPoints === 'number'
+      // aiBackend is optional for backward compatibility
     );
   }
 }

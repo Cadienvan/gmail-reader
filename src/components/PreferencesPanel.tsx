@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Filter, HardDrive, Trophy, Zap } from 'lucide-react';
+import { Filter, HardDrive, Trophy, Zap, Settings2 } from 'lucide-react';
 import { UrlFilterConfigPanel } from './UrlFilterConfigPanel';
 import { StorageConfigPanel } from './StorageConfigPanel';
 import { EmailScoringDashboard } from './EmailScoringDashboard';
 import { RulesConfigPanel } from './RulesConfigPanel';
+import { MiscConfigPanel } from './MiscConfigPanel';
 
-type SubTabId = 'url-filters' | 'storage' | 'scoring' | 'rules';
+type SubTabId = 'url-filters' | 'storage' | 'scoring' | 'rules' | 'misc';
 
 interface SubTab {
   id: SubTabId;
@@ -41,6 +42,12 @@ export const PreferencesPanel: React.FC = () => {
       label: 'Rules',
       icon: Zap,
       component: <RulesConfigPanel onConfigChange={(config) => console.log('Rules configuration updated:', config)} />
+    },
+    {
+      id: 'misc',
+      label: 'Misc',
+      icon: Settings2,
+      component: <MiscConfigPanel />
     }
   ];
 

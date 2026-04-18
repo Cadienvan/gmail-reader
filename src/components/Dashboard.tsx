@@ -528,7 +528,7 @@ export const Dashboard: React.FC = () => {
           
           <div className="flex flex-col md:flex-row md:items-center gap-4">
             <div className="w-full md:w-auto">
-              <OllamaStatusIndicator />
+              {environmentConfigService.getAiBackend() === 'local' && <OllamaStatusIndicator />}
             </div>
           </div>
         </div>
@@ -674,7 +674,7 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              {ollamaStatus === 'unavailable' && !isOllamaWarningDismissed && (
+              {ollamaStatus === 'unavailable' && !isOllamaWarningDismissed && environmentConfigService.getAiBackend() === 'local' && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3">
