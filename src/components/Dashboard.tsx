@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, Trophy, Calendar, X, LucideDollarSign } from 'lucide-react';
+import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, Trophy, Calendar, X, LucideDollarSign, FileText } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration, LinkSummary } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
@@ -16,6 +16,7 @@ import { FlashCardImportExport } from './FlashCardImportExport';
 import { VoiceCommands } from './VoiceCommands';
 import { ConfigurationModal } from './ConfigurationModal';
 import { SavedForLaterModal } from './SavedForLaterModal';
+import { TabSummariesModal } from './TabSummariesModal';
 import { RulesDebugFloater } from './RulesDebugFloater';
 import { gempestService } from '../services/gempestService';
 import { Sparkles, StopCircle } from 'lucide-react';
@@ -43,6 +44,7 @@ export const Dashboard: React.FC = () => {
   const [showImportExportModal, setShowImportExportModal] = useState(false);
   const [showConfigurationModal, setShowConfigurationModal] = useState(false);
   const [showSavedForLaterModal, setShowSavedForLaterModal] = useState(false);
+  const [showTabSummariesModal, setShowTabSummariesModal] = useState(false);
   const [showRulesDebugFloater, setShowRulesDebugFloater] = useState(true);
   const [currentEmailIndex, setCurrentEmailIndex] = useState(0);
   const [allFlashCards, setAllFlashCards] = useState<FlashCard[]>([]);
@@ -542,14 +544,11 @@ export const Dashboard: React.FC = () => {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => {
-                  loadViewedEmails();
-                  setShowLogModal(true);
-                }}
+                onClick={() => setShowTabSummariesModal(true)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 shadow-md transition-all duration-200"
               >
-                <BookOpen size={18} />
-                View Summaries Log
+                <FileText size={18} />
+                Tab Summaries
               </button>
               <button
                 onClick={() => setShowImportExportModal(true)}
@@ -882,6 +881,11 @@ export const Dashboard: React.FC = () => {
         <SavedForLaterModal
           isOpen={showSavedForLaterModal}
           onClose={() => setShowSavedForLaterModal(false)}
+        />
+
+        <TabSummariesModal
+          isOpen={showTabSummariesModal}
+          onClose={() => setShowTabSummariesModal(false)}
         />
         </div>
       </div>
