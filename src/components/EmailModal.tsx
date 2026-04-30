@@ -2226,13 +2226,52 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             background: #f3f4f6;
             color: #374151;
           }
+
+          .dark .content-toggle-button {
+            background: #111827;
+            color: #9ca3af;
+          }
+
+          .dark .content-toggle-button:not(.active):hover {
+            background: #1f2937;
+            color: #e5e7eb;
+          }
+
+          .dark .hyper-focus-links-container {
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            border-color: #60a5fa;
+          }
+
+          .dark .hyper-focus-links-container h3 {
+            color: #93c5fd !important;
+          }
+
+          .dark .hyper-focus-link-item {
+            background: #111827 !important;
+            border-color: #374151 !important;
+          }
+
+          .dark .hyper-focus-link-item:hover {
+            background: #1f2937 !important;
+            border-color: #60a5fa !important;
+          }
+
+          .dark .hyper-focus-link-title {
+            color: #e5e7eb !important;
+          }
+
+          .dark .hyper-focus-separator {
+            background: #111827 !important;
+            border-color: #374151 !important;
+            color: #d1d5db !important;
+          }
         `}
       </style>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-7xl h-full max-h-[90vh] flex flex-col">
+      <div className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 rounded-lg w-full max-w-7xl h-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-xl font-semibold truncate flex-1 mr-4 flex items-center gap-2">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate flex-1 mr-4 flex items-center gap-2">
             {/* Sender Rank Badge */}
             {(() => {
               const scoringConfig = environmentConfigService.getScoringConfig();
@@ -2302,7 +2341,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           </h2>
           <div className="flex items-center gap-2">
             {/* Keyboard shortcuts info */}
-            <div className="text-xs text-gray-500 mr-4 hidden sm:block">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mr-4 hidden sm:block">
               <div className="flex gap-3">
                 <span>← Prev</span>
                 <span>→ Next</span>
@@ -2371,13 +2410,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               URL Filter
             </button>
             
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               {currentIndex + 1} of {emails.length}
             </span>
             <button
               onClick={() => executeAction('prev')}
               disabled={currentIndex === 0}
-              className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"
+              className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
               title="Previous email"
             >
               <ChevronLeft size={20} />
@@ -2385,7 +2424,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             <button
               onClick={() => executeAction('next')}
               disabled={currentIndex === emails.length - 1}
-              className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"
+              className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
               title="Next email"
             >
               <ChevronRight size={20} />
@@ -2393,7 +2432,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
             <button
               onClick={() => handleNavigationWithConfirm('close')}
-              className="p-2 rounded hover:bg-gray-100"
+              className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <X size={20} />
             </button>
@@ -2428,15 +2467,15 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               : 'flex-1'
           } overflow-hidden`}>
             {/* Email Content - responsive width based on sidebar visibility */}
-            <div className={`${isSidebarVisible ? 'w-[70%]' : 'w-full'} ${isSidebarVisible ? 'border-r' : ''} flex flex-col overflow-hidden relative`}>
+            <div className={`${isSidebarVisible ? 'w-[70%]' : 'w-full'} ${isSidebarVisible ? 'border-r border-gray-200 dark:border-gray-700' : ''} flex flex-col overflow-hidden relative`}>
               <div className={`flex-1 overflow-y-auto p-4 email-content-container ${focusMode ? 'focus-mode' : ''}`}>
               
               {/* Paste URL/Text Input Section - Full width when sidebar is hidden */}
               {!isSidebarVisible && (
-                <div className="mb-4 border-b pb-3 bg-indigo-50 p-3 rounded-md">
+                <div className="mb-4 border-b border-gray-200 dark:border-gray-700 pb-3 bg-indigo-50 dark:bg-indigo-950/40 p-3 rounded-md">
                   <button 
                     onClick={togglePasteInput}
-                    className="mb-2 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-1 px-3 rounded-full transition-colors inline-flex items-center gap-1"
+                    className="mb-2 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:hover:bg-indigo-900 dark:text-indigo-200 py-1 px-3 rounded-full transition-colors inline-flex items-center gap-1"
                   >
                     <span>{isPasteInputVisible ? 'Hide' : 'Paste URL or text for summary'}</span>
                   </button>
@@ -2445,7 +2484,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     <div className="space-y-2">
                       <textarea
                         placeholder="Paste URL or text here. URLs will be processed as links, any other content will be summarized as text."
-                        className="w-full p-2 border rounded text-sm min-h-[80px]"
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm min-h-[80px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         value={pasteInput}
                         onChange={handlePasteInputChange}
                         onPaste={() => {
@@ -2464,7 +2503,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                         }}
                       />
                       <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-500">Press Ctrl+Enter to process</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Press Ctrl+Enter to process</span>
                         <button
                           onClick={processUserInput}
                           disabled={!pasteInput.trim()}
@@ -2483,7 +2522,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                   <button 
                     onClick={handleEmailSummary}
                     disabled={linkSummaries.get(`email:${currentEmail.id}`)?.loading}
-                    className="inline-flex items-center gap-1 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 py-1 px-3 rounded-full transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:hover:bg-blue-900/70 dark:text-blue-200 py-1 px-3 rounded-full transition-colors disabled:opacity-50"
                   >
                     {linkSummaries.get(`email:${currentEmail.id}`)?.loading ? (
                       <>
@@ -2500,7 +2539,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                   
                   {/* Content Type Toggle */}
                   {emailContent?.htmlBody && (
-                    <div className="inline-flex ml-3 rounded-lg border border-gray-200 overflow-hidden">
+                    <div className="inline-flex ml-3 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                       <button
                         onClick={() => setShowHtmlContent(false)}
                         className={`px-3 py-1 text-sm transition-colors content-toggle-button ${
@@ -2521,7 +2560,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                   )}
 
                   {/* Focus Mode Toggle Buttons */}
-                  <div className="inline-flex ml-3 rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="inline-flex ml-3 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                     <button
                       onClick={toggleFocusMode}
                       className={`px-3 py-1 text-sm transition-colors content-toggle-button ${
@@ -2544,9 +2583,9 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 </div>
               </div>
               
-              <div className="prose max-w-none">
+              <div className="prose max-w-none dark:prose-invert">
                 {isLoadingContent ? (
-                  <div className="flex items-center gap-2 text-gray-600 p-4">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 p-4">
                     <Loader2 size={20} className="animate-spin" />
                     Loading email content...
                   </div>
@@ -2582,7 +2621,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                               <h3>
                                 🔗 No meaningful links found
                               </h3>
-                              <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
+                              <p className="text-gray-500 dark:text-gray-400 text-sm m-0">
                                 This email doesn't contain links with descriptive titles.
                               </p>
                             </div>
@@ -2631,10 +2670,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               {!isSidebarVisible && (
                 <button
                   onClick={toggleSidebar}
-                  className="absolute top-4 right-4 p-2 bg-white border border-gray-300 rounded-lg shadow-md hover:bg-gray-50 transition-colors z-10"
+                  className="absolute top-4 right-4 p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors z-10"
                   title="Show links panel"
                 >
-                  <ChevronLeft size={20} className="text-gray-600" />
+                  <ChevronLeft size={20} className="text-gray-600 dark:text-gray-300" />
                 </button>
               )}
             </div>
@@ -2644,10 +2683,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               <div className="w-[30%] flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto p-4">
               {/* Paste URL/Text Input Section */}
-              <div className="mb-4 border-b pb-3 bg-indigo-50 p-3 rounded-md">
+              <div className="mb-4 border-b border-gray-200 dark:border-gray-700 pb-3 bg-indigo-50 dark:bg-indigo-950/40 p-3 rounded-md">
                 <button 
                   onClick={togglePasteInput}
-                  className="mb-2 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-1 px-3 rounded-full transition-colors inline-flex items-center gap-1"
+                  className="mb-2 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:hover:bg-indigo-900 dark:text-indigo-200 py-1 px-3 rounded-full transition-colors inline-flex items-center gap-1"
                 >
                   <span>{isPasteInputVisible ? 'Hide' : 'Paste URL or text for summary'}</span>
                 </button>
@@ -2656,7 +2695,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                   <div className="space-y-2">
                     <textarea
                       placeholder="Paste URL or text here. URLs will be processed as links, any other content will be summarized as text."
-                      className="w-full p-2 border rounded text-sm min-h-[80px]"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm min-h-[80px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       value={pasteInput}
                       onChange={handlePasteInputChange}
                       onPaste={() => {
@@ -2675,7 +2714,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       }}
                     />
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">Press Ctrl+Enter to process</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Press Ctrl+Enter to process</span>
                       <button
                         onClick={processUserInput}
                         disabled={!pasteInput.trim()}
@@ -2693,27 +2732,27 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 <h3 className="font-semibold">Extracted Links ({extractedLinks.length})</h3>
                 <button
                   onClick={toggleSidebar}
-                  className="p-1 rounded hover:bg-gray-100 transition-colors"
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   title="Hide links panel"
                 >
-                  <X size={16} className="text-gray-600" />
+                  <X size={16} className="text-gray-600 dark:text-gray-300" />
                 </button>
               </div>
               {extractedLinks.length === 0 ? (
-                <p className="text-gray-500 text-sm">No links found in this email.</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">No links found in this email.</p>
               ) : (
                 <div className="space-y-2">
                   {extractedLinks.map((link, index) => (
                     <div 
                       key={index} 
-                      className="border rounded p-2"
+                      className="border border-gray-200 dark:border-gray-700 rounded p-2"
                       onMouseEnter={() => handleLinkHover(link.url)}
                       onMouseLeave={() => handleLinkHover(null)}
                     >
                       <div className="flex items-start gap-2">
                         <button
                           onClick={() => handleLinkClick(link)}
-                          className="flex-1 text-left hover:bg-blue-50 p-1 rounded transition-colors cursor-pointer"
+                          className="flex-1 text-left hover:bg-blue-50 dark:hover:bg-blue-950/40 p-1 rounded transition-colors cursor-pointer"
                         >
                           <div className="text-sm text-blue-600 hover:text-blue-800 break-all font-medium flex items-center">
                             <span className="bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center mr-1 text-xs">
@@ -2722,7 +2761,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                             {/* Always show the domain as the main identifier */}
                             {link.domain}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1 break-all">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-all">
                             {/* Show the link title/text if available and meaningful, otherwise show a descriptive text */}
                             {link.text && link.text !== link.url && link.text.trim() !== '' 
                               ? link.text 
@@ -2740,7 +2779,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                           href={link.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-1 text-gray-400 hover:text-gray-600"
+                          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                           title="Open in new tab"
                         >
                           <ExternalLink size={14} />
@@ -2748,9 +2787,9 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       </div>
                       
                       {linkSummaries.has(link.url) && (
-                        <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                        <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
                           {linkSummaries.get(link.url)?.loading && (
-                            <div className="flex items-center gap-2 text-gray-600">
+                            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                               <Loader2 size={14} className="animate-spin" />
                               Generating summary...
                             </div>
@@ -2775,16 +2814,16 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           {activeSummaryUrls.length > 0 && isSummaryVisible && (
             <div
               onMouseDown={handleResizerMouseDown}
-              className="h-2 bg-gray-200 hover:bg-blue-400 active:bg-blue-500 cursor-row-resize transition-colors flex items-center justify-center group flex-shrink-0"
+              className="h-2 bg-gray-200 dark:bg-gray-700 hover:bg-blue-400 active:bg-blue-500 cursor-row-resize transition-colors flex items-center justify-center group flex-shrink-0"
               title="Drag to resize panel"
             >
-              <div className="w-10 h-0.5 rounded-full bg-gray-400 group-hover:bg-blue-600 transition-colors" />
+              <div className="w-10 h-0.5 rounded-full bg-gray-400 dark:bg-gray-500 group-hover:bg-blue-600 transition-colors" />
             </div>
           )}
 
           {/* Bottom row: AI Summary - Full width */}
           <div
-            className={`border-t bg-gray-50 ${
+            className={`border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 ${
               activeSummaryUrls.length > 0
                 ? isSummaryVisible ? 'flex-shrink-0 overflow-y-auto' : 'h-auto flex-shrink-0'
                 : 'h-[50px] flex-shrink-0'
@@ -2833,8 +2872,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                               summary?.error 
                                 ? 'border-red-400 bg-red-100 text-red-800 hover:bg-red-200 shadow-sm animate-pulse' // Enhanced error state styling
                                 : currentTabUrl === url
-                                  ? 'border-blue-500 bg-white text-blue-700'
-                                  : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                                  ? 'border-blue-500 bg-white text-blue-700 dark:bg-gray-800 dark:text-blue-300'
+                                  : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
                             }`}
                             title={summary?.error ? `Error: ${summary.error}` : displayUrl}
                           >
@@ -2850,7 +2889,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                                 e.stopPropagation();
                                 handleCloseSummary(url);
                               }}
-                              className="p-0.5 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600 flex-shrink-0 cursor-pointer"
+                              className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0 cursor-pointer"
                               title="Close this tab"
                             >
                               <X size={12} />
@@ -2861,7 +2900,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       })
                     ) : activeSummary ? (
                       // Single tab display
-                      <div className="text-sm text-gray-700 font-medium">
+                       <div className="text-sm text-gray-700 dark:text-gray-200 font-medium">
                         {activeSummary.url.startsWith('email:') ? 'Email Summary' :
                          activeSummary.url.startsWith('text://') ? 'Pasted Text Summary' :
                          activeSummary.url.startsWith('paste-url://') ? 'Pasted URL Summary' :
@@ -2873,7 +2912,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                   {/* Toggle Button */}
                   <button
                     onClick={toggleSummaryPanel}
-                    className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 ml-2"
+                     className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 ml-2"
                     title={isSummaryVisible ? 'Hide summary content' : 'Show summary content'}
                   >
                     {isSummaryVisible ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
@@ -2884,7 +2923,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 {activeSummary && isSummaryVisible && (
                   <div className="flex-1 overflow-y-auto">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-sm text-gray-700 flex items-center gap-2">
+                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2">
                         {activeSummary.url.startsWith('email:') ? (
                           <>
                             <Mail size={14} />
@@ -2905,7 +2944,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                             <span className="truncate">{getTabUrl() || 'Summary'}</span>
                             <button
                               onClick={() => window.open(activeSummary.finalUrl || activeSummary.url, '_blank')}
-                              className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex-shrink-0"
+                              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 flex-shrink-0"
                               title="Open in new tab"
                             >
                               <ExternalLink size={14} />
@@ -2916,7 +2955,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       {activeSummaryUrls.length === 1 && (
                         <button
                           onClick={() => handleCloseSummary()}
-                          className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
+                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100"
                           title="Close summary and focus on email"
                         >
                           <X size={16} />
@@ -2925,7 +2964,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     </div>
                 
                 {activeSummary.loading && (
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                     <Loader2 size={16} className="animate-spin" />
                     {environmentConfigService.getAiBackend() === 'gemini'
                       ? 'Generating summary with Gemini...'
@@ -2934,13 +2973,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 )}
                 
                 {activeSummary.error && (
-                  <div className="text-red-600 bg-red-50 p-3 rounded">
+                  <div className="text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/40 p-3 rounded">
                     <strong>Error:</strong> {activeSummary.error}
                   </div>
                 )}
                 
                 {activeSummary.summary && (
-                  <div className="prose max-w-none">
+                  <div className="prose max-w-none dark:prose-invert">
                     <ReactMarkdown 
                       rehypePlugins={[rehypeRaw, rehypeSanitize]}
                     >
@@ -2951,10 +2990,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     
                     {/* Pending memory phrase banner */}
                     {activeSummary.pendingMemoryPhrase && (
-                      <div className="mt-4 p-3 rounded-lg bg-indigo-50 border border-indigo-200">
-                        <p className="text-xs font-semibold text-indigo-700 mb-2">🧠 Memory suggestion — choose where to file it:</p>
+                      <div className="mt-4 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
+                        <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-200 mb-2">🧠 Memory suggestion — choose where to file it:</p>
                         <textarea
-                          className="w-full text-sm text-indigo-900 bg-white border border-indigo-200 rounded-md px-2 py-1.5 mb-3 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          className="w-full text-sm text-indigo-900 dark:text-indigo-100 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-md px-2 py-1.5 mb-3 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           rows={2}
                           value={editedMemoryPhrases.get(currentTabUrl!) ?? activeSummary.pendingMemoryPhrase}
                           onChange={(e) => {
@@ -3000,7 +3039,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                               setEditedMemoryPhrases(prev => { const n = new Map(prev); n.delete(url); return n; });
                               setLinkSummaries(prev => new Map(prev).set(url, { ...prev.get(url)!, pendingMemoryPhrase: undefined }));
                             }}
-                            className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 py-1 px-2 transition-colors"
+                            className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 py-1 px-2 transition-colors"
                           >
                             <span>✕</span>
                             <span>Dismiss</span>
@@ -3010,7 +3049,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     )}
 
                     {/* Action buttons */}
-                    <div className="mt-4 pt-3 border-t border-gray-200 flex items-center gap-3 flex-wrap">
+                    <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3 flex-wrap">
                       {/* Improve Summary Button - show only if upgrade is available */}
                       {activeSummary.canUpgrade && activeSummary.modelUsed === 'short' && (
                         <button
@@ -3047,7 +3086,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       
                       {/* Model indicator */}
                       {activeSummary.modelUsed && (
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                         <span className="text-xs text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
                           {activeSummary.modelUsed === 'short' ? 'Quick Summary' : 'Detailed Summary'}
                         </span>
                       )}
@@ -3088,7 +3127,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               </div>
             ) : (
               <div className="p-4 flex items-center h-full">
-                <p className="text-gray-500 text-sm">
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
                   {activeSummaryUrls.length > 0 && !isSummaryVisible 
                     ? "Summary hidden - click the arrow button to show content"
                     : "Click on a link above to generate an AI summary"
@@ -3103,18 +3142,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4 text-red-600">Delete Email?</h3>
-            <p className="text-gray-600 mb-4">
+          <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4 text-red-600 dark:text-red-400">Delete Email?</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
               Are you sure you want to delete this email? It will be moved to trash.
             </p>
-            <p className="text-xs text-gray-500 mb-6">
-              Press <kbd className="bg-gray-100 px-1 rounded">Enter</kbd> to delete or <kbd className="bg-gray-100 px-1 rounded">Esc</kbd> to cancel
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+              Press <kbd className="bg-gray-100 dark:bg-gray-800 px-1 rounded">Enter</kbd> to delete or <kbd className="bg-gray-100 dark:bg-gray-800 px-1 rounded">Esc</kbd> to cancel
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={handleCancelDelete}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                className="px-4 py-2 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
@@ -3140,21 +3179,21 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       {/* Confirmation Dialog */}
       {showConfirmDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Mark Email as Read?</h3>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Mark Email as Read?</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
               This email hasn't been marked as read yet. Would you like to mark it as read before continuing?
                                              </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={handleCancelAction}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                className="px-4 py-2 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleContinueWithoutMarking}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
+                className="px-4 py-2 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
               >
                 Continue Without Marking
               </button>
