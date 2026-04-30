@@ -93,12 +93,12 @@ export const TabSummariesModal: React.FC<TabSummariesModalProps> = ({ isOpen, on
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+      <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col border border-transparent dark:border-gray-700">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Tab Summaries</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Tab Summaries</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               {tabs.length} previously summarised {tabs.length === 1 ? 'tab' : 'tabs'}
             </p>
           </div>
@@ -106,13 +106,13 @@ export const TabSummariesModal: React.FC<TabSummariesModalProps> = ({ isOpen, on
             <button
               onClick={loadTabs}
               disabled={isLoading}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               title="Refresh"
             >
-              <RefreshCw className={`w-5 h-5 text-gray-600 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 text-gray-600 dark:text-gray-300 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-gray-600" />
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
           </div>
         </div>
@@ -120,40 +120,40 @@ export const TabSummariesModal: React.FC<TabSummariesModalProps> = ({ isOpen, on
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-3">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              {error}
-            </div>
-          )}
+              <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-300 text-sm">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {error}
+              </div>
+            )}
 
           {isLoading ? (
-            <div className="text-center py-12 text-gray-500">
-              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-gray-300" />
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-gray-300 dark:text-gray-600" />
               Loading summaries…
             </div>
           ) : tabs.length === 0 ? (
             <div className="text-center py-12">
-              <FileText className="w-12 h-12 mx-auto mb-4 text-gray-200" />
-              <p className="text-gray-500">No summaries yet. Open emails and let the AI summarise their links.</p>
+              <FileText className="w-12 h-12 mx-auto mb-4 text-gray-200 dark:text-gray-700" />
+              <p className="text-gray-500 dark:text-gray-400">No summaries yet. Open emails and let the AI summarise their links.</p>
             </div>
           ) : (
             tabs.map(tab => (
               <div
                 key={tab.url}
-                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-2 flex-1 min-w-0">
                     {getTabIcon(tab.url)}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-gray-900 text-sm truncate">
+                        <span className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">
                           {getTabLabel(tab)}
                         </span>
-                        <span className="text-xs text-gray-400">{formatDate(tab.lastOpened)}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">{formatDate(tab.lastOpened)}</span>
                       </div>
 
-                      <div className={`prose prose-sm max-w-none mt-1 ${expandedUrl === tab.url ? '' : 'line-clamp-3'}`}>
+                      <div className={`prose prose-sm max-w-none mt-1 text-gray-700 dark:text-gray-200 ${expandedUrl === tab.url ? '' : 'line-clamp-3'}`}>
                         <ReactMarkdown rehypePlugins={[rehypeRaw, rehypeSanitize]}>
                           {tab.summary.includes('</think>')
                             ? tab.summary.split('</think>')[1]
@@ -164,7 +164,7 @@ export const TabSummariesModal: React.FC<TabSummariesModalProps> = ({ isOpen, on
                       {(tab.summary.split('\n').length > 4 || tab.summary.length > 300) && (
                         <button
                           onClick={() => setExpandedUrl(expandedUrl === tab.url ? null : tab.url)}
-                          className="mt-1 text-xs text-blue-600 hover:underline"
+                          className="mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
                         >
                           {expandedUrl === tab.url ? 'Show less' : 'Show more'}
                         </button>
@@ -176,15 +176,15 @@ export const TabSummariesModal: React.FC<TabSummariesModalProps> = ({ isOpen, on
                     {tab.url.startsWith('http') && (
                       <button
                         onClick={() => window.open(tab.url, '_blank')}
-                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                        className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         title="Open link"
                       >
-                        <ExternalLink className="w-4 h-4 text-gray-500" />
+                        <ExternalLink className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                       </button>
                     )}
                     <button
                       onClick={() => handleDelete(tab.url)}
-                      className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                      className="p-2 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
                       title="Delete summary"
                     >
                       <Trash2 className="w-4 h-4 text-red-500" />
