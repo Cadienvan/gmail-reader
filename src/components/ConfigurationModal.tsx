@@ -77,20 +77,20 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden border border-transparent dark:border-gray-700">
         {/* Modal Header */}
-        <div className="flex justify-between items-center p-6 border-b bg-gray-50">
-          <h2 className="text-xl font-semibold text-gray-900">Configuration</h2>
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Configuration</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b bg-gray-50 overflow-x-auto">
+        <div className="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-x-auto">
           <div className="flex flex-nowrap min-w-full">
             {tabs.map((tab) => {
               const IconComponent = tab.icon;
@@ -100,8 +100,8 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors flex-shrink-0 whitespace-nowrap ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600 bg-white'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-900'
+                      : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
                   <IconComponent size={16} />
@@ -113,7 +113,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
           {tabs.find(tab => tab.id === activeTab)?.component}
         </div>
       </div>

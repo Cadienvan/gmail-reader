@@ -472,7 +472,7 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       {/* Main Content Area */}
       <div className="flex-1 p-4">
         {/* Voice Commands */}
@@ -480,13 +480,13 @@ export const Dashboard: React.FC = () => {
         
         <div className="max-w-5xl mx-auto">
           {/* Header */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 mb-6 border border-transparent dark:border-gray-800">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
             <div className="mb-3 md:mb-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
                 Gmail Reader
               </h1>
-              <p className="text-sm md:text-base text-gray-600 mt-1">
+              <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 mt-1">
                 Read your (forever and ever) unread emails with AI-powered link summaries.
               </p>
             </div>
@@ -536,11 +536,11 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Global Actions Section - Available without authentication */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 mb-6 border border-transparent dark:border-gray-800">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Quick Actions</h2>
-              <p className="text-gray-600 text-sm">Available features and tools</p>
+               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Quick Actions</h2>
+               <p className="text-gray-600 dark:text-gray-300 text-sm">Available features and tools</p>
             </div>
             <div className="flex gap-3">
               <button
@@ -571,7 +571,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Authentication Section */}
         {!isAuthenticated && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 mb-6 border border-transparent dark:border-gray-800">
             <div className="text-center">
               <Mail size={48} className="mx-auto text-blue-500 mb-4" />
               <h2 className="text-xl font-semibold mb-2">Connect to Gmail</h2>
@@ -593,7 +593,7 @@ export const Dashboard: React.FC = () => {
         {isAuthenticated && (
           <div className="space-y-6">
             {/* Stats and Actions */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 border border-transparent dark:border-gray-800">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-6">
                   <div className="text-center">
@@ -723,7 +723,7 @@ export const Dashboard: React.FC = () => {
 
             {/* Email List */}
             {emails.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 border border-transparent dark:border-gray-800">
                 <h2 className="text-lg font-semibold mb-4">Unread Emails</h2>
                 <div className="max-h-96 overflow-y-auto pr-2 space-y-3">
                   {emails.map((email, index) => (

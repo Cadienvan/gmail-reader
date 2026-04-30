@@ -17,6 +17,12 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: #f9fafb;
+  color: #111827;
+}
+
+.dark body {
+  background-color: #0f172a;
+  color: #e5e7eb;
 }
 
 /* Flash card 3D flip animations */
@@ -47,9 +53,17 @@ body {
   border-radius: 4px;
 }
 
+.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -292,5 +306,4 @@ body {
   background-color: #e5e7eb;
   color: #4b5563;
 }
-
 
