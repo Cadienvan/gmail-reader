@@ -104,11 +104,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     return localStorage.getItem('emailModal_currentTabUrl');
   });
 
-  // Ref to keep the latest currentTabUrl available to event listeners to avoid stale closures
+  // Refs to keep the latest currentTabUrl and activeSummaryUrls available to event listeners to avoid stale closures
   const currentTabUrlRef = useRef<string | null>(currentTabUrl);
+  const activeSummaryUrlsRef = useRef<string[]>(activeSummaryUrls);
+
+  // Keep refs in sync as a fallback, but primary updates are done synchronously in setters/handlers
   useEffect(() => {
     currentTabUrlRef.current = currentTabUrl;
   }, [currentTabUrl]);
+  useEffect(() => {
+    activeSummaryUrlsRef.current = activeSummaryUrls;
+  }, [activeSummaryUrls]);
+
   const [currentModel, setCurrentModel] = useState<ModelConfiguration>(() => ollamaService.getModelConfiguration());
 
   // Save active tabs and current tab to localStorage
@@ -194,7 +201,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       setLinkSummaries(prev => new Map(prev).set(url, summary));
       setActiveSummaryUrls(prev => {
         if (prev.includes(url)) return prev;
-        return [...prev, url];
+        const newUrls = [...prev, url];
+        // Update ref synchronously so event handlers see the latest value
+        activeSummaryUrlsRef.current = newUrls;
+        return newUrls;
       });
     });
   }, [gempestSummaries]);
@@ -725,8 +735,11 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       } else if (matches(keyBindings.closeSummary)) {
         event.preventDefault();
         // Close the active summary tab using the same handler as clicking the tab X
-        // Use the ref to ensure we always target the current active tab (avoid stale closures)
-        handleCloseSummary(currentTabUrlRef.current || undefined);
+        // Resolve target from currentTabUrlRef first, then fall back to first activeSummaryUrlsRef entry
+        const closeTarget = currentTabUrlRef.current || (activeSummaryUrlsRef.current && activeSummaryUrlsRef.current.length > 0 ? activeSummaryUrlsRef.current[0] : undefined);
+        if (closeTarget) {
+          handleCloseSummary(closeTarget);
+        }
       } else if (pressed === 'escape') {
         // Always allow Escape to close the modal (preserve existing behavior)
         event.preventDefault();
@@ -1150,7 +1163,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         // Set as current tab if it's the first one or if no current tab
         if (prev.length === 0) {
           setCurrentTabUrl(link.url);
+          currentTabUrlRef.current = link.url;
         }
+        // Update ref synchronously so event handlers see the latest value
+        activeSummaryUrlsRef.current = newUrls;
         return newUrls;
       }
       return prev;
@@ -1158,6 +1174,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     
     // Set as current tab
     setCurrentTabUrl(link.url);
+    currentTabUrlRef.current = link.url;
     
     // Check if we already have a summary for this link
     if (linkSummaries.has(link.url)) {
@@ -1352,7 +1369,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         // Set as current tab if it's the first one or if no current tab
         if (prev.length === 0) {
           setCurrentTabUrl(emailTabId);
+          currentTabUrlRef.current = emailTabId;
         }
+        // Update ref synchronously
+        activeSummaryUrlsRef.current = newUrls;
         return newUrls;
       }
       return prev;
@@ -1360,6 +1380,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     
     // Set as current tab
     setCurrentTabUrl(emailTabId);
+    currentTabUrlRef.current = emailTabId;
     
     // Check if we already have a summary for this email
     if (linkSummaries.has(emailTabId)) {
@@ -1466,9 +1487,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   };
 
   const handleCloseSummary = async (urlToClose?: string) => {
-    const urlToRemove = urlToClose || currentTabUrl;
+    // Resolve the URL to remove from the explicit parameter or the current tab ref
+    const urlToRemove = urlToClose || currentTabUrlRef.current;
     if (!urlToRemove) return;
-    
+
     // Cancel any ongoing request for this URL
     const controller = abortControllers.get(urlToRemove);
     if (controller) {
@@ -1479,7 +1501,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         return newMap;
       });
     }
-    
+
     // Also cancel flash card generation if it's for this URL
     const flashCardController = abortControllers.get(`flashcards-${urlToRemove}`);
     if (flashCardController) {
@@ -1491,7 +1513,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       });
       setIsGeneratingFlashCards(null);
     }
-    
+
     // If this is a Gempest-originated tab, mark it as dismissed to prevent auto-reopening
     if (gempestOriginatedUrls.current.has(urlToRemove)) {
       addDismissedGempestUrl(urlToRemove);
@@ -1500,16 +1522,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     // Update state synchronously for immediate UI feedback and accurate localStorage
     setActiveSummaryUrls(prev => {
       const newUrls = prev.filter(url => url !== urlToRemove);
-      
-      // If we're closing the current tab, switch to another tab or set to null
-      // We pass the function to the setter so we have the most up-to-date state
-      setCurrentTabUrl(current => {
-        if (urlToRemove === current) {
-          return newUrls.length > 0 ? newUrls[0] : null;
-        }
-        return current;
-      });
-      
+
+      // Determine the new current tab synchronously using refs
+      const prevCurrent = currentTabUrlRef.current;
+      const newCurrent = prevCurrent === urlToRemove ? (newUrls.length > 0 ? newUrls[0] : null) : prevCurrent;
+
+      // Update current tab state and refs synchronously
+      setCurrentTabUrl(newCurrent);
+      currentTabUrlRef.current = newCurrent;
+
+      // Update active summary urls ref synchronously
+      activeSummaryUrlsRef.current = newUrls;
+
       return newUrls;
     });
 
@@ -1524,6 +1548,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   const handleTabSwitch = (url: string) => {
     setCurrentTabUrl(url);
+    currentTabUrlRef.current = url;
     
     // Highlight any links in the email that match this URL
     const emailContentElement = document.querySelector('.email-content-container');
@@ -1606,8 +1631,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         loading: true
       }));
 
-      setActiveSummaryUrls(prev => [...prev, fakeUrl]);
+      setActiveSummaryUrls(prev => {
+        const newUrls = [...prev, fakeUrl];
+        activeSummaryUrlsRef.current = newUrls;
+        return newUrls;
+      });
       setCurrentTabUrl(fakeUrl);
+      currentTabUrlRef.current = fakeUrl;
 
       try {
         const aiBackend = environmentConfigService.getAiBackend();
@@ -1676,8 +1706,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       }));
       
       // Add to active tabs
-      setActiveSummaryUrls(prev => [...prev, fakeUrl]);
+      setActiveSummaryUrls(prev => {
+        const newUrls = [...prev, fakeUrl];
+        activeSummaryUrlsRef.current = newUrls;
+        return newUrls;
+      });
       setCurrentTabUrl(fakeUrl);
+      currentTabUrlRef.current = fakeUrl;
       
       // Generate summary directly from text
       try {
