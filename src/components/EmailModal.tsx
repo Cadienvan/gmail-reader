@@ -103,6 +103,12 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const [currentTabUrl, setCurrentTabUrl] = useState<string | null>(() => {
     return localStorage.getItem('emailModal_currentTabUrl');
   });
+
+  // Ref to keep the latest currentTabUrl available to event listeners to avoid stale closures
+  const currentTabUrlRef = useRef<string | null>(currentTabUrl);
+  useEffect(() => {
+    currentTabUrlRef.current = currentTabUrl;
+  }, [currentTabUrl]);
   const [currentModel, setCurrentModel] = useState<ModelConfiguration>(() => ollamaService.getModelConfiguration());
 
   // Save active tabs and current tab to localStorage
@@ -719,7 +725,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       } else if (matches(keyBindings.closeSummary)) {
         event.preventDefault();
         // Close the active summary tab using the same handler as clicking the tab X
-        handleCloseSummary();
+        // Use the ref to ensure we always target the current active tab (avoid stale closures)
+        handleCloseSummary(currentTabUrlRef.current || undefined);
       } else if (pressed === 'escape') {
         // Always allow Escape to close the modal (preserve existing behavior)
         event.preventDefault();
