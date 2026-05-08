@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Filter, HardDrive, Trophy, Zap, Settings2 } from 'lucide-react';
+import { Filter, HardDrive, Trophy, Zap, Settings2, Keyboard } from 'lucide-react';
 import { UrlFilterConfigPanel } from './UrlFilterConfigPanel';
 import { StorageConfigPanel } from './StorageConfigPanel';
 import { EmailScoringDashboard } from './EmailScoringDashboard';
 import { RulesConfigPanel } from './RulesConfigPanel';
 import { MiscConfigPanel } from './MiscConfigPanel';
+import { KeyBindingsConfigPanel } from './KeyBindingsConfigPanel';
 
-type SubTabId = 'url-filters' | 'storage' | 'scoring' | 'rules' | 'misc';
+type SubTabId = 'url-filters' | 'storage' | 'scoring' | 'rules' | 'key-bindings' | 'misc';
 
 interface SubTab {
   id: SubTabId;
@@ -42,6 +43,12 @@ export const PreferencesPanel: React.FC = () => {
       label: 'Rules',
       icon: Zap,
       component: <RulesConfigPanel onConfigChange={(config) => console.log('Rules configuration updated:', config)} />
+    },
+    {
+      id: 'key-bindings',
+      label: 'Key bindings',
+      icon: Keyboard,
+      component: <KeyBindingsConfigPanel />
     },
     {
       id: 'misc',

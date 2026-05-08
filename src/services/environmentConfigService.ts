@@ -1,5 +1,14 @@
 export type AiBackend = 'local' | 'gemini';
 
+export interface KeyBindings {
+  // Key binding strings (e.g. "j", "k", "r", "d", "Escape" or combos like "g n")
+  gotoNextEmail: string;
+  gotoPreviousEmail: string;
+  markAsRead: string;
+  deleteEmail: string;
+  closeSummary: string;
+}
+
 export interface EnvironmentConfig {
   googleClientId: string;
   googleClientSecret: string;
@@ -12,6 +21,7 @@ export interface EnvironmentConfig {
   emailSummaryPoints: number;
   linkOpenPoints: number;
   aiBackend: AiBackend;
+  keyBindings: KeyBindings;
 }
 
 // Import email cache service for clearing cache when Gmail query changes
@@ -151,6 +161,29 @@ class EnvironmentConfigService {
   }
 
   /**
+   * Get current key bindings
+   */
+  getKeyBindings(): KeyBindings {
+    return { ...this.config.keyBindings };
+  }
+
+  /**
+   * Update all key bindings at once
+   */
+  setKeyBindings(bindings: KeyBindings): void {
+    this.config.keyBindings = { ...bindings };
+    this.saveConfiguration();
+  }
+
+  /**
+   * Update a single key binding
+   */
+  updateKeyBinding<K extends keyof KeyBindings>(action: K, value: KeyBindings[K]): void {
+    this.config.keyBindings[action] = value;
+    this.saveConfiguration();
+  }
+
+  /**
    * Export configuration as JSON string
    */
   exportConfiguration(): string {
@@ -213,11 +246,26 @@ class EnvironmentConfigService {
       scoringEnabled: true, // Enable by default for easier testing
       emailSummaryPoints: 10,
       linkOpenPoints: 3,
-      aiBackend: 'local'
+      aiBackend: 'local',
+      keyBindings: {
+        // Defaults wired to arrow keys and 'q' for closing summary tab
+        gotoNextEmail: 'ArrowRight',
+        gotoPreviousEmail: 'ArrowLeft',
+        markAsRead: 'ArrowUp',
+        deleteEmail: 'ArrowDown',
+        closeSummary: 'q'
+      }
     };
   }
 
   private validateConfiguration(config: any): config is EnvironmentConfig {
+    const keyBindingsValid = typeof config.keyBindings === 'object' &&
+      typeof config.keyBindings.gotoNextEmail === 'string' &&
+      typeof config.keyBindings.gotoPreviousEmail === 'string' &&
+      typeof config.keyBindings.markAsRead === 'string' &&
+      typeof config.keyBindings.deleteEmail === 'string' &&
+      typeof config.keyBindings.closeSummary === 'string';
+
     return (
       typeof config === 'object' &&
       typeof config.googleClientId === 'string' &&
@@ -229,8 +277,10 @@ class EnvironmentConfigService {
       typeof config.gmailQuery === 'string' &&
       typeof config.scoringEnabled === 'boolean' &&
       typeof config.emailSummaryPoints === 'number' &&
-      typeof config.linkOpenPoints === 'number'
+      typeof config.linkOpenPoints === 'number' &&
       // aiBackend is optional for backward compatibility
+      (config.aiBackend === undefined || typeof config.aiBackend === 'string') &&
+      keyBindingsValid
     );
   }
 }

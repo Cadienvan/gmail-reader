@@ -683,35 +683,49 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         return;
       }
 
-      switch (event.key) {
-        case 'ArrowLeft':
-          event.preventDefault();
-          if (currentIndex > 0) {
-            executeAction('prev');
-          }
-          break;
-        case 'ArrowRight':
-          event.preventDefault();
-          if (currentIndex < emails.length - 1) {
-            executeAction('next');
-          }
-          break;
-        case 'ArrowUp':
-          event.preventDefault();
-          if (currentEmail && !isCurrentEmailRead && !isMarkingAsRead) {
-            handleMarkAsRead();
-          }
-          break;
-        case 'ArrowDown':
-          event.preventDefault();
-          handleShowDeleteConfirm();
-          break;
-        case 'Escape':
-          event.preventDefault();
-          if (!showConfirmDialog) {
-            handleNavigationWithConfirm('close');
-          }
-          break;
+      // Use runtime-configured key bindings from environment service
+      const keyBindings = environmentConfigService.getKeyBindings();
+      const normalizeKeyName = (key: string): string => {
+        if (!key) return '';
+        if (/^left$/i.test(key)) return 'ArrowLeft';
+        if (/^right$/i.test(key)) return 'ArrowRight';
+        if (/^up$/i.test(key)) return 'ArrowUp';
+        if (/^down$/i.test(key)) return 'ArrowDown';
+        if (key === ' ' || /^spacebar$/i.test(key) || /^space$/i.test(key)) return 'Space';
+        if (/^esc$/i.test(key)) return 'Escape';
+        return key.length === 1 ? key.toUpperCase() : key;
+      };
+      const pressed = normalizeKeyName(event.key).toLowerCase();
+      const matches = (binding?: string) => !!binding && pressed === normalizeKeyName(binding).toLowerCase();
+
+      if (matches(keyBindings.gotoPreviousEmail)) {
+        event.preventDefault();
+        if (currentIndex > 0) {
+          executeAction('prev');
+        }
+      } else if (matches(keyBindings.gotoNextEmail)) {
+        event.preventDefault();
+        if (currentIndex < emails.length - 1) {
+          executeAction('next');
+        }
+      } else if (matches(keyBindings.markAsRead)) {
+        event.preventDefault();
+        if (currentEmail && !isCurrentEmailRead && !isMarkingAsRead) {
+          handleMarkAsRead();
+        }
+      } else if (matches(keyBindings.deleteEmail)) {
+        event.preventDefault();
+        handleShowDeleteConfirm();
+      } else if (matches(keyBindings.closeSummary)) {
+        event.preventDefault();
+        // Close the active summary tab using the same handler as clicking the tab X
+        handleCloseSummary();
+      } else if (pressed === 'escape') {
+        // Always allow Escape to close the modal (preserve existing behavior)
+        event.preventDefault();
+        if (!showConfirmDialog) {
+          handleNavigationWithConfirm('close');
+        }
       }
     };
 
@@ -1873,6 +1887,26 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     }
   }
 
+  const keyBindings = environmentConfigService.getKeyBindings();
+  const formatKeyLabel = (key?: string) => {
+    if (!key) return '';
+    const k = key.trim();
+    const lower = k.toLowerCase();
+    if (/^left$/i.test(k) || lower === 'arrowleft') return '←';
+    if (/^right$/i.test(k) || lower === 'arrowright') return '→';
+    if (/^up$/i.test(k) || lower === 'arrowup') return '↑';
+    if (/^down$/i.test(k) || lower === 'arrowdown') return '↓';
+    if (k === ' ' || /^space(bar)?$/i.test(k)) return 'Space';
+    if (/^esc(ape)?$/i.test(k) || lower === 'escape') return 'Esc';
+    return k.length === 1 ? k.toUpperCase() : k;
+  };
+
+  const prevLabel = `${formatKeyLabel(keyBindings.gotoPreviousEmail) || '←'} Prev`;
+  const nextLabel = `${formatKeyLabel(keyBindings.gotoNextEmail) || '→'} Next`;
+  const readLabel = `${formatKeyLabel(keyBindings.markAsRead) || '↑'} Read`;
+  const deleteLabel = `${formatKeyLabel(keyBindings.deleteEmail) || '↓'} Delete`;
+  const closeLabel = `${formatKeyLabel(keyBindings.closeSummary) || 'Q'} Close`;
+
   return (
     <>      <style>
         {`
@@ -2343,11 +2377,11 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             {/* Keyboard shortcuts info */}
             <div className="text-xs text-gray-500 dark:text-gray-400 mr-4 hidden sm:block">
               <div className="flex gap-3">
-                <span>← Prev</span>
-                <span>→ Next</span>
-                <span>↑ Read</span>
-                <span>↓ Delete</span>
-                <span>Esc Close</span>
+                <span>{prevLabel}</span>
+                <span>{nextLabel}</span>
+                <span>{readLabel}</span>
+                <span>{deleteLabel}</span>
+                <span>{closeLabel}</span>
               </div>
             </div>
             
