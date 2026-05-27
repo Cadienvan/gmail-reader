@@ -3249,9 +3249,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                             max="10"
                             step="0.5"
                             placeholder="6–10"
-                            value={tabRatings.get(currentTabUrl!) ?? ''}
+                            value={currentTabUrl ? (tabRatings.get(currentTabUrl) ?? '') : ''}
                             onChange={(e) => {
-                              const url = currentTabUrl!;
+                              const url = currentTabUrl;
+                              if (!url) return;
                               const raw = e.target.value;
                               const num = raw === '' ? null : parseFloat(raw);
                               const clamped = num === null ? null : Math.min(10, Math.max(6, Math.round(num * 2) / 2));

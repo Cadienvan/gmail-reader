@@ -19,8 +19,8 @@ class EmailScoringService {
       if (val >= 6 && val <= 10) return Math.round(val * 2) / 2; // round to nearest 0.5
     }
 
-    // Fall back: find first number 6–10 (with optional .5 increment) in the text
-    const numberPattern = /\b(10(?:\.0)?|[6-9](?:[.,]5)?)\b/g;
+    // Fall back: find first number 6–10 (with optional .5 or whole-number increment) in the text
+    const numberPattern = /\b(10(?:[.,]0)?|[6-9](?:[.,][05])?)\b/g;
     let match;
     while ((match = numberPattern.exec(summary)) !== null) {
       const val = parseFloat(match[1].replace(',', '.'));
@@ -49,7 +49,7 @@ class EmailScoringService {
       const newAvg = (prevAvg * prevCount + rating) / newCount;
       scores[existingIndex] = {
         ...existing,
-        averageRating: Math.round(newAvg * 100) / 100,
+        averageRating: Math.round(newAvg * 10) / 10,
         ratingCount: newCount
       };
     } else {
