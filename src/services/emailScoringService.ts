@@ -6,6 +6,71 @@ class EmailScoringService {
   private readonly ACTIONS_KEY = 'email-scoring-actions';
 
   /**
+   * Extract a rating from a summary text.
+   * First looks for "voto: X" patterns, then falls back to
+   * the first number in the range 6–10 (with optional .5 step).
+   */
+  extractRatingFromSummary(summary: string): number | null {
+    // Try "voto: X" or "voto X" or "score: X" or "rating: X" or "punteggio: X" patterns
+    const votoPattern = /(?:voto|score|rating|punteggio|valutazione)\s*[:\s]\s*(\d+(?:[.,]\d)?)/i;
+    const votoMatch = summary.match(votoPattern);
+    if (votoMatch) {
+      const val = parseFloat(votoMatch[1].replace(',', '.'));
+      if (val >= 6 && val <= 10) return Math.round(val * 2) / 2; // round to nearest 0.5
+    }
+
+    // Fall back: find first number 6–10 (with optional .5 increment) in the text
+    const numberPattern = /\b(10(?:\.0)?|[6-9](?:[.,]5)?)\b/g;
+    let match;
+    while ((match = numberPattern.exec(summary)) !== null) {
+      const val = parseFloat(match[1].replace(',', '.'));
+      if (val >= 6 && val <= 10 && val % 0.5 === 0) return val;
+    }
+
+    return null;
+  }
+
+  /**
+   * Record a rating for a sender and update their average
+   */
+  recordRating(senderEmail: string, senderName: string | undefined, rating: number): void {
+    if (!environmentConfigService.isRatingCollectionEnabled()) return;
+
+    const scores = this.getSenderScores();
+    const normalizedEmail = this.normalizeSenderEmail(senderEmail);
+    const existingIndex = scores.findIndex(score =>
+      this.normalizeSenderEmail(score.senderEmail) === normalizedEmail);
+
+    if (existingIndex >= 0) {
+      const existing = scores[existingIndex];
+      const prevCount = existing.ratingCount || 0;
+      const prevAvg = existing.averageRating || 0;
+      const newCount = prevCount + 1;
+      const newAvg = (prevAvg * prevCount + rating) / newCount;
+      scores[existingIndex] = {
+        ...existing,
+        averageRating: Math.round(newAvg * 100) / 100,
+        ratingCount: newCount
+      };
+    } else {
+      // Create a minimal score entry if the sender doesn't exist yet
+      scores.push({
+        senderEmail: normalizedEmail,
+        senderName,
+        totalScore: 0,
+        emailSummaryCount: 0,
+        linkOpenCount: 0,
+        lastActivity: Date.now(),
+        firstActivity: Date.now(),
+        averageRating: rating,
+        ratingCount: 1
+      });
+    }
+
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(scores));
+  }
+
+  /**
    * Add points for email summary action
    */
   async addEmailSummaryPoints(senderEmail: string, senderName: string | undefined, emailId: string): Promise<void> {

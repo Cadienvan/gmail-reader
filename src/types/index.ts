@@ -172,6 +172,8 @@ export interface SenderScore {
   linkOpenCount: number;
   lastActivity: number;
   firstActivity: number;
+  averageRating?: number;
+  ratingCount?: number;
 }
 
 export interface ScoringAction {

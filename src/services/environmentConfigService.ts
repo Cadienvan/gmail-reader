@@ -20,6 +20,7 @@ export interface EnvironmentConfig {
   scoringEnabled: boolean;
   emailSummaryPoints: number;
   linkOpenPoints: number;
+  ratingCollectionEnabled: boolean;
   aiBackend: AiBackend;
   keyBindings: KeyBindings;
 }
@@ -154,6 +155,13 @@ class EnvironmentConfigService {
   }
 
   /**
+   * Check if rating collection is enabled
+   */
+  isRatingCollectionEnabled(): boolean {
+    return this.config.ratingCollectionEnabled ?? true;
+  }
+
+  /**
    * Get the AI backend preference ('local' or 'gemini')
    */
   getAiBackend(): AiBackend {
@@ -246,6 +254,7 @@ class EnvironmentConfigService {
       scoringEnabled: true, // Enable by default for easier testing
       emailSummaryPoints: 10,
       linkOpenPoints: 3,
+      ratingCollectionEnabled: true,
       aiBackend: 'local',
       keyBindings: {
         // Defaults wired to arrow keys and 'q' for closing summary tab
