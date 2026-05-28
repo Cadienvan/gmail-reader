@@ -1221,7 +1221,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       // Create updated summary
       if (summary.trim().toUpperCase().includes('[CLOSE]')) {
         console.log(`[CLOSE] received for ${link.url}, auto-closing tab`);
-        await handleCloseSummary(link.url);
+        await handleCloseSummary(link.url, 4);
         return;
       }
 
@@ -1288,7 +1288,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           };
           if (summary.trim().toUpperCase().includes('[CLOSE]')) {
             console.log(`[CLOSE] received for ${link.url} (Gemini fallback), auto-closing tab`);
-            await handleCloseSummary(link.url);
+            await handleCloseSummary(link.url, 4);
           } else {
             setLinkSummaries(prev => new Map(prev).set(link.url, fallbackSummary));
             await tabSummaryStorage.saveLinkSummary(link.url, fallbackSummary, link.url, link.domain);
@@ -1434,7 +1434,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       // Create completed summary
       if (summary.trim().toUpperCase().includes('[CLOSE]')) {
         console.log(`[CLOSE] received for email ${emailTabId}, auto-closing tab`);
-        await handleCloseSummary(emailTabId);
+        await handleCloseSummary(emailTabId, 4);
         return;
       }
 
@@ -1514,14 +1514,15 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     return null;
   };
 
-  const handleCloseSummary = async (urlToClose?: string) => {
+  // forcedRating, when provided (e.g. auto-close via [CLOSE]), overrides any pending tab rating.
+  const handleCloseSummary = async (urlToClose?: string, forcedRating?: number) => {
     // Resolve the URL to remove from the explicit parameter or the current tab ref
     const urlToRemove = urlToClose || currentTabUrlRef.current;
     if (!urlToRemove) return;
 
     // Save any pending rating for this tab before closing
     if (environmentConfigService.isRatingCollectionEnabled() && currentEmail?.from) {
-      const rating = tabRatingsRef.current.get(urlToRemove);
+      const rating = forcedRating ?? tabRatingsRef.current.get(urlToRemove);
       if (rating !== undefined && rating !== null) {
         const senderInfo = emailScoringService.extractSenderInfo(currentEmail.from);
         emailScoringService.recordRating(senderInfo.email, senderInfo.name, rating);
@@ -1694,7 +1695,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
         if (summary.trim().toUpperCase().includes('[CLOSE]')) {
           console.log(`[CLOSE] received for pasted URL ${fakeUrl}, auto-closing tab`);
-          await handleCloseSummary(fakeUrl);
+          await handleCloseSummary(fakeUrl, 4);
           setPasteInput('');
           return;
         }
@@ -1771,7 +1772,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         // Update with the summary
         if (summary.trim().toUpperCase().includes('[CLOSE]')) {
           console.log(`[CLOSE] received for pasted text ${fakeUrl}, auto-closing tab`);
-          await handleCloseSummary(fakeUrl);
+          await handleCloseSummary(fakeUrl, 4);
           setPasteInput('');
           return;
         }
