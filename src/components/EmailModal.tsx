@@ -542,6 +542,11 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   };
 
   const handleShowDeleteConfirm = () => {
+    if (isDeletingEmail) return;
+    if (environmentConfigService.shouldSkipDeleteConfirmation()) {
+      void handleDeleteEmail();
+      return;
+    }
     setShowDeleteConfirm(true);
   };
 
