@@ -177,6 +177,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const [isFlashCardsModalOpen, setIsFlashCardsModalOpen] = useState(false);
   const [isGeneratingFlashCards, setIsGeneratingFlashCards] = useState<string | null>(null);
   const [flashCardsError, setFlashCardsError] = useState<string | null>(null);
+
+  // Per-tab rating state: tab URL -> rating value (null = not set)
+  const [tabRatings, setTabRatings] = useState<Map<string, number | null>>(new Map());
+  const tabRatingsRef = useRef<Map<string, number | null>>(new Map());
   
   // Request cancellation state
   const [abortControllers, setAbortControllers] = useState<Map<string, AbortController>>(new Map());
@@ -1217,7 +1221,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       // Create updated summary
       if (summary.trim().toUpperCase().includes('[CLOSE]')) {
         console.log(`[CLOSE] received for ${link.url}, auto-closing tab`);
-        await handleCloseSummary(link.url);
+        await handleCloseSummary(link.url, 4);
         return;
       }
 
@@ -1232,6 +1236,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       
       // Update state
       setLinkSummaries(prev => new Map(prev).set(link.url, updatedSummary));
+      
+      // Auto-extract rating from summary if rating collection is enabled
+      if (environmentConfigService.isRatingCollectionEnabled()) {
+        const extracted = emailScoringService.extractRatingFromSummary(summary);
+        if (extracted !== null) {
+          setTabRatings(prev => {
+            const next = new Map(prev).set(link.url, extracted);
+            tabRatingsRef.current = next;
+            return next;
+          });
+        }
+      }
       
       // Save completed summary to IndexedDB
       await tabSummaryStorage.saveLinkSummary(link.url, updatedSummary, content, finalUrl ? new URL(finalUrl).hostname : new URL(link.url).hostname);
@@ -1272,7 +1288,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           };
           if (summary.trim().toUpperCase().includes('[CLOSE]')) {
             console.log(`[CLOSE] received for ${link.url} (Gemini fallback), auto-closing tab`);
-            await handleCloseSummary(link.url);
+            await handleCloseSummary(link.url, 4);
           } else {
             setLinkSummaries(prev => new Map(prev).set(link.url, fallbackSummary));
             await tabSummaryStorage.saveLinkSummary(link.url, fallbackSummary, link.url, link.domain);
@@ -1418,7 +1434,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       // Create completed summary
       if (summary.trim().toUpperCase().includes('[CLOSE]')) {
         console.log(`[CLOSE] received for email ${emailTabId}, auto-closing tab`);
-        await handleCloseSummary(emailTabId);
+        await handleCloseSummary(emailTabId, 4);
         return;
       }
 
@@ -1432,6 +1448,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       
       // Update state
       setLinkSummaries(prev => new Map(prev).set(emailTabId, completedSummary));
+      
+      // Auto-extract rating from summary if rating collection is enabled
+      if (environmentConfigService.isRatingCollectionEnabled()) {
+        const extracted = emailScoringService.extractRatingFromSummary(summary);
+        if (extracted !== null) {
+          setTabRatings(prev => {
+            const next = new Map(prev).set(emailTabId, extracted);
+            tabRatingsRef.current = next;
+            return next;
+          });
+        }
+      }
       
       // Save completed summary to IndexedDB
       await tabSummaryStorage.saveLinkSummary(
@@ -1486,10 +1514,26 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     return null;
   };
 
-  const handleCloseSummary = async (urlToClose?: string) => {
+  // forcedRating, when provided (e.g. auto-close via [CLOSE]), overrides any pending tab rating.
+  const handleCloseSummary = async (urlToClose?: string, forcedRating?: number) => {
     // Resolve the URL to remove from the explicit parameter or the current tab ref
     const urlToRemove = urlToClose || currentTabUrlRef.current;
     if (!urlToRemove) return;
+
+    // Save any pending rating for this tab before closing
+    if (environmentConfigService.isRatingCollectionEnabled() && currentEmail?.from) {
+      const rating = forcedRating ?? tabRatingsRef.current.get(urlToRemove);
+      if (rating !== undefined && rating !== null) {
+        const senderInfo = emailScoringService.extractSenderInfo(currentEmail.from);
+        emailScoringService.recordRating(senderInfo.email, senderInfo.name, rating);
+        setTabRatings(prev => {
+          const next = new Map(prev);
+          next.delete(urlToRemove);
+          tabRatingsRef.current = next;
+          return next;
+        });
+      }
+    }
 
     // Cancel any ongoing request for this URL
     const controller = abortControllers.get(urlToRemove);
@@ -1651,7 +1695,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
         if (summary.trim().toUpperCase().includes('[CLOSE]')) {
           console.log(`[CLOSE] received for pasted URL ${fakeUrl}, auto-closing tab`);
-          await handleCloseSummary(fakeUrl);
+          await handleCloseSummary(fakeUrl, 4);
           setPasteInput('');
           return;
         }
@@ -1728,7 +1772,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         // Update with the summary
         if (summary.trim().toUpperCase().includes('[CLOSE]')) {
           console.log(`[CLOSE] received for pasted text ${fakeUrl}, auto-closing tab`);
-          await handleCloseSummary(fakeUrl);
+          await handleCloseSummary(fakeUrl, 4);
           setPasteInput('');
           return;
         }
@@ -3193,6 +3237,34 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       {flashCardsError && isGeneratingFlashCards === null && (
                         <div className="mt-2 text-xs text-red-600">
                           {flashCardsError}
+                        </div>
+                      )}
+
+                      {/* Rating input - shown when rating collection is enabled */}
+                      {environmentConfigService.isRatingCollectionEnabled() && !activeSummary.loading && activeSummary.summary && (
+                        <div className="ml-auto flex items-center gap-1" title="Rating saved when tab is closed">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">⭐</span>
+                          <input
+                            type="number"
+                            min="6"
+                            max="10"
+                            step="0.5"
+                            placeholder="6–10"
+                            value={currentTabUrl ? (tabRatings.get(currentTabUrl) ?? '') : ''}
+                            onChange={(e) => {
+                              const url = currentTabUrl;
+                              if (!url) return;
+                              const raw = e.target.value;
+                              const num = raw === '' ? null : parseFloat(raw);
+                              const clamped = num === null ? null : Math.min(10, Math.max(6, Math.round(num * 2) / 2));
+                              setTabRatings(prev => {
+                                const next = new Map(prev).set(url, clamped);
+                                tabRatingsRef.current = next;
+                                return next;
+                              });
+                            }}
+                            className="w-16 px-1 py-0.5 border border-gray-300 dark:border-gray-600 rounded text-xs text-center bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                          />
                         </div>
                       )}
                     </div>

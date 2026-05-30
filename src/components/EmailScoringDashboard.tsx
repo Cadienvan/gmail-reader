@@ -167,6 +167,19 @@ export const EmailScoringDashboard: React.FC<EmailScoringDashboardProps> = ({ cl
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
+                  id="ratingCollectionEnabled"
+                  checked={envConfig.ratingCollectionEnabled ?? true}
+                  onChange={(e) => handleEnvConfigChange('ratingCollectionEnabled', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="ratingCollectionEnabled" className="text-sm text-gray-700 cursor-pointer">
+                  Collect average rating per sender from summaries
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
                   id="scoringEnabled"
                   checked={envConfig.scoringEnabled}
                   onChange={(e) => handleEnvConfigChange('scoringEnabled', e.target.checked)}
@@ -408,6 +421,12 @@ export const EmailScoringDashboard: React.FC<EmailScoringDashboardProps> = ({ cl
                         {sender.totalScore}
                       </div>
                       <div className="text-xs text-gray-500">points</div>
+                      {sender.averageRating !== undefined && sender.ratingCount !== undefined && sender.ratingCount > 0 && (
+                        <div className="text-xs text-yellow-600 mt-1">
+                          ⭐ {sender.averageRating.toFixed(1)}
+                          <span className="text-gray-400 ml-1">({sender.ratingCount})</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
