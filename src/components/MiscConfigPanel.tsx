@@ -7,15 +7,16 @@ import { themeService } from '../services/themeService';
 export const MiscConfigPanel: React.FC = () => {
   const [aiBackend, setAiBackend] = useState<AiBackend>(() => environmentConfigService.getAiBackend());
   const [darkModeEnabled, setDarkModeEnabled] = useState<boolean>(() => environmentConfigService.isDarkModeEnabled());
+  const [skipDeleteConfirmation, setSkipDeleteConfirmation] = useState<boolean>(() => environmentConfigService.shouldSkipDeleteConfirmation());
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
     const config = environmentConfigService.getConfiguration();
-    environmentConfigService.setConfiguration({ ...config, aiBackend, darkModeEnabled });
+    environmentConfigService.setConfiguration({ ...config, aiBackend, darkModeEnabled, skipDeleteConfirmation });
     themeService.applyDarkMode(darkModeEnabled);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
-    console.log('[MiscConfigPanel] Preferences saved:', { aiBackend, darkModeEnabled });
+    console.log('[MiscConfigPanel] Preferences saved:', { aiBackend, darkModeEnabled, skipDeleteConfirmation });
   };
 
   return (
@@ -78,6 +79,24 @@ export const MiscConfigPanel: React.FC = () => {
             <span className="flex items-center gap-2 text-gray-800 dark:text-gray-200 font-medium">
               {darkModeEnabled ? <Moon size={16} /> : <Sun size={16} />}
               {darkModeEnabled ? 'Dark mode enabled' : 'Dark mode disabled'}
+            </span>
+          </label>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">Deletion behavior</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-300 mb-4">
+            Skip the extra confirmation modal when deleting an email.
+          </p>
+          <label className="inline-flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={skipDeleteConfirmation}
+              onChange={(event) => setSkipDeleteConfirmation(event.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-gray-800 dark:text-gray-200 font-medium">
+              Skip delete confirmation
             </span>
           </label>
         </div>

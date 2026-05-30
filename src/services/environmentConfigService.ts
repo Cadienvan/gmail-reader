@@ -16,6 +16,7 @@ export interface EnvironmentConfig {
   ollamaBaseUrl: string;
   saveForLaterMode: boolean;
   darkModeEnabled: boolean;
+  skipDeleteConfirmation: boolean;
   gmailQuery: string;
   scoringEnabled: boolean;
   emailSummaryPoints: number;
@@ -127,6 +128,13 @@ class EnvironmentConfigService {
    */
   isDarkModeEnabled(): boolean {
     return this.config.darkModeEnabled ?? false;
+  }
+
+  /**
+   * Check if delete confirmation should be skipped
+   */
+  shouldSkipDeleteConfirmation(): boolean {
+    return this.config.skipDeleteConfirmation ?? false;
   }
 
   /**
@@ -250,6 +258,7 @@ class EnvironmentConfigService {
       ollamaBaseUrl: import.meta.env.VITE_OLLAMA_BASE_URL || 'http://localhost:11434',
       saveForLaterMode: false,
       darkModeEnabled: false,
+      skipDeleteConfirmation: false,
       gmailQuery: 'is:unread -is:spam -is:starred in:inbox',
       scoringEnabled: true, // Enable by default for easier testing
       emailSummaryPoints: 10,
@@ -283,6 +292,7 @@ class EnvironmentConfigService {
       typeof config.ollamaBaseUrl === 'string' &&
       typeof config.saveForLaterMode === 'boolean' &&
       (config.darkModeEnabled === undefined || typeof config.darkModeEnabled === 'boolean') &&
+      (config.skipDeleteConfirmation === undefined || typeof config.skipDeleteConfirmation === 'boolean') &&
       typeof config.gmailQuery === 'string' &&
       typeof config.scoringEnabled === 'boolean' &&
       typeof config.emailSummaryPoints === 'number' &&
