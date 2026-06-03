@@ -69,6 +69,11 @@ class NewsletterRatingService {
     this.saveRatings(ratings);
   }
 
+  removeRating(emailId: string): void {
+    const ratings = this.getRatings().filter(r => r.emailId !== emailId);
+    this.saveRatings(ratings);
+  }
+
   getRatingForEmail(emailId: string): RatingValue | null {
     const ratings = this.getRatings();
     return ratings.find(r => r.emailId === emailId)?.rating ?? null;

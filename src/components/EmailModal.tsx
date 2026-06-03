@@ -284,6 +284,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     const next = currentRating === rating ? null : rating;
     if (next) {
       newsletterRatingService.rateNewsletter(currentEmail.id, currentEmail.from, next);
+    } else {
+      newsletterRatingService.removeRating(currentEmail.id);
     }
     setCurrentRating(next);
     const stats = newsletterRatingService.getSenderStats(currentEmail.from);
