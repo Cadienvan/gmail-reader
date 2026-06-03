@@ -3,14 +3,14 @@ import { environmentConfigService } from './environmentConfigService';
 import { ollamaService } from './ollamaService';
 import { urlFilterService } from './urlFilterService';
 import { rulesService } from './rulesService';
-import { emailScoringService } from './emailScoringService';
+import { newsletterRatingService } from './newsletterRatingService';
 import { gempestService } from './gempestService';
 import { flashCardService } from './flashCardService';
 import { memoryService } from './memoryService';
 
 class ConfigExportService {
   async exportAllConfig(): Promise<string> {
-    const scoringData = emailScoringService.exportData();
+    const ratingData = newsletterRatingService.exportData();
     const flashCards = await flashCardService.getAllFlashCards();
 
     const result: AppConfigExport = {
@@ -25,10 +25,7 @@ class ConfigExportService {
       urlFilters: urlFilterService.getConfig(),
       rules: rulesService.getAllRules(),
       rulesConfig: rulesService.getConfig(),
-      emailScoring: {
-        data: scoringData.scores,
-        actions: scoringData.actions,
-      },
+      newsletterRatings: ratingData,
       gempest: gempestService.getConfig(),
       memoryList: memoryService.getMemoryList(),
       reinforcingMemoryList: memoryService.getMemoryList('reinforcing'),
@@ -55,22 +52,21 @@ class ConfigExportService {
     if (typeof data.version !== 'string') errors.push('Missing or invalid version');
     if (!data.exportedAt || isNaN(Date.parse(data.exportedAt as string))) errors.push('Missing or invalid exportedAt');
 
-    const sectionKeys = ['environment', 'ollama', 'urlFilters', 'rules', 'rulesConfig', 'emailScoring', 'gempest', 'flashCards'];
+    const sectionKeys = ['environment', 'ollama', 'urlFilters', 'rules', 'rulesConfig', 'gempest', 'flashCards'];
     for (const key of sectionKeys) {
       if (data[key] === undefined || data[key] === null || typeof data[key] !== 'object') {
         errors.push(`Missing or invalid section: ${key}`);
       }
     }
 
-    const emailScoring = data.emailScoring as Record<string, unknown> | undefined;
+    const nr = data.newsletterRatings as Record<string, unknown> | undefined;
     const sections: ConfigExportSummary['sections'] = [
       { name: 'Environment', count: data.environment ? 1 : 0, present: !!data.environment },
       { name: 'Ollama', count: data.ollama ? 1 : 0, present: !!data.ollama },
       { name: 'URL Filter Patterns', count: (data.urlFilters as Record<string, unknown>)?.patterns instanceof Array ? ((data.urlFilters as Record<string, unknown>).patterns as unknown[]).length : 0, present: !!data.urlFilters },
       { name: 'Rules', count: Array.isArray(data.rules) ? data.rules.length : 0, present: Array.isArray(data.rules) },
       { name: 'Rules Config', count: data.rulesConfig ? 1 : 0, present: !!data.rulesConfig },
-      { name: 'Email Scoring Senders', count: Array.isArray(emailScoring?.data) ? (emailScoring!.data as unknown[]).length : 0, present: !!data.emailScoring },
-      { name: 'Email Scoring Actions', count: Array.isArray(emailScoring?.actions) ? (emailScoring!.actions as unknown[]).length : 0, present: !!data.emailScoring },
+      { name: 'Newsletter Ratings', count: Array.isArray(nr?.ratings) ? (nr!.ratings as unknown[]).length : 0, present: !!data.newsletterRatings },
       { name: 'Gempest', count: data.gempest ? 1 : 0, present: !!data.gempest },
       { name: 'Memory List', count: Array.isArray(data.memoryList) ? (data.memoryList as unknown[]).length : 0, present: Array.isArray(data.memoryList) },
       { name: 'Reinforcing Memory List', count: Array.isArray(data.reinforcingMemoryList) ? (data.reinforcingMemoryList as unknown[]).length : 0, present: Array.isArray(data.reinforcingMemoryList) },
@@ -118,15 +114,13 @@ class ConfigExportService {
       sectionsImported.push('rules');
     } catch (e) { errors.push(`rules: ${e instanceof Error ? e.message : String(e)}`); }
 
-    try {
-      emailScoringService.importData({
+    if (data.newsletterRatings) {
+      try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        scores: data.emailScoring.data as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        actions: data.emailScoring.actions as any,
-      });
-      sectionsImported.push('emailScoring');
-    } catch (e) { errors.push(`emailScoring: ${e instanceof Error ? e.message : String(e)}`); }
+        newsletterRatingService.importData(data.newsletterRatings as any);
+        sectionsImported.push('newsletterRatings');
+      } catch (e) { errors.push(`newsletterRatings: ${e instanceof Error ? e.message : String(e)}`); }
+    }
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

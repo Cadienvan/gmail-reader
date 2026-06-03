@@ -10,9 +10,9 @@ export interface AppConfigExport {
   urlFilters: object;
   rules: object;
   rulesConfig: object;
-  emailScoring: {
-    data: object;
-    actions: object;
+  newsletterRatings?: {
+    ratings: object[];
+    rejections: object[];
   };
   gempest: object;
   memoryList?: string[];

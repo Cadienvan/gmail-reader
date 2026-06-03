@@ -2,6 +2,7 @@ import { gmailService } from './gmailService';
 import { linkService } from './linkService';
 import { tabSummaryStorage } from './tabSummaryStorage';
 import { memoryService } from './memoryService';
+import { newsletterRatingService } from './newsletterRatingService';
 import type { ParsedEmail, LinkSummary } from '../types';
 
 export type GeminiModel = string;
@@ -258,6 +259,7 @@ class GempestService {
 
         if (upperTypeStr.includes('OTHER') || (!upperTypeStr.includes('NL_FULL') && !upperTypeStr.includes('NL_LINK'))) {
             this.updateProgress(`Skipped (Not a newsletter): ${email.subject}`);
+            newsletterRatingService.recordRejection(email.from, 'not_newsletter');
             continue;
         }
 
@@ -276,6 +278,7 @@ class GempestService {
             
             if (summary.trim().toUpperCase().includes('[CLOSE]')) {
               this.updateProgress(`Skipped (low value): ${email.subject}`);
+              newsletterRatingService.recordRejection(email.from, 'low_value_full');
             } else {
               const emailTabId = `email-${email.id}`;
               const emailTabSummary: LinkSummary = {
@@ -339,6 +342,7 @@ class GempestService {
                             const linkSummaryText = await this.runPrompt(linkPrompt, contentObj.content, this.config.linkSummaryModel);
                             if (linkSummaryText.trim().toUpperCase().includes('[CLOSE]')) {
                                 this.updateProgress(`Skipped (low value): ${label}`);
+                                newsletterRatingService.recordRejection(email.from, 'low_value_link');
                             } else {
                                 const linkSummaryData: LinkSummary = {
                                     url: url,

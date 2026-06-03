@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { Filter, HardDrive, Trophy, Zap, Settings2, Keyboard } from 'lucide-react';
+import { Filter, HardDrive, Zap, Settings2, Keyboard } from 'lucide-react';
 import { UrlFilterConfigPanel } from './UrlFilterConfigPanel';
 import { StorageConfigPanel } from './StorageConfigPanel';
-import { EmailScoringDashboard } from './EmailScoringDashboard';
 import { RulesConfigPanel } from './RulesConfigPanel';
 import { MiscConfigPanel } from './MiscConfigPanel';
 import { KeyBindingsConfigPanel } from './KeyBindingsConfigPanel';
 
-type SubTabId = 'url-filters' | 'storage' | 'scoring' | 'rules' | 'key-bindings' | 'misc';
+type SubTabId = 'url-filters' | 'storage' | 'rules' | 'key-bindings' | 'misc';
 
 interface SubTab {
   id: SubTabId;
@@ -31,12 +30,6 @@ export const PreferencesPanel: React.FC = () => {
       label: 'Storage',
       icon: HardDrive,
       component: <StorageConfigPanel />
-    },
-    {
-      id: 'scoring',
-      label: 'Email Scoring',
-      icon: Trophy,
-      component: <EmailScoringDashboard />
     },
     {
       id: 'rules',

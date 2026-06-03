@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, Trophy, Calendar, X, LucideDollarSign, FileText } from 'lucide-react';
+import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, X, LucideDollarSign, FileText } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration, LinkSummary } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
 import { emailLogService } from '../utils/emailLogService';
 import { flashCardService } from '../services/flashCardService';
-import { emailScoringService } from '../services/emailScoringService';
 import { environmentConfigService } from '../services/environmentConfigService';
 import { emailCacheService } from '../services/emailCacheService';
 import { ollamaWarningService } from '../services/ollamaWarningService';
@@ -400,77 +399,6 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Helper function to render sender rank badge
-  const renderSenderRank = (senderEmail: string) => {
-    const scoringConfig = environmentConfigService.getScoringConfig();
-    
-    if (!scoringConfig.enabled) {
-      return null;
-    }
-
-    const rank = emailScoringService.getSenderRank(senderEmail);
-    const score = emailScoringService.getSenderScore(senderEmail);
-    
-    if (!rank.allTimeRank || rank.allTimeRank === 0) {
-      return null; // No rank if sender has no score
-    }
-
-    const getRankColor = (position: number, total: number) => {
-      const percentage = position / total;
-      if (percentage <= 0.1) return 'bg-yellow-100 text-yellow-700 border-yellow-200'; // Top 10%
-      if (percentage <= 0.25) return 'bg-orange-100 text-orange-700 border-orange-200'; // Top 25%
-      if (percentage <= 0.5) return 'bg-blue-100 text-blue-700 border-blue-200'; // Top 50%
-      return 'bg-gray-100 text-gray-700 border-gray-200'; // Lower 50%
-    };
-
-    const allTimeTooltip = `All-time rank: #${rank.allTimeRank} of ${rank.totalSenders} senders`;
-    const last90DaysTooltip = rank.last90DaysRank > 0 
-      ? `Last 90 days rank: #${rank.last90DaysRank}`
-      : `No activity in last 90 days`;
-    const pointsTooltip = score ? `${score.totalScore} total points` : '';
-    const fullTooltip = [allTimeTooltip, last90DaysTooltip, pointsTooltip].filter(Boolean).join(' | ');
-
-    return (
-      <div className="flex items-center gap-1">
-        {/* All-time rank */}
-        <div 
-          className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border ${getRankColor(rank.allTimeRank, rank.totalSenders)}`}
-          title={fullTooltip}
-        >
-          <Trophy size={10} />
-          <span>#{rank.allTimeRank}</span>
-          {score && (
-            <span className="ml-1 text-xs opacity-75">
-              ({score.totalScore}pt)
-            </span>
-          )}
-        </div>
-        
-        {/* 90-day rank badge if different or no activity */}
-        {rank.last90DaysRank > 0 && rank.last90DaysRank !== rank.allTimeRank && (
-          <div 
-            className="flex items-center gap-1 px-2 py-1 rounded-full text-xs border bg-blue-50 text-blue-700 border-blue-200"
-            title={`Last 90 days: #${rank.last90DaysRank}`}
-          >
-            <Calendar size={10} />
-            <span>#{rank.last90DaysRank}</span>
-          </div>
-        )}
-        
-        {/* No recent activity indicator */}
-        {rank.last90DaysRank === 0 && (
-          <div 
-            className="flex items-center gap-1 px-2 py-1 rounded-full text-xs border bg-gray-50 text-gray-500 border-gray-200"
-            title="No activity in last 90 days"
-          >
-            <Calendar size={10} />
-            <span>-</span>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       {/* Main Content Area */}
@@ -758,8 +686,6 @@ export const Dashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Sender Rank Badge */}
-                      {renderSenderRank(email.from)}
                     </div>
                   ))}
                 </div>

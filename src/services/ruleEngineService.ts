@@ -1,6 +1,5 @@
 import type { Rule, RuleCondition, RuleAction, RuleContext, RuleExecutionResult } from '../types';
 import { rulesService } from './rulesService';
-import { emailScoringService } from './emailScoringService';
 import { gmailService } from './gmailService';
 import { environmentConfigService } from './environmentConfigService';
 import { tabSummaryStorage } from './tabSummaryStorage';
@@ -245,12 +244,6 @@ class RuleEngineService {
           actualValue = context.extractedLinks.map(link => link.url).join(' ');
           break;
         
-        case 'sender_score':
-          // Get sender score from scoring service
-          const score = emailScoringService.getSenderScore(context.senderInfo.email);
-          actualValue = score ? score.totalScore : 0;
-          break;
-        
         case 'has_links':
           actualValue = context.extractedLinks.length > 0;
           break;
@@ -381,12 +374,6 @@ class RuleEngineService {
           const message = this.interpolateString(action.parameters.message, context, variables);
           console.log(`[Rule Action] ${message}`);
           result.result = { message };
-          result.success = true;
-          break;
-        
-        case 'add_score':
-          await this.addScore(action.parameters, context);
-          result.result = { pointsAdded: action.parameters.points };
           result.success = true;
           break;
         
@@ -539,22 +526,6 @@ class RuleEngineService {
   }
 
   /**
-   * Add points to sender score
-   */
-  private async addScore(parameters: any, context: RuleContext): Promise<void> {
-    const points = Number(parameters.points) || 0;
-    
-    if (points > 0) {
-      // Create a scoring action to add points
-      await emailScoringService.addEmailSummaryPoints(
-        context.senderInfo.email,
-        context.senderInfo.name,
-        context.email.id
-      );
-    }
-  }
-
-  /**
    * Mark email with custom marker
    */
   private async markEmail(parameters: any, context: RuleContext): Promise<any> {
@@ -655,18 +626,7 @@ class RuleEngineService {
         );
         
         console.log(`[Rule Action] Saved email for later: ${context.email.subject}`);
-        
-        // Add scoring points for email save
-        try {
-          await emailScoringService.addEmailSummaryPoints(
-            context.senderInfo.email,
-            context.senderInfo.name,
-            context.email.id
-          );
-        } catch (scoringError) {
-          console.error('Failed to add scoring points for email save:', scoringError);
-        }
-        
+
         return { savedForLater: true, emailId: context.email.id };
       } else {
         // Generate summary
@@ -688,18 +648,7 @@ class RuleEngineService {
         );
         
         console.log(`[Rule Action] Generated summary for email: ${context.email.subject}`);
-        
-        // Add scoring points for email summary
-        try {
-          await emailScoringService.addEmailSummaryPoints(
-            context.senderInfo.email,
-            context.senderInfo.name,
-            context.email.id
-          );
-        } catch (scoringError) {
-          console.error('Failed to add scoring points for email summary:', scoringError);
-        }
-        
+
         return { summarized: true, summary, emailId: context.email.id };
       }
     } catch (error) {
@@ -832,13 +781,6 @@ class RuleEngineService {
         supportedOperators: ['equals', 'contains', 'starts_with', 'ends_with']
       },
       {
-        type: 'sender_score',
-        label: 'Sender Score',
-        description: 'The scoring points of the sender',
-        valueType: 'number',
-        supportedOperators: ['equals', 'greater_than', 'less_than']
-      },
-      {
         type: 'has_links',
         label: 'Has Links',
         description: 'Whether the email contains any links',
@@ -962,29 +904,6 @@ class RuleEngineService {
             required: true,
             description: 'Message to log. Can use variables: ${email.subject}, ${senderInfo.email}, ${variables.variableName}',
             placeholder: 'Rule triggered for ${senderInfo.name}: ${email.subject}'
-          }
-        ]
-      },
-      {
-        type: 'add_score',
-        label: 'Add Score Points',
-        description: 'Add points to the sender\'s quality score',
-        parameters: [
-          {
-            name: 'points',
-            label: 'Points',
-            type: 'number',
-            required: true,
-            description: 'Number of points to add',
-            placeholder: '10'
-          },
-          {
-            name: 'reason',
-            label: 'Reason',
-            type: 'string',
-            required: false,
-            description: 'Reason for adding points',
-            placeholder: 'Rule-based bonus'
           }
         ]
       },

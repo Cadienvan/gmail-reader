@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Filter, AlertCircle, Trophy, Calendar, StopCircle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Filter, AlertCircle, StopCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
 import type { ParsedEmail, ExtractedLink, LinkSummary, FlashCard, ModelConfiguration } from '../types';
 import { linkService } from '../services/linkService';
 import { ollamaService } from '../services/ollamaService';
@@ -15,7 +15,8 @@ import { FlashCardsModal } from './FlashCardsModal';
 import { RegexChecker } from './RegexChecker';
 import { environmentConfigService } from '../services/environmentConfigService';
 import { gempestService } from '../services/gempestService';
-import { emailScoringService } from '../services/emailScoringService';
+import { newsletterRatingService, extractSenderInfo } from '../services/newsletterRatingService';
+import type { RatingValue } from '../services/newsletterRatingService';
 import { ruleEngineService } from '../services/ruleEngineService';
 import type { RuleContext } from '../types';
 import { memoryService } from '../services/memoryService';
@@ -263,6 +264,29 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   });
 
   const currentEmail = emails[currentIndex];
+
+  // Newsletter rating state — tracks the current rating for the displayed email
+  const [currentRating, setCurrentRating] = useState<RatingValue | null>(null);
+  const [senderStats, setSenderStats] = useState<{ globalQuality: number; last30Quality: number } | null>(null);
+
+  // Load rating and stats whenever the displayed email changes
+  useEffect(() => {
+    if (!currentEmail) { setCurrentRating(null); setSenderStats(null); return; }
+    setCurrentRating(newsletterRatingService.getRatingForEmail(currentEmail.id));
+    const stats = newsletterRatingService.getSenderStats(currentEmail.from);
+    setSenderStats(stats.totalRatings > 0 ? { globalQuality: stats.globalQuality, last30Quality: stats.last30Quality } : null);
+  }, [currentEmail?.id]);
+
+  const handleRate = (rating: RatingValue) => {
+    if (!currentEmail) return;
+    const next = currentRating === rating ? null : rating;
+    if (next) {
+      newsletterRatingService.rateNewsletter(currentEmail.id, currentEmail.from, next);
+    }
+    setCurrentRating(next);
+    const stats = newsletterRatingService.getSenderStats(currentEmail.from);
+    setSenderStats(stats.totalRatings > 0 ? { globalQuality: stats.globalQuality, last30Quality: stats.last30Quality } : null);
+  };
 
   // Check if current email is already marked as read
   const isCurrentEmailRead = currentEmail?.isRead || false;
@@ -1026,19 +1050,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const executeEmailRules = async (email: ParsedEmail, extractedLinks: ExtractedLink[]) => {
     try {
       console.log(`[Rules] Executing rules for email: "${email.subject}" from ${email.from}`);
-      
-      // Extract sender information
-      const senderInfo = emailScoringService.extractSenderInfo(email.from);
-      
-      // Get sender score
-      const senderScore = emailScoringService.getSenderScore(senderInfo.email)?.totalScore || 0;
 
-      // Create rule context
+      const senderInfo = extractSenderInfo(email.from);
+
       const context: RuleContext = {
         email,
         senderInfo,
         extractedLinks,
-        senderScore,
+        senderScore: 0,
         variables: {}
       };
 
@@ -1130,22 +1149,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           finalUrl ? new URL(finalUrl).hostname : new URL(link.url).hostname
         );
         
-        // Add scoring points for link save if enabled (same as link open)
-        try {
-          const scoringConfig = environmentConfigService.getScoringConfig();
-          if (scoringConfig.enabled && currentEmail?.from) {
-            await emailScoringService.addLinkOpenPoints(
-              currentEmail.from,
-              currentEmail.from, // Using sender email as name for now
-              finalUrl || link.url,
-              currentEmail.id
-            );
-            console.log(`Added ${scoringConfig.linkOpenPoints} points to ${currentEmail.from} for saving link for later`);
-          }
-        } catch (error) {
-          console.error('Failed to add scoring points for saving link for later:', error);
-        }
-        
         // Show notification instead of creating a tab
         showNotification(`Link content saved for later review: ${finalUrl ? new URL(finalUrl).hostname : new URL(link.url).hostname}`, 'success');
         
@@ -1236,21 +1239,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       // Save completed summary to IndexedDB
       await tabSummaryStorage.saveLinkSummary(link.url, updatedSummary, content, finalUrl ? new URL(finalUrl).hostname : new URL(link.url).hostname);
       
-      // Add scoring points for link open if enabled
-      try {
-        const scoringConfig = environmentConfigService.getScoringConfig();
-        if (scoringConfig.enabled && currentEmail?.from) {
-          await emailScoringService.addLinkOpenPoints(
-            currentEmail.from,
-            currentEmail.from, // Using sender email as name for now
-            finalUrl || link.url,
-            currentEmail.id
-          );
-          console.log(`Added ${scoringConfig.linkOpenPoints} points to ${currentEmail.from} for link open`);
-        }
-      } catch (error) {
-        console.error('Failed to add scoring points for link open:', error);
-      }
     } catch (error) {
       // If Gemini is configured, fall back to sending the URL directly for summarization
       const aiBackendOnError = environmentConfigService.getAiBackend();
@@ -1335,21 +1323,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           emailContent.body, 
           `Email: ${currentEmail.subject}`
         );
-        
-        // Add scoring points for email save if enabled (same as email summary)
-        try {
-          const scoringConfig = environmentConfigService.getScoringConfig();
-          if (scoringConfig.enabled && currentEmail.from) {
-            await emailScoringService.addEmailSummaryPoints(
-              currentEmail.from, 
-              currentEmail.from, // Using sender email as name for now, could extract name from "Name <email>" format
-              currentEmail.id
-            );
-            console.log(`Added ${scoringConfig.emailSummaryPoints} points to ${currentEmail.from} for saving email for later`);
-          }
-        } catch (error) {
-          console.error('Failed to add scoring points for saving email for later:', error);
-        }
         
         showNotification('Email saved for later review', 'success');
       } catch (error) {
@@ -1441,20 +1414,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         `Email: ${currentEmail.subject}`
       );
       
-      // Add scoring points for email summary if enabled
-      try {
-        const scoringConfig = environmentConfigService.getScoringConfig();
-        if (scoringConfig.enabled && currentEmail.from) {
-          await emailScoringService.addEmailSummaryPoints(
-            currentEmail.from, 
-            currentEmail.from, // Using sender email as name for now, could extract name from "Name <email>" format
-            currentEmail.id
-          );
-          console.log(`Added ${scoringConfig.emailSummaryPoints} points to ${currentEmail.from} for email summary`);
-        }
-      } catch (error) {
-        console.error('Failed to add scoring points for email summary:', error);
-      }
     } catch (error) {
       // Create error summary
       const errorSummary = {
@@ -2347,72 +2306,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       <div className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 rounded-lg w-full max-w-7xl h-full max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate flex-1 mr-4 flex items-center gap-2">
-            {/* Sender Rank Badge */}
-            {(() => {
-              const scoringConfig = environmentConfigService.getScoringConfig();
-              if (!scoringConfig.enabled) return null;
-              
-              const rank = emailScoringService.getSenderRank(currentEmail.from);
-              const score = emailScoringService.getSenderScore(currentEmail.from);
-              
-              if (!rank.allTimeRank || rank.allTimeRank === 0) return null;
-              
-              const getRankColor = (position: number, total: number) => {
-                const percentage = position / total;
-                if (percentage <= 0.1) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-                if (percentage <= 0.25) return 'bg-orange-100 text-orange-800 border-orange-200';
-                if (percentage <= 0.5) return 'bg-blue-100 text-blue-800 border-blue-200';
-                return 'bg-gray-100 text-gray-800 border-gray-200';
-              };
-
-              const allTimeTooltip = `All-time rank: #${rank.allTimeRank} of ${rank.totalSenders} senders`;
-              const last90DaysTooltip = rank.last90DaysRank > 0 
-                ? `Last 90 days rank: #${rank.last90DaysRank}`
-                : `No activity in last 90 days`;
-              const pointsTooltip = score ? `${score.totalScore} total points` : '';
-              const fullTooltip = [allTimeTooltip, last90DaysTooltip, pointsTooltip].filter(Boolean).join(' | ');
-              
-              return (
-                <div className="flex items-center gap-1">
-                  {/* All-time rank */}
-                  <div 
-                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border ${getRankColor(rank.allTimeRank, rank.totalSenders)}`} 
-                    title={fullTooltip}
-                  >
-                    <Trophy size={10} />
-                    <span>#{rank.allTimeRank}</span>
-                    {score && (
-                      <span className="ml-1 text-xs opacity-75">
-                        ({score.totalScore}pt)
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* 90-day rank badge if different or no activity */}
-                  {rank.last90DaysRank > 0 && rank.last90DaysRank !== rank.allTimeRank && (
-                    <div 
-                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs border bg-blue-100 text-blue-800 border-blue-200"
-                      title={`Last 90 days: #${rank.last90DaysRank}`}
-                    >
-                      <Calendar size={10} />
-                      <span>#{rank.last90DaysRank}</span>
-                    </div>
-                  )}
-                  
-                  {/* No recent activity indicator */}
-                  {rank.last90DaysRank === 0 && (
-                    <div 
-                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs border bg-gray-100 text-gray-500 border-gray-200"
-                      title="No activity in last 90 days"
-                    >
-                      <Calendar size={10} />
-                      <span>-</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate flex-1 mr-4">
             {currentEmail.subject}
           </h2>
           <div className="flex items-center gap-2">
@@ -2994,6 +2888,47 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     {isSummaryVisible ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                   </button>
                 </div>
+
+                {/* Newsletter Rating Bar — visible whenever a summary is open */}
+                {isSummaryVisible && currentEmail && (
+                  <div className="flex items-center gap-3 mb-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Rate this newsletter:</span>
+                    <button
+                      onClick={() => handleRate('up')}
+                      title="Good edition — thumbs up"
+                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors ${
+                        currentRating === 'up'
+                          ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 border border-transparent'
+                      }`}
+                    >
+                      <ThumbsUp size={12} />
+                    </button>
+                    <button
+                      onClick={() => handleRate('down')}
+                      title="Bad edition — thumbs down"
+                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors ${
+                        currentRating === 'down'
+                          ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 border border-transparent'
+                      }`}
+                    >
+                      <ThumbsDown size={12} />
+                    </button>
+                    {senderStats && (
+                      <div className="flex items-center gap-2 ml-auto text-xs text-gray-500 dark:text-gray-400">
+                        <span title="Global quality for this sender">
+                          All-time: <strong className={senderStats.globalQuality >= 70 ? 'text-green-600 dark:text-green-400' : senderStats.globalQuality >= 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}>{senderStats.globalQuality}%</strong>
+                        </span>
+                        {senderStats.last30Quality >= 0 && (
+                          <span title="Quality in the last 30 days">
+                            30d: <strong className={senderStats.last30Quality >= 70 ? 'text-green-600 dark:text-green-400' : senderStats.last30Quality >= 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}>{senderStats.last30Quality}%</strong>
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Summary Content */}
                 {activeSummary && isSummaryVisible && (

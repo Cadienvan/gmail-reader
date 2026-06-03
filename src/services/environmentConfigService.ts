@@ -17,9 +17,6 @@ export interface EnvironmentConfig {
   saveForLaterMode: boolean;
   darkModeEnabled: boolean;
   gmailQuery: string;
-  scoringEnabled: boolean;
-  emailSummaryPoints: number;
-  linkOpenPoints: number;
   aiBackend: AiBackend;
   keyBindings: KeyBindings;
 }
@@ -136,24 +133,6 @@ class EnvironmentConfigService {
   }
 
   /**
-   * Get scoring configuration
-   */
-  getScoringConfig(): { enabled: boolean; emailSummaryPoints: number; linkOpenPoints: number } {
-    return {
-      enabled: this.config.scoringEnabled,
-      emailSummaryPoints: this.config.emailSummaryPoints,
-      linkOpenPoints: this.config.linkOpenPoints
-    };
-  }
-
-  /**
-   * Check if scoring is enabled
-   */
-  isScoringEnabled(): boolean {
-    return this.config.scoringEnabled;
-  }
-
-  /**
    * Get the AI backend preference ('local' or 'gemini')
    */
   getAiBackend(): AiBackend {
@@ -243,9 +222,6 @@ class EnvironmentConfigService {
       saveForLaterMode: false,
       darkModeEnabled: false,
       gmailQuery: 'is:unread -is:spam -is:starred in:inbox',
-      scoringEnabled: true, // Enable by default for easier testing
-      emailSummaryPoints: 10,
-      linkOpenPoints: 3,
       aiBackend: 'local',
       keyBindings: {
         // Defaults wired to arrow keys and 'q' for closing summary tab
@@ -275,9 +251,6 @@ class EnvironmentConfigService {
       typeof config.saveForLaterMode === 'boolean' &&
       (config.darkModeEnabled === undefined || typeof config.darkModeEnabled === 'boolean') &&
       typeof config.gmailQuery === 'string' &&
-      typeof config.scoringEnabled === 'boolean' &&
-      typeof config.emailSummaryPoints === 'number' &&
-      typeof config.linkOpenPoints === 'number' &&
       // aiBackend is optional for backward compatibility
       (config.aiBackend === undefined || typeof config.aiBackend === 'string') &&
       keyBindingsValid
