@@ -10,6 +10,8 @@ interface StoredTab {
   lastOpened: number;
   summaryRequested: boolean;
   summaryReady: boolean;
+  sourceEmailId?: string;
+  sourceSender?: string;
 }
 
 class TabSummaryStorageService {
@@ -176,12 +178,14 @@ class TabSummaryStorageService {
       error: linkSummary.error,
       lastOpened: Date.now(),
       summaryRequested: true,
-      summaryReady: !linkSummary.loading
+      summaryReady: !linkSummary.loading,
+      sourceEmailId: linkSummary.sourceEmailId,
+      sourceSender: linkSummary.sourceSender
     };
-    
+
     await this.saveTab(tab);
   }
-  
+
   // Convert StoredTab to LinkSummary
   toLinkSummary(tab: StoredTab): LinkSummary {
     return {
@@ -189,7 +193,9 @@ class TabSummaryStorageService {
       finalUrl: tab.url, // reuse same URL as we don't store finalUrl separately
       summary: tab.summary || '',
       error: tab.error,
-      loading: !tab.summaryReady
+      loading: !tab.summaryReady,
+      sourceEmailId: tab.sourceEmailId,
+      sourceSender: tab.sourceSender
     };
   }
 }

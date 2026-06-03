@@ -285,7 +285,9 @@ class GempestService {
                 url: emailTabId,
                 summary: summary,
                 loading: false,
-                modelUsed: 'short'
+                modelUsed: 'short',
+                sourceEmailId: email.id,
+                sourceSender: email.from
               };
               if (this.config.memoryEnabled) {
                 try {
@@ -348,7 +350,9 @@ class GempestService {
                                     url: url,
                                     finalUrl: contentObj.finalUrl,
                                     summary: linkSummaryText,
-                                    loading: false
+                                    loading: false,
+                                    sourceEmailId: email.id,
+                                    sourceSender: email.from
                                 };
                                 if (this.config.memoryEnabled) {
                                   try {

@@ -267,12 +267,26 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   const currentEmail = emails[currentIndex];
 
-  // The newsletter being rated follows the active summary tab: an `email:<id>` tab
-  // rates that specific email, while any other tab (link/pasted) rates the email
-  // currently open. This keeps the rating bar in sync when switching/closing tabs.
-  const ratedEmail = currentTabUrl?.startsWith('email:')
-    ? (emails.find(e => e.id === currentTabUrl.slice('email:'.length)) ?? null)
-    : currentEmail;
+  // Resolve which newsletter the rating bar refers to, following the ACTIVE summary tab:
+  //  1. tabs tagged with their source (Gempest/link tabs) carry the id+sender directly;
+  //  2. `email:<id>` / `email-<id>` tabs are mapped back to the email in the list;
+  //  3. with no tab open we fall back to the email currently being read.
+  // This keeps the bar in sync when switching between tabs or closing one.
+  const ratedNewsletter = (() => {
+    const active = currentTabUrl ? linkSummaries.get(currentTabUrl) : undefined;
+    if (active?.sourceEmailId && active?.sourceSender) {
+      return { id: active.sourceEmailId, sender: active.sourceSender };
+    }
+    if (currentTabUrl?.startsWith('email:') || currentTabUrl?.startsWith('email-')) {
+      const id = currentTabUrl.slice('email:'.length);
+      const email = emails.find(e => e.id === id);
+      if (email) return { id: email.id, sender: email.from };
+    }
+    if (!currentTabUrl && currentEmail) {
+      return { id: currentEmail.id, sender: currentEmail.from };
+    }
+    return null;
+  })();
 
   // Newsletter rating state — tracks the current rating for the rated newsletter
   const [currentRating, setCurrentRating] = useState<RatingValue | null>(null);
@@ -281,24 +295,29 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   // Reload rating and stats whenever the rated newsletter changes — email
   // navigation, switching tabs, and closing tabs all change which one is in focus
   useEffect(() => {
-    if (!ratedEmail) { setCurrentRating(null); setSenderStats(null); return; }
-    setCurrentRating(newsletterRatingService.getRatingForEmail(ratedEmail.id));
-    const stats = newsletterRatingService.getSenderStats(ratedEmail.from);
+    if (!ratedNewsletter) { setCurrentRating(null); setSenderStats(null); return; }
+    setCurrentRating(newsletterRatingService.getRatingForEmail(ratedNewsletter.id));
+    const stats = newsletterRatingService.getSenderStats(ratedNewsletter.sender);
     setSenderStats(stats.totalRatings > 0 ? { globalQuality: stats.globalQuality, last30Quality: stats.last30Quality } : null);
-  }, [ratedEmail?.id]);
+  }, [ratedNewsletter?.id, ratedNewsletter?.sender]);
 
   const handleRate = (rating: RatingValue) => {
-    if (!ratedEmail) return;
+    if (!ratedNewsletter) return;
     const next = currentRating === rating ? null : rating;
     if (next) {
-      newsletterRatingService.rateNewsletter(ratedEmail.id, ratedEmail.from, next);
+      newsletterRatingService.rateNewsletter(ratedNewsletter.id, ratedNewsletter.sender, next);
     } else {
-      newsletterRatingService.removeRating(ratedEmail.id);
+      newsletterRatingService.removeRating(ratedNewsletter.id);
     }
     setCurrentRating(next);
-    const stats = newsletterRatingService.getSenderStats(ratedEmail.from);
+    const stats = newsletterRatingService.getSenderStats(ratedNewsletter.sender);
     setSenderStats(stats.totalRatings > 0 ? { globalQuality: stats.globalQuality, last30Quality: stats.last30Quality } : null);
   };
+
+  // Display name for the newsletter currently being rated
+  const ratedSenderName = ratedNewsletter
+    ? (extractSenderInfo(ratedNewsletter.sender).name ?? extractSenderInfo(ratedNewsletter.sender).email)
+    : null;
 
   // Check if current email is already marked as read
   const isCurrentEmailRead = currentEmail?.isRead || false;
@@ -1176,6 +1195,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     }
 
     // Normal mode: generate summary and create tabs
+    // Tag this tab with the newsletter it was opened from, so the rating bar can follow it
+    const source = currentEmail ? { sourceEmailId: currentEmail.id, sourceSender: currentEmail.from } : {};
     // Add the URL to active summaries if not already there
     setActiveSummaryUrls(prev => {
       if (!prev.includes(link.url)) {
@@ -1210,14 +1231,16 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     setLinkSummaries(prev => new Map(prev).set(link.url, {
       url: link.url,
       summary: '',
-      loading: true
+      loading: true,
+      ...source
     }));
 
     // Save loading state to IndexedDB
     await tabSummaryStorage.saveLinkSummary(link.url, {
       url: link.url,
       summary: '',
-      loading: true
+      loading: true,
+      ...source
     });
 
     try {
@@ -1247,7 +1270,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         summary,
         loading: false,
         modelUsed: 'short' as const,
-        canUpgrade: aiBackend === 'local' && ollamaService.canUpgradeSummary()
+        canUpgrade: aiBackend === 'local' && ollamaService.canUpgradeSummary(),
+        ...source
       };
       
       // Update state
@@ -1273,7 +1297,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             summary,
             loading: false,
             modelUsed: 'short' as const,
-            canUpgrade: false
+            canUpgrade: false,
+            ...source
           };
           if (summary.trim().toUpperCase().includes('[CLOSE]')) {
             console.log(`[CLOSE] received for ${link.url} (Gemini fallback), auto-closing tab`);
@@ -2906,9 +2931,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 </div>
 
                 {/* Newsletter Rating Bar — rates the newsletter behind the active tab */}
-                {isSummaryVisible && ratedEmail && (
+                {isSummaryVisible && ratedNewsletter && (
                   <div className="flex items-center gap-3 mb-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Rate this newsletter:</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                      Rate this newsletter
+                      {ratedSenderName && (
+                        <> — <span className="font-medium text-gray-700 dark:text-gray-200" title={ratedNewsletter.sender}>{ratedSenderName}</span></>
+                      )}:
+                    </span>
                     <button
                       onClick={() => handleRate('up')}
                       title="Good edition — thumbs up"
