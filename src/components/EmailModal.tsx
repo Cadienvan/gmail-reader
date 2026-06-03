@@ -178,6 +178,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const [isFlashCardsModalOpen, setIsFlashCardsModalOpen] = useState(false);
   const [isGeneratingFlashCards, setIsGeneratingFlashCards] = useState<string | null>(null);
   const [flashCardsError, setFlashCardsError] = useState<string | null>(null);
+
+  // Per-tab rating state: tab URL -> rating value (null = not set)
   
   // Request cancellation state
   const [abortControllers, setAbortControllers] = useState<Map<string, AbortController>>(new Map());
@@ -562,6 +564,11 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   };
 
   const handleShowDeleteConfirm = () => {
+    if (isDeletingEmail) return;
+    if (environmentConfigService.shouldSkipDeleteConfirmation()) {
+      void handleDeleteEmail();
+      return;
+    }
     setShowDeleteConfirm(true);
   };
 
@@ -1446,7 +1453,6 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   };
 
   const handleCloseSummary = async (urlToClose?: string) => {
-    // Resolve the URL to remove from the explicit parameter or the current tab ref
     const urlToRemove = urlToClose || currentTabUrlRef.current;
     if (!urlToRemove) return;
 
@@ -3130,6 +3136,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                           {flashCardsError}
                         </div>
                       )}
+
                     </div>
                   </div>
                 )}

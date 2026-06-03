@@ -283,30 +283,6 @@ class RulesService {
   createExampleRules(): void {
     const examples: Omit<Rule, 'id' | 'createdAt' | 'lastModified' | 'executionCount'>[] = [
       {
-        name: 'High Scorer Auto-Summary',
-        description: 'Automatically trigger summary for emails from high-scoring senders',
-        enabled: false,
-        conditions: [
-          {
-            id: 'cond1',
-            type: 'sender_score',
-            operator: 'greater_than',
-            value: 50
-          }
-        ],
-        actions: [
-          {
-            id: 'action1',
-            type: 'log_message',
-            parameters: {
-              message: 'High-scoring sender detected: ${senderInfo.name || senderInfo.email} (Score: ${senderScore})'
-            },
-            description: 'Log high-scoring sender'
-          }
-        ],
-        logicOperator: 'AND'
-      },
-      {
         name: 'Newsletter Link Detector',
         description: 'Detects newsletters with unsubscribe links and logs them',
         enabled: false,
@@ -335,36 +311,6 @@ class RulesService {
               marker: 'newsletter'
             },
             description: 'Mark as newsletter'
-          }
-        ],
-        logicOperator: 'AND'
-      },
-      {
-        name: 'Auto-delete Low Quality Emails',
-        description: 'Automatically delete emails from very low-scoring senders',
-        enabled: false,
-        conditions: [
-          {
-            id: 'cond1',
-            type: 'sender_score',
-            operator: 'less_than',
-            value: -10
-          }
-        ],
-        actions: [
-          {
-            id: 'action1',
-            type: 'log_message',
-            parameters: {
-              message: 'Auto-deleting low quality email from ${senderInfo.name || senderInfo.email}: ${email.subject}'
-            },
-            description: 'Log deletion action'
-          },
-          {
-            id: 'action2',
-            type: 'delete_email',
-            parameters: {},
-            description: 'Delete the email'
           }
         ],
         logicOperator: 'AND'
@@ -400,96 +346,6 @@ class RulesService {
         ],
         logicOperator: 'AND'
       },
-      {
-        name: 'Auto-summarize Important Emails',
-        description: 'Automatically request summary for high-scoring senders',
-        enabled: false,
-        conditions: [
-          {
-            id: 'cond1',
-            type: 'sender_score',
-            operator: 'greater_than',
-            value: 75
-          }
-        ],
-        actions: [
-          {
-            id: 'action1',
-            type: 'log_message',
-            parameters: {
-              message: 'Auto-summarizing important email from ${senderInfo.name || senderInfo.email}: ${email.subject}'
-            },
-            description: 'Log summary request action'
-          },
-          {
-            id: 'action2',
-            type: 'request_summary',
-            parameters: {},
-            description: 'Request email summary or save for later'
-          }
-        ],
-        logicOperator: 'AND'
-      },
-      {
-        name: 'Skip Low Quality Emails',
-        description: 'Automatically navigate to next email for very low-scoring senders',
-        enabled: false,
-        conditions: [
-          {
-            id: 'cond1',
-            type: 'sender_score',
-            operator: 'less_than',
-            value: -20
-          }
-        ],
-        actions: [
-          {
-            id: 'action1',
-            type: 'log_message',
-            parameters: {
-              message: 'Skipping very low quality email from ${senderInfo.name || senderInfo.email}: ${email.subject}'
-            },
-            description: 'Log skip action'
-          },
-          {
-            id: 'action2',
-            type: 'goto_next_email',
-            parameters: {},
-            description: 'Navigate to next email'
-          }
-        ],
-        logicOperator: 'AND'
-      },
-      {
-        name: 'Review VIP Emails',
-        description: 'Go back to review emails from very high-scoring senders',
-        enabled: false,
-        conditions: [
-          {
-            id: 'cond1',
-            type: 'sender_score',
-            operator: 'greater_than',
-            value: 95
-          }
-        ],
-        actions: [
-          {
-            id: 'action1',
-            type: 'log_message',
-            parameters: {
-              message: 'VIP email detected from ${senderInfo.name || senderInfo.email}: ${email.subject} - Score: ${senderScore}'
-            },
-            description: 'Log VIP detection'
-          },
-          {
-            id: 'action2',
-            type: 'request_summary',
-            parameters: {},
-            description: 'Generate summary for VIP email'
-          }
-        ],
-        logicOperator: 'AND'
-      }
     ];
 
     examples.forEach(example => {

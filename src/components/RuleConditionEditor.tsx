@@ -213,8 +213,6 @@ export const RuleConditionEditor: React.FC<RuleConditionEditorProps> = ({
                           placeholder={
                             condition.type === 'content_regex' || condition.operator === 'regex_match'
                               ? 'Regular expression pattern'
-                              : condition.type === 'sender_score'
-                              ? '50'
                               : 'Value to match'
                           }
                         />

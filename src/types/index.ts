@@ -166,7 +166,7 @@ export interface UrlFilterConfigPanelProps {
 // Rules System types
 export interface RuleCondition {
   id: string;
-  type: 'sender_email' | 'sender_name' | 'subject' | 'content' | 'content_regex' | 'url_contains' | 'sender_score' | 'has_links' | 'link_domain';
+  type: 'sender_email' | 'sender_name' | 'subject' | 'content' | 'content_regex' | 'url_contains' | 'has_links' | 'link_domain';
   operator: 'equals' | 'contains' | 'starts_with' | 'ends_with' | 'regex_match' | 'greater_than' | 'less_than' | 'exists' | 'not_exists';
   value: string | number | boolean;
   caseSensitive?: boolean;
@@ -174,7 +174,7 @@ export interface RuleCondition {
 
 export interface RuleAction {
   id: string;
-  type: 'javascript_code' | 'open_url' | 'save_variable' | 'log_message' | 'add_score' | 'mark_email' | 'notify' | 'delete_email' | 'mark_as_read' | 'request_summary' | 'goto_next_email' | 'goto_previous_email';
+  type: 'javascript_code' | 'open_url' | 'save_variable' | 'log_message' | 'mark_email' | 'notify' | 'delete_email' | 'mark_as_read' | 'request_summary' | 'goto_next_email' | 'goto_previous_email';
   parameters: Record<string, any>;
   description?: string;
 }
