@@ -267,28 +267,36 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   const currentEmail = emails[currentIndex];
 
-  // Newsletter rating state — tracks the current rating for the displayed email
+  // The newsletter being rated follows the active summary tab: an `email:<id>` tab
+  // rates that specific email, while any other tab (link/pasted) rates the email
+  // currently open. This keeps the rating bar in sync when switching/closing tabs.
+  const ratedEmail = currentTabUrl?.startsWith('email:')
+    ? (emails.find(e => e.id === currentTabUrl.slice('email:'.length)) ?? null)
+    : currentEmail;
+
+  // Newsletter rating state — tracks the current rating for the rated newsletter
   const [currentRating, setCurrentRating] = useState<RatingValue | null>(null);
   const [senderStats, setSenderStats] = useState<{ globalQuality: number; last30Quality: number } | null>(null);
 
-  // Load rating and stats whenever the displayed email changes
+  // Reload rating and stats whenever the rated newsletter changes — email
+  // navigation, switching tabs, and closing tabs all change which one is in focus
   useEffect(() => {
-    if (!currentEmail) { setCurrentRating(null); setSenderStats(null); return; }
-    setCurrentRating(newsletterRatingService.getRatingForEmail(currentEmail.id));
-    const stats = newsletterRatingService.getSenderStats(currentEmail.from);
+    if (!ratedEmail) { setCurrentRating(null); setSenderStats(null); return; }
+    setCurrentRating(newsletterRatingService.getRatingForEmail(ratedEmail.id));
+    const stats = newsletterRatingService.getSenderStats(ratedEmail.from);
     setSenderStats(stats.totalRatings > 0 ? { globalQuality: stats.globalQuality, last30Quality: stats.last30Quality } : null);
-  }, [currentEmail?.id]);
+  }, [ratedEmail?.id]);
 
   const handleRate = (rating: RatingValue) => {
-    if (!currentEmail) return;
+    if (!ratedEmail) return;
     const next = currentRating === rating ? null : rating;
     if (next) {
-      newsletterRatingService.rateNewsletter(currentEmail.id, currentEmail.from, next);
+      newsletterRatingService.rateNewsletter(ratedEmail.id, ratedEmail.from, next);
     } else {
-      newsletterRatingService.removeRating(currentEmail.id);
+      newsletterRatingService.removeRating(ratedEmail.id);
     }
     setCurrentRating(next);
-    const stats = newsletterRatingService.getSenderStats(currentEmail.from);
+    const stats = newsletterRatingService.getSenderStats(ratedEmail.from);
     setSenderStats(stats.totalRatings > 0 ? { globalQuality: stats.globalQuality, last30Quality: stats.last30Quality } : null);
   };
 
@@ -2897,8 +2905,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                   </button>
                 </div>
 
-                {/* Newsletter Rating Bar — visible whenever a summary is open */}
-                {isSummaryVisible && currentEmail && (
+                {/* Newsletter Rating Bar — rates the newsletter behind the active tab */}
+                {isSummaryVisible && ratedEmail && (
                   <div className="flex items-center gap-3 mb-2 pb-2 border-b border-gray-200 dark:border-gray-700">
                     <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Rate this newsletter:</span>
                     <button
