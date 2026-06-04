@@ -581,6 +581,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     try {
       const success = await gmailService.deleteEmail(currentEmail.id);
       if (success) {
+        // Track the manual deletion as a negative signal for this sender, so it
+        // feeds the quality insights and unsubscribe suggestions alongside
+        // Gempest's automatic rejections.
+        newsletterRatingService.recordRejection(currentEmail.from, 'manual_delete');
         // Notify parent component - let the parent handle navigation
         onEmailDeleted?.(currentEmail.id);
         // The parent component (Dashboard) will handle the navigation and index updates

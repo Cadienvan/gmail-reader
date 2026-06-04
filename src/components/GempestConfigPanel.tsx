@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2, Pencil, Trash2, Check, X, AlertTriangle, ThumbsUp, ThumbsDown, Ban } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2, Pencil, Trash2, Check, X, AlertTriangle, ThumbsUp, ThumbsDown, Ban, MailX, Trash } from 'lucide-react';
 import { gempestService, fetchGeminiModels, type GempestConfig, type GeminiModel } from '../services/gempestService';
 import { memoryService } from '../services/memoryService';
 import { environmentConfigService } from '../services/environmentConfigService';
-import { newsletterRatingService } from '../services/newsletterRatingService';
-import type { SenderStats } from '../services/newsletterRatingService';
+import { newsletterRatingService, extractSenderInfo } from '../services/newsletterRatingService';
+import type { SenderStats, UnsubscribeSuggestion } from '../services/newsletterRatingService';
 
 interface MemorySectionProps {
   title: string;
@@ -95,8 +95,12 @@ export const GempestConfigPanel: React.FC = () => {
   const [reinforcingEditingValue, setReinforcingEditingValue] = useState('');
   const isGeminiBackend = environmentConfigService.getAiBackend() === 'gemini';
   const [senderStats, setSenderStats] = useState<SenderStats[]>(() => newsletterRatingService.getAllSenderStats());
+  const [unsubscribeSuggestions, setUnsubscribeSuggestions] = useState<UnsubscribeSuggestion[]>(() => newsletterRatingService.getUnsubscribeSuggestions());
 
-  const refreshStats = () => setSenderStats(newsletterRatingService.getAllSenderStats());
+  const refreshStats = () => {
+    setSenderStats(newsletterRatingService.getAllSenderStats());
+    setUnsubscribeSuggestions(newsletterRatingService.getUnsubscribeSuggestions());
+  };
 
   const loadModels = useCallback(async (apiKey: string) => {
     if (!apiKey) return;
@@ -437,6 +441,47 @@ export const GempestConfigPanel: React.FC = () => {
         </>
       )}
 
+      {/* Unsubscribe Suggestions */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+            <MailX size={20} className="text-red-500" />
+            Newsletter da rivedere
+          </h3>
+          <button onClick={refreshStats} className="text-xs text-blue-600 hover:underline">Refresh</button>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Mittenti per cui, negli ultimi 30 giorni, hai fruito di meno contenuti di quanti ne hai scartati
+          (rating negativi, chiusure automatiche di Gempest e cancellazioni manuali). Potresti valutare la disiscrizione.
+        </p>
+        {unsubscribeSuggestions.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">Nessun suggerimento: per ora i tuoi mittenti hanno un buon rapporto tra contenuti fruiti e scartati.</p>
+        ) : (
+          <ul className="space-y-2">
+            {unsubscribeSuggestions.map(s => {
+              const info = extractSenderInfo(s.sender);
+              return (
+                <li key={s.sender} className="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
+                  <MailX size={16} className="text-red-500 mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate" title={s.sender}>
+                      {info.name ?? info.email}
+                    </p>
+                    <p className="text-xs text-gray-500 mb-1 truncate" title={s.sender}>{info.email}</p>
+                    <p className="text-xs text-gray-600">{s.reason}</p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
+                      <span className="flex items-center gap-1 text-green-600"><ThumbsUp size={11} />{s.engagedLast30} fruiti</span>
+                      <span className="flex items-center gap-1 text-orange-600"><Ban size={11} />{s.autoClosedLast30} chiusi da Gempest</span>
+                      <span className="flex items-center gap-1 text-red-600"><Trash size={11} />{s.manualDeletesLast30} cancellati a mano</span>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
       {/* Newsletter Insights */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between mb-4">
@@ -446,7 +491,7 @@ export const GempestConfigPanel: React.FC = () => {
           <button onClick={refreshStats} className="text-xs text-blue-600 hover:underline">Refresh</button>
         </div>
         <p className="text-sm text-gray-500 mb-4">
-          Ratings you give via thumbs up/down in email summaries, plus rejection counts from Gempest automatic processing.
+          Ratings you give via thumbs up/down in email summaries, plus rejection counts from Gempest automatic processing and your manual deletions.
         </p>
         {senderStats.length === 0 ? (
           <p className="text-sm text-gray-400 italic">No data yet. Rate newsletters from the summary tab, or run Gempest to start collecting rejections.</p>
@@ -498,7 +543,7 @@ export const GempestConfigPanel: React.FC = () => {
                         <td className="py-2 pr-3 text-center text-gray-600">{s.totalRatings}</td>
                         <td className="py-2 text-center">
                           {s.rejections.total > 0 ? (
-                            <span className="flex items-center justify-center gap-1 text-orange-600" title={`Not newsletter: ${s.rejections.not_newsletter} · Low value full: ${s.rejections.low_value_full} · Low value link: ${s.rejections.low_value_link}`}>
+                            <span className="flex items-center justify-center gap-1 text-orange-600" title={`Not newsletter: ${s.rejections.not_newsletter} · Low value full: ${s.rejections.low_value_full} · Low value link: ${s.rejections.low_value_link} · Manual delete: ${s.rejections.manual_delete}`}>
                               <Ban size={11} />
                               {s.rejections.total}
                             </span>

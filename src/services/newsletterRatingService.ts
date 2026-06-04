@@ -1,5 +1,5 @@
 export type RatingValue = 'up' | 'down';
-export type RejectionReason = 'not_newsletter' | 'low_value_full' | 'low_value_link';
+export type RejectionReason = 'not_newsletter' | 'low_value_full' | 'low_value_link' | 'manual_delete';
 
 export interface NewsletterRating {
   // Unique per rated tab (the tab URL, or `email:<id>` when reading an email
@@ -27,13 +27,32 @@ export interface SenderStats {
     not_newsletter: number;
     low_value_full: number;
     low_value_link: number;
+    manual_delete: number;
     total: number;
   };
+}
+
+export interface UnsubscribeSuggestion {
+  sender: string;
+  // Contenuti effettivamente fruiti negli ultimi 30 giorni (rating positivi).
+  engagedLast30: number;
+  // Segnali negativi negli ultimi 30 giorni: rating negativi + chiusure
+  // automatiche di Gempest + cancellazioni manuali.
+  discardedLast30: number;
+  // Quante delle scartate sono cancellazioni manuali dell'utente.
+  manualDeletesLast30: number;
+  // Quante delle scartate sono chiusure automatiche di Gemini (low value / not newsletter).
+  autoClosedLast30: number;
+  // Frase pronta da mostrare in UI che spiega perché è suggerita la disiscrizione.
+  reason: string;
 }
 
 const RATINGS_KEY = 'newsletter_ratings';
 const REJECTIONS_KEY = 'newsletter_rejections';
 const MS_30_DAYS = 30 * 24 * 60 * 60 * 1000;
+// Soglia minima di segnali negli ultimi 30 giorni per suggerire la disiscrizione,
+// così da evitare falsi positivi su un solo dato isolato.
+const MIN_SIGNALS_FOR_SUGGESTION = 3;
 
 class NewsletterRatingService {
   private getRatings(): NewsletterRating[] {
@@ -115,6 +134,7 @@ class NewsletterRatingService {
         not_newsletter: allRejections.filter(r => r.reason === 'not_newsletter').length,
         low_value_full: allRejections.filter(r => r.reason === 'low_value_full').length,
         low_value_link: allRejections.filter(r => r.reason === 'low_value_link').length,
+        manual_delete: allRejections.filter(r => r.reason === 'manual_delete').length,
         total: allRejections.length,
       },
     };
@@ -130,6 +150,60 @@ class NewsletterRatingService {
     ]);
 
     return Array.from(senders).map(s => this.getSenderStats(s));
+  }
+
+  // Suggerisce i mittenti da cui valutare la disiscrizione: quelli per cui,
+  // negli ultimi 30 giorni, i contenuti fruiti (rating positivi) sono inferiori
+  // ai contenuti scartati (rating negativi + chiusure automatiche di Gempest +
+  // cancellazioni manuali). Non esegue alcuna disiscrizione: produce solo l'elenco.
+  getUnsubscribeSuggestions(): UnsubscribeSuggestion[] {
+    const now = Date.now();
+    const cutoff = now - MS_30_DAYS;
+
+    const recentRatings = this.getRatings().filter(r => r.timestamp >= cutoff);
+    const recentRejections = this.getRejections().filter(r => r.timestamp >= cutoff);
+
+    const senders = new Set<string>([
+      ...recentRatings.map(r => r.sender),
+      ...recentRejections.map(r => r.sender),
+    ]);
+
+    const suggestions: UnsubscribeSuggestion[] = [];
+
+    for (const sender of senders) {
+      const ratings = recentRatings.filter(r => r.sender === sender);
+      const rejections = recentRejections.filter(r => r.sender === sender);
+
+      const engaged = ratings.filter(r => r.rating === 'up').length;
+      const downvotes = ratings.filter(r => r.rating === 'down').length;
+      const manualDeletes = rejections.filter(r => r.reason === 'manual_delete').length;
+      const autoClosed = rejections.filter(r => r.reason !== 'manual_delete').length;
+      const discarded = downvotes + manualDeletes + autoClosed;
+
+      const totalSignals = engaged + discarded;
+      if (totalSignals < MIN_SIGNALS_FOR_SUGGESTION) continue;
+      if (engaged >= discarded) continue;
+
+      let reason: string;
+      if (engaged === 0) {
+        reason = `${discarded} newsletter scartate e nessun contenuto fruito negli ultimi 30 giorni.`;
+      } else {
+        reason = `Solo ${engaged} contenuti fruiti contro ${discarded} scartati negli ultimi 30 giorni.`;
+      }
+
+      suggestions.push({
+        sender,
+        engagedLast30: engaged,
+        discardedLast30: discarded,
+        manualDeletesLast30: manualDeletes,
+        autoClosedLast30: autoClosed,
+        reason,
+      });
+    }
+
+    // I casi più netti (più scartati, meno fruiti) prima.
+    return suggestions.sort((a, b) =>
+      (b.discardedLast30 - b.engagedLast30) - (a.discardedLast30 - a.engagedLast30));
   }
 
   exportData(): { ratings: NewsletterRating[]; rejections: NewsletterRejection[] } {
