@@ -103,6 +103,12 @@ export const GempestConfigPanel: React.FC = () => {
     setUnsubscribeSuggestions(newsletterRatingService.getUnsubscribeSuggestions());
   };
 
+  const handleClearInsights = () => {
+    if (!window.confirm('Vuoi svuotare tutti i dati di Newsletter Quality Insight (valutazioni e rifiuti)? L\'operazione non è reversibile.')) return;
+    newsletterRatingService.clearAll();
+    refreshStats();
+  };
+
   const loadModels = useCallback(async (apiKey: string) => {
     if (!apiKey) return;
     setLoadingModels(true);
@@ -470,6 +476,17 @@ export const GempestConfigPanel: React.FC = () => {
 
       {subTab === 'insights' && (
         <div className="space-y-6">
+      <div className="flex justify-end">
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={handleClearInsights}
+          disabled={senderStats.length === 0 && unsubscribeSuggestions.length === 0}
+          leftIcon={<Trash2 size={16} />}
+        >
+          Svuota dati
+        </Button>
+      </div>
       {/* Unsubscribe Suggestions */}
       <div className="bg-white dark:bg-gray-800/50 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">

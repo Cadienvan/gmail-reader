@@ -206,6 +206,12 @@ class NewsletterRatingService {
       (b.discardedLast30 - b.engagedLast30) - (a.discardedLast30 - a.engagedLast30));
   }
 
+  // Svuota tutti i dati di Newsletter Quality Insight (rating e rifiuti).
+  clearAll(): void {
+    localStorage.removeItem(RATINGS_KEY);
+    localStorage.removeItem(REJECTIONS_KEY);
+  }
+
   exportData(): { ratings: NewsletterRating[]; rejections: NewsletterRejection[] } {
     return { ratings: this.getRatings(), rejections: this.getRejections() };
   }
