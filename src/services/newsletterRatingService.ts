@@ -2,7 +2,10 @@ export type RatingValue = 'up' | 'down';
 export type RejectionReason = 'not_newsletter' | 'low_value_full' | 'low_value_link';
 
 export interface NewsletterRating {
-  emailId: string;
+  // Unique per rated tab (the tab URL, or `email:<id>` when reading an email
+  // with no tab open). This lets every tab be rated independently, even when
+  // many tabs come from the same sender.
+  key: string;
   sender: string;
   rating: RatingValue;
   timestamp: number;
@@ -57,10 +60,10 @@ class NewsletterRatingService {
     localStorage.setItem(REJECTIONS_KEY, JSON.stringify(rejections));
   }
 
-  rateNewsletter(emailId: string, sender: string, rating: RatingValue): void {
+  rateNewsletter(key: string, sender: string, rating: RatingValue): void {
     const ratings = this.getRatings();
-    const existingIdx = ratings.findIndex(r => r.emailId === emailId);
-    const entry: NewsletterRating = { emailId, sender, rating, timestamp: Date.now() };
+    const existingIdx = ratings.findIndex(r => r.key === key);
+    const entry: NewsletterRating = { key, sender, rating, timestamp: Date.now() };
     if (existingIdx >= 0) {
       ratings[existingIdx] = entry;
     } else {
@@ -69,14 +72,14 @@ class NewsletterRatingService {
     this.saveRatings(ratings);
   }
 
-  removeRating(emailId: string): void {
-    const ratings = this.getRatings().filter(r => r.emailId !== emailId);
+  removeRating(key: string): void {
+    const ratings = this.getRatings().filter(r => r.key !== key);
     this.saveRatings(ratings);
   }
 
-  getRatingForEmail(emailId: string): RatingValue | null {
+  getRatingForKey(key: string): RatingValue | null {
     const ratings = this.getRatings();
-    return ratings.find(r => r.emailId === emailId)?.rating ?? null;
+    return ratings.find(r => r.key === key)?.rating ?? null;
   }
 
   recordRejection(sender: string, reason: RejectionReason): void {

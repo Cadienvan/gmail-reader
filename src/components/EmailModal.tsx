@@ -267,24 +267,29 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   const currentEmail = emails[currentIndex];
 
-  // Resolve which newsletter the rating bar refers to, following the ACTIVE summary tab:
-  //  1. tabs tagged with their source (Gempest/link tabs) carry the id+sender directly;
+  // Resolve which newsletter the rating bar refers to, following the ACTIVE summary tab.
+  // The rating is keyed per TAB (`key`), so every open tab can be rated independently —
+  // 50 tabs from the same sender accumulate 50 distinct votes. The `sender` drives the
+  // aggregated stats. The key is always the active tab URL; only the sender attribution
+  // changes depending on how the tab was opened:
+  //  1. tabs tagged with their source (Gempest/link tabs) carry the sender directly;
   //  2. `email:<id>` / `email-<id>` tabs are mapped back to the email in the list;
-  //  3. with no tab open we fall back to the email currently being read.
-  // This keeps the bar in sync when switching between tabs or closing one.
+  //  3. otherwise we attribute to the email currently being read.
+  // With no tab open we fall back to rating the email currently being read.
   const ratedNewsletter = (() => {
-    const active = currentTabUrl ? linkSummaries.get(currentTabUrl) : undefined;
-    if (active?.sourceEmailId && active?.sourceSender) {
-      return { id: active.sourceEmailId, sender: active.sourceSender };
+    if (!currentTabUrl) {
+      return currentEmail ? { key: `email:${currentEmail.id}`, sender: currentEmail.from } : null;
     }
-    if (currentTabUrl?.startsWith('email:') || currentTabUrl?.startsWith('email-')) {
+    const active = linkSummaries.get(currentTabUrl);
+    if (active?.sourceSender) {
+      return { key: currentTabUrl, sender: active.sourceSender };
+    }
+    if (currentTabUrl.startsWith('email:') || currentTabUrl.startsWith('email-')) {
       const id = currentTabUrl.slice('email:'.length);
       const email = emails.find(e => e.id === id);
-      if (email) return { id: email.id, sender: email.from };
+      if (email) return { key: currentTabUrl, sender: email.from };
     }
-    if (!currentTabUrl && currentEmail) {
-      return { id: currentEmail.id, sender: currentEmail.from };
-    }
+    if (currentEmail) return { key: currentTabUrl, sender: currentEmail.from };
     return null;
   })();
 
@@ -296,18 +301,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   // navigation, switching tabs, and closing tabs all change which one is in focus
   useEffect(() => {
     if (!ratedNewsletter) { setCurrentRating(null); setSenderStats(null); return; }
-    setCurrentRating(newsletterRatingService.getRatingForEmail(ratedNewsletter.id));
+    setCurrentRating(newsletterRatingService.getRatingForKey(ratedNewsletter.key));
     const stats = newsletterRatingService.getSenderStats(ratedNewsletter.sender);
     setSenderStats(stats.totalRatings > 0 ? { globalQuality: stats.globalQuality, last30Quality: stats.last30Quality } : null);
-  }, [ratedNewsletter?.id, ratedNewsletter?.sender]);
+  }, [ratedNewsletter?.key, ratedNewsletter?.sender]);
 
   const handleRate = (rating: RatingValue) => {
     if (!ratedNewsletter) return;
     const next = currentRating === rating ? null : rating;
     if (next) {
-      newsletterRatingService.rateNewsletter(ratedNewsletter.id, ratedNewsletter.sender, next);
+      newsletterRatingService.rateNewsletter(ratedNewsletter.key, ratedNewsletter.sender, next);
     } else {
-      newsletterRatingService.removeRating(ratedNewsletter.id);
+      newsletterRatingService.removeRating(ratedNewsletter.key);
     }
     setCurrentRating(next);
     const stats = newsletterRatingService.getSenderStats(ratedNewsletter.sender);
