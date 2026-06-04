@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import type { ModelConfiguration } from '../types';
 import { ollamaService } from '../services/ollamaService';
 import { DoubleModelConfig } from './DoubleModelConfig';
+import { IconButton, Label } from './ui';
 
 interface ModelSelectorProps {
   onModelChange?: (config: ModelConfiguration) => void;
@@ -44,29 +45,26 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div className="flex items-center gap-2 mb-1.5">
-        <label className="block text-sm font-medium text-gray-700">
-          AI Models Configuration
-        </label>
+        <Label className="mb-0">AI Models Configuration</Label>
       </div>
-      
+
       <div className="flex items-center gap-2">
-        <DoubleModelConfig 
+        <DoubleModelConfig
           onConfigChange={handleConfigChange}
           className="flex-1"
         />
-        
-        <button
+
+        <IconButton
           onClick={handleRefresh}
-          className="px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          title="Refresh configuration"
-          aria-label="Refresh configuration"
+          label="Refresh configuration"
+          size="sm"
         >
           <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-        </button>
+        </IconButton>
       </div>
-      
+
       {/* Display current configuration */}
-      <div className="mt-2 text-xs text-gray-600">
+      <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
         <div className="flex items-center gap-4">
           <span>Quick: <strong>{config.quick}</strong></span>
           <span>Detailed: <strong>{config.detailed}</strong></span>

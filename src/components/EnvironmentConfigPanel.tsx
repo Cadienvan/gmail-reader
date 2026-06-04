@@ -3,6 +3,7 @@ import { Save, RotateCcw, Download, Upload, Eye, EyeOff, AlertCircle, CheckCircl
 import { environmentConfigService } from '../services/environmentConfigService';
 import { emailCacheService } from '../services/emailCacheService';
 import type { EnvironmentConfig } from '../services/environmentConfigService';
+import { Button, IconButton, Input, Textarea, Label, Callout } from './ui';
 
 interface EnvironmentConfigProps {
   onConfigChange?: (config: EnvironmentConfig) => void;
@@ -84,17 +85,17 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
       // Get the current configuration to check if Gmail query has changed
       const currentConfig = environmentConfigService.getConfiguration();
       const gmailQueryChanged = currentConfig.gmailQuery !== config.gmailQuery;
-      
+
       // Save the new configuration
       environmentConfigService.setConfiguration(config);
       onConfigChange?.(config);
-      
+
       // Clear email cache if Gmail query has changed
       if (gmailQueryChanged) {
         emailCacheService.forceRefresh();
         console.log('Gmail query changed - email cache cleared');
       }
-      
+
       // Refresh the page to apply new configuration
       if (confirm('Configuration saved! The page will refresh to apply changes. Continue?')) {
         window.location.reload();
@@ -153,145 +154,130 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
     <div className={className}>
       {/* OAuth Setup Link */}
       {onSwitchToOAuthSetup && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start gap-2">
-              <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="text-blue-800 font-medium mb-1">Need Google OAuth Credentials?</p>
-                <p className="text-blue-700">
-                  Follow our comprehensive step-by-step guide to set up Google OAuth for Gmail integration.
-                </p>
-              </div>
+        <Callout variant="info" icon={<CheckCircle className="w-5 h-5" />} className="mb-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="text-sm">
+              <p className="font-medium mb-1">Need Google OAuth Credentials?</p>
+              <p>
+                Follow our comprehensive step-by-step guide to set up Google OAuth for Gmail integration.
+              </p>
             </div>
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={onSwitchToOAuthSetup}
-              className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+              className="flex-shrink-0"
             >
               Setup Guide
-            </button>
+            </Button>
           </div>
-        </div>
+        </Callout>
       )}
 
       {/* Configuration Status */}
       <div className="mb-4">
         {isConfigComplete && Object.keys(validationErrors).length === 0 ? (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <span className="text-green-800 font-medium">Configuration Complete!</span>
-            </div>
-            <p className="text-green-700 text-sm mt-1">
+          <Callout variant="success" icon={<CheckCircle className="w-5 h-5" />}>
+            <p className="font-medium">Configuration Complete!</p>
+            <p className="text-sm mt-1">
               Your OAuth credentials are properly configured. You can now connect to Gmail.
             </p>
-          </div>
+          </Callout>
         ) : (
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-amber-600" />
-              <span className="text-amber-800 font-medium">Configuration Needed</span>
-            </div>
-            <p className="text-amber-700 text-sm mt-1">
+          <Callout variant="warning" icon={<AlertCircle className="w-5 h-5" />}>
+            <p className="font-medium">Configuration Needed</p>
+            <p className="text-sm mt-1">
               Please complete the OAuth setup to enable Gmail integration.
             </p>
-          </div>
+          </Callout>
         )}
       </div>
 
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-2">
-          <button
+          <IconButton
+            label={showSecrets ? 'Hide secrets' : 'Show secrets'}
             onClick={() => setShowSecrets(!showSecrets)}
-            className="p-1 hover:bg-gray-100 rounded"
-            title={showSecrets ? 'Hide secrets' : 'Show secrets'}
+            size="sm"
           >
             {showSecrets ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
+          </IconButton>
         </div>
       </div>
 
       {/* Security Warning */}
-      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-        <div className="flex items-start gap-2">
-          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="text-amber-800 font-medium mb-1">Security Notice</p>
-            <p className="text-amber-700">
-              These environment variables are stored client-side and are visible to anyone who inspects your browser. 
-              <strong> Do not share them with anyone</strong> or commit them to public repositories.
-            </p>
-          </div>
-        </div>
-      </div>
+      <Callout variant="warning" icon={<AlertCircle className="w-5 h-5" />} className="mb-4">
+        <p className="font-medium mb-1">Security Notice</p>
+        <p>
+          These environment variables are stored client-side and are visible to anyone who inspects your browser.
+          <strong> Do not share them with anyone</strong> or commit them to public repositories.
+        </p>
+      </Callout>
 
       <div className="space-y-4 max-h-96 overflow-y-auto">
         {/* Google OAuth Settings */}
         <div className="space-y-3">
-          <h4 className="font-medium text-gray-700 border-b pb-1">Google OAuth</h4>
-          
+          <h4 className="font-medium text-gray-700 dark:text-gray-300 border-b dark:border-gray-700 pb-1">Google OAuth</h4>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="googleClientId">
               Client ID
-              <span className="text-gray-500 font-normal ml-1">(from Google Cloud Console)</span>
-            </label>
-            <input
+              <span className="text-gray-500 dark:text-gray-400 font-normal ml-1">(from Google Cloud Console)</span>
+            </Label>
+            <Input
+              id="googleClientId"
               type="text"
               value={config.googleClientId}
               onChange={(e) => handleConfigChange('googleClientId', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md text-sm ${
-                validationErrors.googleClientId ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={validationErrors.googleClientId ? 'border-red-300 dark:border-red-600' : ''}
               placeholder="123456789-abcdefghijklmnop.apps.googleusercontent.com"
             />
             {validationErrors.googleClientId && (
-              <p className="text-red-600 text-xs mt-1">{validationErrors.googleClientId}</p>
+              <p className="text-red-600 dark:text-red-400 text-xs mt-1">{validationErrors.googleClientId}</p>
             )}
-            <p className="text-gray-500 text-xs mt-1">
+            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
               Should end with '.apps.googleusercontent.com'
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="googleClientSecret">
               Client Secret
-              <span className="text-gray-500 font-normal ml-1">(from Google Cloud Console)</span>
-            </label>
-            <input
+              <span className="text-gray-500 dark:text-gray-400 font-normal ml-1">(from Google Cloud Console)</span>
+            </Label>
+            <Input
+              id="googleClientSecret"
               type={showSecrets ? 'text' : 'password'}
               value={config.googleClientSecret}
               onChange={(e) => handleConfigChange('googleClientSecret', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md text-sm ${
-                validationErrors.googleClientSecret ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={validationErrors.googleClientSecret ? 'border-red-300 dark:border-red-600' : ''}
               placeholder="GOCSPX-..."
             />
             {validationErrors.googleClientSecret && (
-              <p className="text-red-600 text-xs mt-1">{validationErrors.googleClientSecret}</p>
+              <p className="text-red-600 dark:text-red-400 text-xs mt-1">{validationErrors.googleClientSecret}</p>
             )}
-            <p className="text-gray-500 text-xs mt-1">
+            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
               Should start with 'GOCSPX-'
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="googleRedirectUri">
               Redirect URI
-              <span className="text-gray-500 font-normal ml-1">(must match Google Cloud Console exactly)</span>
-            </label>
-            <input
+              <span className="text-gray-500 dark:text-gray-400 font-normal ml-1">(must match Google Cloud Console exactly)</span>
+            </Label>
+            <Input
+              id="googleRedirectUri"
               type="text"
               value={config.googleRedirectUri}
               onChange={(e) => handleConfigChange('googleRedirectUri', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md text-sm ${
-                validationErrors.googleRedirectUri ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={validationErrors.googleRedirectUri ? 'border-red-300 dark:border-red-600' : ''}
               placeholder="http://localhost:5173/auth-callback.html"
             />
             {validationErrors.googleRedirectUri && (
-              <p className="text-red-600 text-xs mt-1">{validationErrors.googleRedirectUri}</p>
+              <p className="text-red-600 dark:text-red-400 text-xs mt-1">{validationErrors.googleRedirectUri}</p>
             )}
-            <p className="text-gray-500 text-xs mt-1">
+            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
               Current domain: {window.location.origin}/auth-callback.html
             </p>
           </div>
@@ -299,92 +285,95 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
 
         {/* Content Processing Settings */}
         <div className="space-y-3">
-          <h4 className="font-medium text-gray-700 border-b pb-1">Content Processing</h4>
-          
+          <h4 className="font-medium text-gray-700 dark:text-gray-300 border-b dark:border-gray-700 pb-1">Content Processing</h4>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="gmailQuery">
               Gmail Query
-              <span className="text-gray-500 font-normal ml-1">(filters which emails to fetch)</span>
-            </label>
-            <input
+              <span className="text-gray-500 dark:text-gray-400 font-normal ml-1">(filters which emails to fetch)</span>
+            </Label>
+            <Input
+              id="gmailQuery"
               type="text"
               value={config.gmailQuery}
               onChange={(e) => handleConfigChange('gmailQuery', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md text-sm ${
-                validationErrors.gmailQuery ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={validationErrors.gmailQuery ? 'border-red-300 dark:border-red-600' : ''}
               placeholder="is:unread -is:spam -is:starred in:inbox"
             />
             {validationErrors.gmailQuery && (
-              <p className="text-red-600 text-xs mt-1">{validationErrors.gmailQuery}</p>
+              <p className="text-red-600 dark:text-red-400 text-xs mt-1">{validationErrors.gmailQuery}</p>
             )}
-            <p className="text-gray-500 text-xs mt-1">
+            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
               Use Gmail search syntax. Examples: "is:unread", "from:example.com", "has:attachment", "-is:spam"
               <br />
-              <span className="text-amber-600">Note: Changing this will clear the email cache.</span>
+              <span className="text-amber-600 dark:text-amber-400">Note: Changing this will clear the email cache.</span>
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
               id="saveForLaterMode"
               checked={config.saveForLaterMode}
               onChange={(e) => handleConfigChange('saveForLaterMode', e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
             />
-            <label htmlFor="saveForLaterMode" className="text-sm text-gray-700 cursor-pointer">
+            <label htmlFor="saveForLaterMode" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
               Save for later mode
             </label>
           </div>
-          <p className="text-xs text-gray-500 ml-6">
-            When enabled, content will be saved for later review instead of being immediately summarized. 
+          <p className="text-xs text-gray-500 dark:text-gray-400 ml-6">
+            When enabled, content will be saved for later review instead of being immediately summarized.
             The "Summarize email" button becomes "Save for later", and links are saved without generating summaries.
           </p>
         </div>
 
         {/* Import/Export */}
         <div className="space-y-3">
-          <h4 className="font-medium text-gray-700 border-b pb-1">Import/Export</h4>
-          
+          <h4 className="font-medium text-gray-700 dark:text-gray-300 border-b dark:border-gray-700 pb-1">Import/Export</h4>
+
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Download className="w-4 h-4" />}
               onClick={handleExport}
-              className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
             >
-              <Download className="w-4 h-4" />
               Export
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="success"
+              size="sm"
+              leftIcon={<Upload className="w-4 h-4" />}
               onClick={() => setShowImport(!showImport)}
-              className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
             >
-              <Upload className="w-4 h-4" />
               Import
-            </button>
+            </Button>
           </div>
 
           {showImport && (
             <div className="space-y-2">
-              <textarea
+              <Textarea
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 placeholder="Paste configuration JSON here..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-20"
+                rows={3}
               />
               <div className="flex gap-2">
-                <button
+                <Button
+                  variant="success"
+                  size="sm"
                   onClick={handleImport}
-                  className="px-3 py-1 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
                 >
                   Import
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => { setShowImport(false); setImportText(''); }}
-                  className="px-3 py-1 bg-gray-600 text-white rounded-md text-sm hover:bg-gray-700"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -392,31 +381,31 @@ export const EnvironmentConfigPanel: React.FC<EnvironmentConfigProps> = ({
       </div>
 
       {/* Actions */}
-      <div className="flex justify-between items-center pt-4 border-t mt-4">
-        <button
+      <div className="flex justify-between items-center pt-4 border-t dark:border-gray-700 mt-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          leftIcon={<RotateCcw className="w-4 h-4" />}
           onClick={handleReset}
-          className="flex items-center gap-1 px-3 py-2 bg-gray-600 text-white rounded-md text-sm hover:bg-gray-700"
         >
-          <RotateCcw className="w-4 h-4" />
           Reset
-        </button>
-        
-        <button
+        </Button>
+
+        <Button
+          variant="primary"
+          leftIcon={<Save className="w-4 h-4" />}
           onClick={handleSave}
           disabled={isSaving || hasErrors}
-          className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          loading={isSaving}
         >
-          <Save className="w-4 h-4" />
           {isSaving ? 'Saving...' : 'Save & Reload'}
-        </button>
+        </Button>
       </div>
 
       {hasErrors && (
-        <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-red-700 text-sm">
-            Please fix the validation errors above before saving.
-          </p>
-        </div>
+        <Callout variant="danger" className="mt-3">
+          Please fix the validation errors above before saving.
+        </Callout>
       )}
     </div>
   );

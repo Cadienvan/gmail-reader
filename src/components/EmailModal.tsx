@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Filter, AlertCircle, StopCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Button, IconButton, Modal, Textarea } from './ui';
 import type { ParsedEmail, ExtractedLink, LinkSummary, FlashCard, ModelConfiguration } from '../types';
 import { linkService } from '../services/linkService';
 import { ollamaService } from '../services/ollamaService';
@@ -2372,108 +2373,85 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             </div>
             
             {/* Mark as Read Button */}
-            <button
+            <Button
               onClick={handleMarkAsRead}
               disabled={isCurrentEmailRead || isMarkingAsRead}
-              className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${
-                isCurrentEmailRead 
-                  ? 'bg-green-100 text-green-700 border border-green-200' 
-                  : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
-              }`}
+              variant={isCurrentEmailRead ? 'success' : 'primary'}
+              size="sm"
+              loading={isMarkingAsRead}
+              leftIcon={isCurrentEmailRead ? <CheckCircle size={14} /> : <Mail size={14} />}
               title={isCurrentEmailRead ? 'Email is marked as read' : 'Mark email as read'}
             >
-              {isMarkingAsRead ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  Marking...
-                </>
-              ) : isCurrentEmailRead ? (
-                <>
-                  <CheckCircle size={14} />
-                  Read
-                </>
-              ) : (
-                <>
-                  <Mail size={14} />
-                  Mark as Read
-                </>
-              )}
-            </button>
+              {isMarkingAsRead ? 'Marking...' : isCurrentEmailRead ? 'Read' : 'Mark as Read'}
+            </Button>
             
             {/* Delete Button */}
-            <button
+            <Button
               onClick={handleShowDeleteConfirm}
               disabled={isDeletingEmail}
-              className="flex items-center gap-1 px-3 py-1 rounded text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              variant="danger"
+              size="sm"
+              loading={isDeletingEmail}
+              leftIcon={<Trash2 size={14} />}
               title="Delete email (move to trash)"
             >
-              {isDeletingEmail ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 size={14} />
-                  Delete
-                </>
-              )}
-            </button>
+              {isDeletingEmail ? 'Deleting...' : 'Delete'}
+            </Button>
             
             {/* URL Filter Button */}
-            <button
+            <Button
               onClick={() => handleOpenRegexChecker()}
-              className="flex items-center gap-1 px-3 py-1 rounded text-sm bg-purple-600 text-white hover:bg-purple-700"
+              variant="secondary"
+              size="sm"
+              leftIcon={<Filter size={14} />}
               title="Open URL regex pattern checker"
             >
-              <Filter size={14} />
               URL Filter
-            </button>
+            </Button>
             
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {currentIndex + 1} of {emails.length}
             </span>
-            <button
+            <IconButton
               onClick={() => executeAction('prev')}
               disabled={currentIndex === 0}
-              className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
-              title="Previous email"
+              label="Previous email"
             >
               <ChevronLeft size={20} />
-            </button>
-            <button
+            </IconButton>
+            <IconButton
               onClick={() => executeAction('next')}
               disabled={currentIndex === emails.length - 1}
-              className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
-              title="Next email"
+              label="Next email"
             >
               <ChevronRight size={20} />
-            </button>
+            </IconButton>
 
-            <button
+            <IconButton
               onClick={() => handleNavigationWithConfirm('close')}
-              className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              label="Close"
             >
               <X size={20} />
-            </button>
+            </IconButton>
           </div>
         </div>
 
         {/* Gempest Status Banner */}
         {gempestStatus && (
-          <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between gap-2">
+          <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 border-b border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-emerald-600 animate-pulse">✨</span>
-              <span className="text-sm font-medium text-emerald-700">{gempestStatus}</span>
+              <span className="text-emerald-600 dark:text-emerald-400 animate-pulse">✨</span>
+              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">{gempestStatus}</span>
             </div>
             {isGempestRunning && onStopGempest && (
-              <button
+              <Button
                 onClick={onStopGempest}
-                className="flex items-center gap-1 px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
+                variant="danger"
+                size="sm"
+                leftIcon={<StopCircle size={14} />}
               >
-                <StopCircle size={14} />
                 Stop Gempest
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -2493,18 +2471,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               {/* Paste URL/Text Input Section - Full width when sidebar is hidden */}
               {!isSidebarVisible && (
                 <div className="mb-4 border-b border-gray-200 dark:border-gray-700 pb-3 bg-indigo-50 dark:bg-indigo-950/40 p-3 rounded-md">
-                  <button 
+                  <button
                     onClick={togglePasteInput}
                     className="mb-2 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:hover:bg-indigo-900 dark:text-indigo-200 py-1 px-3 rounded-full transition-colors inline-flex items-center gap-1"
                   >
                     <span>{isPasteInputVisible ? 'Hide' : 'Paste URL or text for summary'}</span>
                   </button>
-                  
+
                   {isPasteInputVisible && (
                     <div className="space-y-2">
-                      <textarea
+                      <Textarea
                         placeholder="Paste URL or text here. URLs will be processed as links, any other content will be summarized as text."
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm min-h-[80px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        rows={3}
                         value={pasteInput}
                         onChange={handlePasteInputChange}
                         onPaste={() => {
@@ -2524,13 +2502,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       />
                       <div className="flex justify-between items-center">
                           <span className="text-xs text-gray-500 dark:text-gray-400">Press Ctrl+Enter to process</span>
-                        <button
+                        <Button
                           onClick={processUserInput}
                           disabled={!pasteInput.trim()}
-                          className="text-xs bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50"
+                          variant="primary"
+                          size="sm"
                         >
                           Get Summary
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -2539,23 +2518,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               
               <div className="mb-4">
                 <div className="mt-2">
-                  <button 
+                  <Button
                     onClick={handleEmailSummary}
                     disabled={linkSummaries.get(`email:${currentEmail.id}`)?.loading}
-                    className="inline-flex items-center gap-1 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:hover:bg-blue-900/70 dark:text-blue-200 py-1 px-3 rounded-full transition-colors disabled:opacity-50"
+                    variant="soft"
+                    size="sm"
+                    loading={!!linkSummaries.get(`email:${currentEmail.id}`)?.loading}
+                    leftIcon={<FileText size={14} />}
                   >
-                    {linkSummaries.get(`email:${currentEmail.id}`)?.loading ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        <span>Generating summary...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileText size={14} />
-                        <span>{saveForLaterMode ? 'Save for later' : 'Summarize Email'}</span>
-                      </>
-                    )}
-                  </button>
+                    {linkSummaries.get(`email:${currentEmail.id}`)?.loading
+                      ? 'Generating summary...'
+                      : saveForLaterMode ? 'Save for later' : 'Summarize Email'}
+                  </Button>
                   
                   {/* Content Type Toggle */}
                   {emailContent?.htmlBody && (
@@ -2688,13 +2662,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               
               {/* Show sidebar button when hidden */}
               {!isSidebarVisible && (
-                <button
+                <IconButton
                   onClick={toggleSidebar}
-                  className="absolute top-4 right-4 p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors z-10"
-                  title="Show links panel"
+                  label="Show links panel"
+                  className="absolute top-4 right-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-md z-10"
                 >
-                  <ChevronLeft size={20} className="text-gray-600 dark:text-gray-300" />
-                </button>
+                  <ChevronLeft size={20} />
+                </IconButton>
               )}
             </div>
 
@@ -2704,18 +2678,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               <div className="flex-1 overflow-y-auto p-4">
               {/* Paste URL/Text Input Section */}
               <div className="mb-4 border-b border-gray-200 dark:border-gray-700 pb-3 bg-indigo-50 dark:bg-indigo-950/40 p-3 rounded-md">
-                <button 
+                <button
                   onClick={togglePasteInput}
                   className="mb-2 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:hover:bg-indigo-900 dark:text-indigo-200 py-1 px-3 rounded-full transition-colors inline-flex items-center gap-1"
                 >
                   <span>{isPasteInputVisible ? 'Hide' : 'Paste URL or text for summary'}</span>
                 </button>
-                
+
                 {isPasteInputVisible && (
                   <div className="space-y-2">
-                    <textarea
+                    <Textarea
                       placeholder="Paste URL or text here. URLs will be processed as links, any other content will be summarized as text."
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm min-h-[80px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      rows={3}
                       value={pasteInput}
                       onChange={handlePasteInputChange}
                       onPaste={() => {
@@ -2735,13 +2709,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     />
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-500 dark:text-gray-400">Press Ctrl+Enter to process</span>
-                      <button
+                      <Button
                         onClick={processUserInput}
                         disabled={!pasteInput.trim()}
-                        className="text-xs bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50"
+                        variant="primary"
+                        size="sm"
                       >
                         Get Summary
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -2749,14 +2724,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 
               {/* Links panel header with close button */}
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Extracted Links ({extractedLinks.length})</h3>
-                <button
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Extracted Links ({extractedLinks.length})</h3>
+                <IconButton
                   onClick={toggleSidebar}
-                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  title="Hide links panel"
+                  label="Hide links panel"
+                  size="sm"
                 >
-                  <X size={16} className="text-gray-600 dark:text-gray-300" />
-                </button>
+                  <X size={16} />
+                </IconButton>
               </div>
               {extractedLinks.length === 0 ? (
                 <p className="text-gray-500 dark:text-gray-400 text-sm">No links found in this email.</p>
@@ -2774,8 +2749,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                           onClick={() => handleLinkClick(link)}
                           className="flex-1 text-left hover:bg-blue-50 dark:hover:bg-blue-950/40 p-1 rounded transition-colors cursor-pointer"
                         >
-                          <div className="text-sm text-blue-600 hover:text-blue-800 break-all font-medium flex items-center">
-                            <span className="bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center mr-1 text-xs">
+                          <div className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 break-all font-medium flex items-center">
+                            <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 rounded-full w-5 h-5 flex items-center justify-center mr-1 text-xs">
                               AI
                             </span>
                             {/* Always show the domain as the main identifier */}
@@ -2788,13 +2763,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                               : `Link to ${link.domain}`}
                           </div>
                         </button>
-                        <button
+                        <IconButton
                           onClick={() => handleOpenRegexChecker(link.url)}
-                          className="p-1 text-purple-400 hover:text-purple-600"
-                          title="Add URL filter pattern"
+                          label="Add URL filter pattern"
+                          size="sm"
                         >
                           <Filter size={14} />
-                        </button>
+                        </IconButton>
                         <a
                           href={link.url}
                           target="_blank"
@@ -2815,7 +2790,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                             </div>
                           )}
                           {linkSummaries.get(link.url)?.error && (
-                            <div className="text-red-600">
+                            <div className="text-red-600 dark:text-red-400">
                               Error: {linkSummaries.get(link.url)?.error}
                             </div>
                           )}
@@ -2855,7 +2830,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 {/* Tabs and Toggle Button */}
                 <div className="flex items-center justify-between mb-3">
                   {/* Tabs */}
-                  <div className={`flex gap-1 overflow-x-auto flex-nowrap ${activeSummaryUrls.length > 1 ? 'border-b flex-1' : 'flex-1'}`}>
+                  <div className={`flex gap-1 overflow-x-auto flex-nowrap ${activeSummaryUrls.length > 1 ? 'border-b border-gray-200 dark:border-gray-700 flex-1' : 'flex-1'}`}>
                     {activeSummaryUrls.length > 1 ? (
                       activeSummaryUrls.map((url) => {
                         const summary = linkSummaries.get(url);
@@ -2930,13 +2905,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                   </div>
                   
                   {/* Toggle Button */}
-                  <button
+                  <IconButton
                     onClick={toggleSummaryPanel}
-                     className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 ml-2"
-                    title={isSummaryVisible ? 'Hide summary content' : 'Show summary content'}
+                    label={isSummaryVisible ? 'Hide summary content' : 'Show summary content'}
+                    size="sm"
+                    className="ml-2"
                   >
                     {isSummaryVisible ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                  </button>
+                  </IconButton>
                 </div>
 
                 {/* Newsletter Rating Bar — rates the newsletter behind the active tab */}
@@ -3008,24 +2984,25 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                         ) : (
                           <>
                             <span className="truncate">{getTabUrl() || 'Summary'}</span>
-                            <button
+                            <IconButton
                               onClick={() => window.open(activeSummary.finalUrl || activeSummary.url, '_blank')}
-                              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 flex-shrink-0"
-                              title="Open in new tab"
+                              label="Open in new tab"
+                              size="sm"
+                              className="flex-shrink-0"
                             >
                               <ExternalLink size={14} />
-                            </button>
+                            </IconButton>
                           </>
                         )}
                       </h3>
                       {activeSummaryUrls.length === 1 && (
-                        <button
+                        <IconButton
                           onClick={() => handleCloseSummary()}
-                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100"
-                          title="Close summary and focus on email"
+                          label="Close summary and focus on email"
+                          size="sm"
                         >
                           <X size={16} />
-                        </button>
+                        </IconButton>
                       )}
                     </div>
                 
@@ -3058,17 +3035,17 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     {activeSummary.pendingMemoryPhrase && (
                       <div className="mt-4 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
                         <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-200 mb-2">🧠 Memory suggestion — choose where to file it:</p>
-                        <textarea
-                          className="w-full text-sm text-indigo-900 dark:text-indigo-100 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-md px-2 py-1.5 mb-3 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        <Textarea
                           rows={2}
                           value={editedMemoryPhrases.get(currentTabUrl!) ?? activeSummary.pendingMemoryPhrase}
                           onChange={(e) => {
                             const url = currentTabUrl!;
                             setEditedMemoryPhrases(prev => new Map(prev).set(url, e.target.value));
                           }}
+                          className="mb-3"
                         />
                         <div className="flex items-center gap-2">
-                          <button
+                          <Button
                             onClick={() => {
                               const url = currentTabUrl!;
                               const phrase = (editedMemoryPhrases.get(url) ?? activeSummary.pendingMemoryPhrase!).trim();
@@ -3078,12 +3055,12 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                               setEditedMemoryPhrases(prev => { const n = new Map(prev); n.delete(url); return n; });
                               setLinkSummaries(prev => new Map(prev).set(url, { ...prev.get(url)!, pendingMemoryPhrase: undefined }));
                             }}
-                            className="inline-flex items-center gap-1 text-xs bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded-full transition-colors"
+                            variant="success"
+                            size="sm"
                           >
-                            <span>⬆</span>
-                            <span>Reinforcing</span>
-                          </button>
-                          <button
+                            ⬆ Reinforcing
+                          </Button>
+                          <Button
                             onClick={() => {
                               const url = currentTabUrl!;
                               const phrase = (editedMemoryPhrases.get(url) ?? activeSummary.pendingMemoryPhrase!).trim();
@@ -3093,23 +3070,23 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                               setEditedMemoryPhrases(prev => { const n = new Map(prev); n.delete(url); return n; });
                               setLinkSummaries(prev => new Map(prev).set(url, { ...prev.get(url)!, pendingMemoryPhrase: undefined }));
                             }}
-                            className="inline-flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded-full transition-colors"
+                            variant="primary"
+                            size="sm"
                           >
-                            <span>⬇</span>
-                            <span>Reductive</span>
-                          </button>
-                          <button
+                            ⬇ Reductive
+                          </Button>
+                          <Button
                             onClick={() => {
                               const url = currentTabUrl!;
                               console.log('[EmailModal] Memory phrase dismissed');
                               setEditedMemoryPhrases(prev => { const n = new Map(prev); n.delete(url); return n; });
                               setLinkSummaries(prev => new Map(prev).set(url, { ...prev.get(url)!, pendingMemoryPhrase: undefined }));
                             }}
-                            className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 py-1 px-2 transition-colors"
+                            variant="ghost"
+                            size="sm"
                           >
-                            <span>✕</span>
-                            <span>Dismiss</span>
-                          </button>
+                            ✕ Dismiss
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -3118,7 +3095,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3 flex-wrap">
                       {/* Improve Summary Button - show only if upgrade is available */}
                       {activeSummary.canUpgrade && activeSummary.modelUsed === 'short' && (
-                        <button
+                        <Button
                           onClick={async () => {
                             try {
                               // Get original content from storage
@@ -3134,20 +3111,12 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                             }
                           }}
                           disabled={activeSummary.loading}
-                          className="inline-flex items-center gap-1 text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 py-1 px-2 rounded-full transition-colors disabled:opacity-50"
+                          loading={activeSummary.loading}
+                          variant="secondary"
+                          size="sm"
                         >
-                          {activeSummary.loading ? (
-                            <>
-                              <Loader2 size={12} className="animate-spin" />
-                              <span>Improving...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>🔄</span>
-                              <span>Improve Summary</span>
-                            </>
-                          )}
-                        </button>
+                          {activeSummary.loading ? 'Improving...' : '🔄 Improve Summary'}
+                        </Button>
                       )}
                       
                       {/* Model indicator */}
@@ -3158,7 +3127,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       )}
                       
                       {/* Flash Cards Button */}
-                      <button
+                      <Button
                         onClick={() => generateFlashCards(
                           activeSummary.summary,
                           activeSummary.url.startsWith('email:') ? 'email' : 'link',
@@ -3166,22 +3135,15 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                           activeSummary.url.startsWith('email:') ? undefined : (activeSummary.finalUrl || activeSummary.url)
                         )}
                         disabled={isGeneratingFlashCards === activeSummary.url}
-                        className="inline-flex items-center gap-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 py-1 px-2 rounded-full transition-colors disabled:opacity-50"
+                        loading={isGeneratingFlashCards === activeSummary.url}
+                        variant="soft"
+                        size="sm"
+                        leftIcon={<BookOpen size={12} />}
                       >
-                        {isGeneratingFlashCards === activeSummary.url ? (
-                          <>
-                            <Loader2 size={12} className="animate-spin" />
-                            <span>Creating Flash Cards...</span>
-                          </>
-                        ) : (
-                          <>
-                            <BookOpen size={12} />
-                            <span>Create Flash Cards</span>
-                          </>
-                        )}
-                      </button>
+                        {isGeneratingFlashCards === activeSummary.url ? 'Creating Flash Cards...' : 'Create Flash Cards'}
+                      </Button>
                       {flashCardsError && isGeneratingFlashCards === null && (
-                        <div className="mt-2 text-xs text-red-600">
+                        <div className="mt-2 text-xs text-red-600 dark:text-red-400">
                           {flashCardsError}
                         </div>
                       )}
@@ -3207,73 +3169,61 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       </div>
       
       {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
-          <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4 text-red-600 dark:text-red-400">Delete Email?</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Are you sure you want to delete this email? It will be moved to trash.
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
-              Press <kbd className="bg-gray-100 dark:bg-gray-800 px-1 rounded">Enter</kbd> to delete or <kbd className="bg-gray-100 dark:bg-gray-800 px-1 rounded">Esc</kbd> to cancel
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={handleCancelDelete}
-                className="px-4 py-2 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteEmail}
-                disabled={isDeletingEmail}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
-              >
-                {isDeletingEmail ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin inline mr-2" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Email'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={handleCancelDelete}
+        title={<span className="text-red-600 dark:text-red-400">Delete Email?</span>}
+        size="sm"
+        closeOnOverlayClick={false}
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleCancelDelete}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteEmail}
+              disabled={isDeletingEmail}
+              loading={isDeletingEmail}
+            >
+              {isDeletingEmail ? 'Deleting...' : 'Delete Email'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-gray-600 dark:text-gray-300 mb-4">
+          Are you sure you want to delete this email? It will be moved to trash.
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Press <kbd className="bg-gray-100 dark:bg-gray-800 px-1 rounded">Enter</kbd> to delete or <kbd className="bg-gray-100 dark:bg-gray-800 px-1 rounded">Esc</kbd> to cancel
+        </p>
+      </Modal>
       
       {/* Confirmation Dialog */}
-      {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
-          <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Mark Email as Read?</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              This email hasn't been marked as read yet. Would you like to mark it as read before continuing?
-                                             </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={handleCancelAction}
-                className="px-4 py-2 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleContinueWithoutMarking}
-                className="px-4 py-2 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-              >
-                Continue Without Marking
-              </button>
-              <button
-                onClick={handleConfirmMarkAsRead}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Mark as Read & Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showConfirmDialog}
+        onClose={handleCancelAction}
+        title="Mark Email as Read?"
+        size="sm"
+        closeOnOverlayClick={false}
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleCancelAction}>
+              Cancel
+            </Button>
+            <Button variant="ghost" onClick={handleContinueWithoutMarking}>
+              Continue Without Marking
+            </Button>
+            <Button variant="primary" onClick={handleConfirmMarkAsRead}>
+              Mark as Read & Continue
+            </Button>
+          </>
+        }
+      >
+        <p className="text-gray-600 dark:text-gray-300">
+          This email hasn't been marked as read yet. Would you like to mark it as read before continuing?
+        </p>
+      </Modal>
       </div>
 
       {/* Flash Cards Modal */}

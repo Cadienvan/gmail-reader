@@ -4,6 +4,7 @@ import { emailCacheService } from '../services/emailCacheService';
 import { dbStorageService } from '../services/dbStorageService';
 import { tabSummaryStorage } from '../services/tabSummaryStorage';
 import { environmentConfigService } from '../services/environmentConfigService';
+import { Button, Callout, Card } from './ui';
 
 interface StorageCategory {
   id: string;
@@ -155,7 +156,7 @@ export const StorageConfigPanel: React.FC<StorageConfigPanelProps> = ({ classNam
         const flashCardsSize = estimateArraySize(flashCards);
         const tagsSize = estimateArraySize(tags);
         const totalSize = flashCardsSize + tagsSize;
-        
+
         categories.push({
           id: 'flashcards',
           name: 'Flash Cards',
@@ -185,7 +186,7 @@ export const StorageConfigPanel: React.FC<StorageConfigPanelProps> = ({ classNam
       try {
         const tabs = await tabSummaryStorage.getAllTabs();
         const tabsSize = estimateArraySize(tabs);
-        
+
         categories.push({
           id: 'tab-summaries',
           name: 'Link Summaries',
@@ -256,13 +257,13 @@ export const StorageConfigPanel: React.FC<StorageConfigPanelProps> = ({ classNam
         case 'flashcards':
           const flashCards = await dbStorageService.getAllFlashCards();
           const tags = await dbStorageService.getAllTags();
-          
+
           for (const card of flashCards) {
             if (card.id) {
               await dbStorageService.deleteFlashCard(card.id);
             }
           }
-          
+
           for (const tag of tags) {
             if (tag.id) {
               await dbStorageService.deleteTag(tag.id);
@@ -283,7 +284,7 @@ export const StorageConfigPanel: React.FC<StorageConfigPanelProps> = ({ classNam
 
       // Reload storage info
       await loadStorageInfo();
-      
+
     } catch (error) {
       console.error(`Failed to clear category ${categoryId}:`, error);
       alert(`Failed to clear storage: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -301,7 +302,7 @@ export const StorageConfigPanel: React.FC<StorageConfigPanelProps> = ({ classNam
     try {
       // Clear localStorage
       localStorage.clear();
-      
+
       // Clear IndexedDB databases
       try {
         await new Promise((resolve, reject) => {
@@ -325,7 +326,7 @@ export const StorageConfigPanel: React.FC<StorageConfigPanelProps> = ({ classNam
 
       alert('All storage cleared successfully. The page will reload.');
       window.location.reload();
-      
+
     } catch (error) {
       console.error('Failed to clear all storage:', error);
       alert(`Failed to clear all storage: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -340,123 +341,117 @@ export const StorageConfigPanel: React.FC<StorageConfigPanelProps> = ({ classNam
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Storage Management</h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Storage Management</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               View and manage application data storage
             </p>
           </div>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />}
             onClick={loadStorageInfo}
             disabled={isLoading}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            title="Refresh storage information"
           >
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
             Refresh
-          </button>
+          </Button>
         </div>
 
         {/* Total Storage Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Database className="w-5 h-5 text-blue-600" />
-            <span className="font-medium text-blue-900">Total localStorage: {totalLocalStorageSize}</span>
-          </div>
-          <p className="text-sm text-blue-700">
+        <Callout variant="info" icon={<Database className="w-5 h-5" />}>
+          <p className="font-medium">Total localStorage: {totalLocalStorageSize}</p>
+          <p className="mt-1 text-sm">
             IndexedDB sizes are estimated based on data content and may vary from actual disk usage
           </p>
-        </div>
+        </Callout>
 
         {isLoading ? (
           <div className="text-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-gray-400" />
-            <p className="text-gray-600">Loading storage information...</p>
+            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-gray-400 dark:text-gray-500" />
+            <p className="text-gray-600 dark:text-gray-400">Loading storage information...</p>
           </div>
         ) : (
           <div className="space-y-4">
             {storageCategories.map((category) => (
-              <div key={category.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-medium text-gray-900">{category.name}</h4>
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        category.type === 'localStorage' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {category.type}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{category.description}</p>
+              <Card
+                key={category.id}
+                padding="md"
+                title={
+                  <div className="flex items-center gap-2">
+                    <span>{category.name}</span>
+                    <span className={`px-2 py-0.5 text-xs rounded ${
+                      category.type === 'localStorage'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    }`}>
+                      {category.type}
+                    </span>
                   </div>
-                  <button
+                }
+                description={category.description}
+                actions={
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    leftIcon={
+                      clearingCategory === category.id
+                        ? <RefreshCw className="w-4 h-4 animate-spin" />
+                        : <Trash2 className="w-4 h-4" />
+                    }
                     onClick={() => clearCategory(category.id)}
                     disabled={!category.canClear || clearingCategory === category.id}
-                    className="flex items-center gap-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
-                    {clearingCategory === category.id ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
-                    )}
                     Clear
-                  </button>
-                </div>
-
+                  </Button>
+                }
+              >
                 <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                   <div>
-                    <span className="text-gray-500">Size:</span>
-                    <span className="ml-2 font-medium">{category.size}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Size:</span>
+                    <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{category.size}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Items:</span>
-                    <span className="ml-2 font-medium">{category.itemCount}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Items:</span>
+                    <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{category.itemCount}</span>
                   </div>
                 </div>
 
                 {category.lastUpdated && (
-                  <div className="text-xs text-gray-500 mb-3">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                     Last updated: {category.lastUpdated.toLocaleString()}
                   </div>
                 )}
 
                 {category.warningMessage && (
-                  <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-yellow-700">{category.warningMessage}</p>
-                  </div>
+                  <Callout variant="warning" icon={<AlertTriangle className="w-4 h-4" />}>
+                    {category.warningMessage}
+                  </Callout>
                 )}
-              </div>
+              </Card>
             ))}
           </div>
         )}
 
-        {/* Clear All Button */}
-        <div className="pt-6 border-t">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <h4 className="font-medium text-red-900 mb-2">Danger Zone</h4>
-            <p className="text-sm text-red-700 mb-4">
+        {/* Clear All / Danger Zone */}
+        <div className="pt-6 border-t dark:border-gray-700">
+          <Callout variant="danger">
+            <h4 className="font-medium mb-2">Danger Zone</h4>
+            <p className="text-sm mb-4">
               Clear all application data. This will log you out and reset all settings.
             </p>
-            <button
+            <Button
+              variant="danger"
+              leftIcon={
+                clearingCategory === 'all'
+                  ? <RefreshCw className="w-4 h-4 animate-spin" />
+                  : <Trash2 className="w-4 h-4" />
+              }
               onClick={clearAllStorage}
               disabled={clearingCategory === 'all'}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {clearingCategory === 'all' ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Clearing All...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4" />
-                  Clear All Storage
-                </>
-              )}
-            </button>
-          </div>
+              {clearingCategory === 'all' ? 'Clearing All...' : 'Clear All Storage'}
+            </Button>
+          </Callout>
         </div>
       </div>
     </div>

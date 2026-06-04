@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Download, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { Download, AlertCircle } from 'lucide-react';
 import { configExportService } from '../services/configExportService';
+import { Button, Callout, Card } from './ui';
 
 export function ConfigExportSection() {
   const [isExporting, setIsExporting] = useState(false);
@@ -22,48 +23,35 @@ export function ConfigExportSection() {
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4">
-      <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center gap-2">
+    <Card padding="md">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
         <Download size={20} />
         Export All Configuration
       </h3>
-      <p className="text-sm text-gray-600 mb-4">
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
         Download all your settings, rules, filters, AI configuration, and flash cards as a single JSON file.
       </p>
 
-      <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md mb-4">
-        <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-        <p className="text-sm text-amber-700">
-          This file contains sensitive data including API keys and OAuth credentials. Keep it secure.
-        </p>
-      </div>
+      <Callout variant="warning" className="mb-4">
+        This file contains sensitive data including API keys and OAuth credentials. Keep it secure.
+      </Callout>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <div className="flex items-center gap-2 text-red-700">
-            <AlertCircle size={16} />
-            <span className="text-sm">{error}</span>
-          </div>
-        </div>
+        <Callout variant="danger" icon={<AlertCircle size={16} />} className="mb-4">
+          {error}
+        </Callout>
       )}
 
-      <button
+      <Button
         onClick={handleExport}
         disabled={isExporting}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        loading={isExporting}
+        variant="success"
+        fullWidth
+        leftIcon={<Download size={16} />}
       >
-        {isExporting ? (
-          <>
-            <Loader2 size={16} className="animate-spin" />
-            Exporting...
-          </>
-        ) : (
-          <>
-            <Download size={16} />
-            Export Configuration
-          </>
-        )}
-      </button>
-    </div>
+        {isExporting ? 'Exporting...' : 'Export Configuration'}
+      </Button>
+    </Card>
   );
 }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, RefreshCw } from 'lucide-react';
+import { Settings, RefreshCw, X } from 'lucide-react';
 import { ollamaService } from '../services/ollamaService';
 import type { ModelConfiguration, OllamaModel } from '../types';
+import { Button, IconButton, Select, Label } from './ui';
 
 interface DoubleModelConfigProps {
   onConfigChange?: (config: ModelConfiguration) => void;
@@ -48,7 +49,7 @@ export const DoubleModelConfig: React.FC<DoubleModelConfigProps> = ({
     <div className={`relative ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        className="flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-gray-100"
         title="Model Configuration"
       >
         <Settings size={12} />
@@ -56,26 +57,24 @@ export const DoubleModelConfig: React.FC<DoubleModelConfigProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute z-20 top-full left-0 mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
+        <div className="absolute z-20 top-full left-0 mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Model Configuration</h3>
-            <button
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Model Configuration</h3>
+            <IconButton
               onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-gray-600"
+              label="Close"
+              size="sm"
             >
-              ×
-            </button>
+              <X size={16} />
+            </IconButton>
           </div>
 
           {/* Quick Model */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quick Model (Initial Summary)
-            </label>
-            <select
+            <Label>Quick Model (Initial Summary)</Label>
+            <Select
               value={config.quick}
               onChange={(e) => handleConfigChange({ quick: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               disabled={isLoading}
             >
               {models.map((model) => (
@@ -83,21 +82,18 @@ export const DoubleModelConfig: React.FC<DoubleModelConfigProps> = ({
                   {getModelDisplayName(model)}
                 </option>
               ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
+            </Select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Used for initial summaries. Faster and lighter.
             </p>
           </div>
 
           {/* Detailed Model */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Detailed Model (Improved Summary)
-            </label>
-            <select
+            <Label>Detailed Model (Improved Summary)</Label>
+            <Select
               value={config.detailed}
               onChange={(e) => handleConfigChange({ detailed: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               disabled={isLoading}
             >
               {models.map((model) => (
@@ -105,22 +101,23 @@ export const DoubleModelConfig: React.FC<DoubleModelConfigProps> = ({
                   {getModelDisplayName(model)}
                 </option>
               ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
+            </Select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Used when user requests improved summary. More detailed and thorough.
             </p>
           </div>
 
           {/* Refresh Button */}
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={loadModels}
               disabled={isLoading}
-              className="flex items-center gap-1 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-50"
+              variant="secondary"
+              size="sm"
+              leftIcon={<RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />}
             >
-              <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
               Refresh Models
-            </button>
+            </Button>
           </div>
         </div>
       )}

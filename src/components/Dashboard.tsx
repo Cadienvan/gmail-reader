@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, X, LucideDollarSign, FileText } from 'lucide-react';
+import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, LucideDollarSign, FileText, Sparkles, StopCircle, X, ThumbsUp, ThumbsDown } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration, LinkSummary } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
@@ -18,7 +18,46 @@ import { SavedForLaterModal } from './SavedForLaterModal';
 import { TabSummariesModal } from './TabSummariesModal';
 import { RulesDebugFloater } from './RulesDebugFloater';
 import { gempestService } from '../services/gempestService';
-import { Sparkles, StopCircle } from 'lucide-react';
+import { newsletterRatingService } from '../services/newsletterRatingService';
+import { Button, IconButton, Callout } from './ui';
+
+// Singolo pollice su/giù con percentuale, colorato in base al segno della qualità.
+const QualityThumb: React.FC<{ quality: number; title: string }> = ({ quality, title }) => {
+  const isPositive = quality >= 50;
+  return (
+    <span
+      title={title}
+      className={`inline-flex items-center gap-0.5 shrink-0 text-xs font-medium ${
+        isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+      }`}
+    >
+      {isPositive ? <ThumbsUp size={13} /> : <ThumbsDown size={13} />}
+      {quality}%
+    </span>
+  );
+};
+
+// Mostra, accanto al titolo, l'orientamento storico verso il mittente con due badge:
+// la qualità complessiva (all-time) e quella degli ultimi 30 giorni.
+// Non mostra nulla finché non ci sono rating per il mittente.
+const SenderSentimentBadge: React.FC<{ sender: string }> = ({ sender }) => {
+  const stats = newsletterRatingService.getSenderStats(sender);
+  if (stats.globalQuality < 0) return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 shrink-0">
+      <QualityThumb
+        quality={stats.globalQuality}
+        title={`Storico complessivo: ${stats.globalQuality}% positivo (${stats.totalRatings} valutazioni)`}
+      />
+      {stats.last30Quality >= 0 && (
+        <QualityThumb
+          quality={stats.last30Quality}
+          title={`Ultimi 30 giorni: ${stats.last30Quality}% positivo (${stats.ratingsLast30} valutazioni)`}
+        />
+      )}
+    </span>
+  );
+};
 
 export const Dashboard: React.FC = () => {
   const [emails, setEmails] = useState<ParsedEmail[]>([]);
@@ -30,12 +69,12 @@ export const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [ollamaStatus, setOllamaStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
   const [currentModel, setCurrentModel] = useState<ModelConfiguration>(() => ollamaService.getModelConfiguration());
-  
+
   // Pagination state
   const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
   const [prevPageTokens, setPrevPageTokens] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   // Modal states
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
@@ -94,7 +133,7 @@ export const Dashboard: React.FC = () => {
     try {
       // Load all flash cards for the game including their tags
       const cards = await flashCardService.getAllFlashCards();
-      
+
       // Only open the game modal if we have cards
       if (cards.length > 0) {
         setAllFlashCards(cards);
@@ -113,7 +152,7 @@ export const Dashboard: React.FC = () => {
   const handleAuthenticate = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       if (!gmailService.isConfigured()) {
         setError('Gmail OAuth not configured. Please set up your Google OAuth credentials in the environment variables.');
@@ -140,7 +179,7 @@ export const Dashboard: React.FC = () => {
     setError(null);
     setRetryCount(0);
     setIsRetrying(false);
-    
+
     try {
       await fetchEmails();
     } catch (error) {
@@ -154,7 +193,7 @@ export const Dashboard: React.FC = () => {
     setError(null);
     setRetryCount(0);
     setIsRetrying(false);
-    
+
     try {
       // Force clear the email cache to ensure fresh data
       console.log('Refresh emails: Starting cache clear...');
@@ -167,7 +206,7 @@ export const Dashboard: React.FC = () => {
       handleRetry();
     }
   };
-  
+
   const fetchEmails = async (token?: string): Promise<void> => {
     const result = await gmailService.getUnreadEmails(token);
     setEmails(result.emails);
@@ -185,20 +224,20 @@ export const Dashboard: React.FC = () => {
     setIsRetrying(false);
     setRetryCount(0);
   };
-  
+
   const handleRetry = async () => {
     const maxRetries = 3;
-    
+
     if (retryCount < maxRetries - 1) {
       const newRetryCount = retryCount + 1;
       setRetryCount(newRetryCount);
       setIsRetrying(true);
       setError(`Gmail error. Retry attempt ${newRetryCount}/${maxRetries}...`);
-      
+
       // Add a small delay before retrying (increasing with each retry)
       const delayMs = 1000 * newRetryCount;
       await new Promise(resolve => setTimeout(resolve, delayMs));
-      
+
       try {
         await fetchEmails();
       } catch (error) {
@@ -233,8 +272,8 @@ export const Dashboard: React.FC = () => {
 
   const handleEmailMarkedAsRead = (emailId: string) => {
     // Update the email's read status in the local state
-    setEmails(prevEmails => 
-      prevEmails.map(email => 
+    setEmails(prevEmails =>
+      prevEmails.map(email =>
         email.id === emailId ? { ...email, isRead: true } : email
       )
     );
@@ -244,14 +283,14 @@ export const Dashboard: React.FC = () => {
 
   const handleEmailDeleted = (emailId: string) => {
     console.log(`[Dashboard] Email deleted: ${emailId}, updating email list and index`);
-    
+
     // Remove the deleted email from the emails array
     setEmails(prevEmails => {
       const emailIndex = prevEmails.findIndex(email => email.id === emailId);
       const filteredEmails = prevEmails.filter(email => email.id !== emailId);
-      
+
       console.log(`[Dashboard] Found email at index ${emailIndex}, filtered emails count: ${filteredEmails.length}`);
-      
+
       // If this was the last email in the list, handle navigation
       if (filteredEmails.length === 0) {
         setShowEmailModal(false);
@@ -264,7 +303,7 @@ export const Dashboard: React.FC = () => {
 
       // Calculate new index to maintain position as much as possible
       let newIndex = currentEmailIndex;
-      
+
       // If we deleted an email before the current index, adjust the current index
       if (emailIndex < currentEmailIndex) {
         newIndex = currentEmailIndex - 1;
@@ -279,11 +318,11 @@ export const Dashboard: React.FC = () => {
       else if (emailIndex === currentEmailIndex) {
         console.log(`[Dashboard] Deleted current email, staying at index ${currentEmailIndex} to view next email`);
       }
-      
+
       // Update the current email index
       console.log(`[Dashboard] Setting new email index to ${newIndex}, new email will be: "${filteredEmails[newIndex]?.subject}"`);
       setCurrentEmailIndex(newIndex);
-      
+
       return filteredEmails;
     });
   };
@@ -292,21 +331,21 @@ export const Dashboard: React.FC = () => {
     switch (ollamaStatus) {
       case 'checking':
         return (
-          <div className="flex items-center gap-2 text-yellow-600 text-sm px-2.5 py-1.5 bg-yellow-50 rounded-md border border-yellow-100 inline-flex">
+          <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-sm px-2.5 py-1.5 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-100 dark:border-yellow-800 inline-flex">
             <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
             <span>Checking Ollama service...</span>
           </div>
         );
       case 'available':
         return (
-          <div className="flex items-center gap-2 text-green-600 text-sm px-2.5 py-1.5 bg-green-50 rounded-md border border-green-100 inline-flex">
+          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm px-2.5 py-1.5 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-100 dark:border-green-800 inline-flex">
             <CheckCircle size={14} />
             <span>Ollama service ready</span>
           </div>
         );
       case 'unavailable':
         return (
-          <div className="flex items-center gap-2 text-red-600 text-sm px-2.5 py-1.5 bg-red-50 rounded-md border border-red-100 inline-flex">
+          <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm px-2.5 py-1.5 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-100 dark:border-red-800 inline-flex">
             <AlertCircle size={14} />
             <span>Ollama service unavailable</span>
           </div>
@@ -317,10 +356,10 @@ export const Dashboard: React.FC = () => {
   // Pagination handlers
   const handleNextPage = async () => {
     if (!nextPageToken) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Save current page token to allow going back
       setPrevPageTokens(prev => [...prev, nextPageToken]);
@@ -335,24 +374,24 @@ export const Dashboard: React.FC = () => {
 
   const handlePrevPage = async () => {
     if (prevPageTokens.length === 0) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Get the last token from our history
       const lastToken = prevPageTokens[prevPageTokens.length - 2]; // Get the one before the last
-      
+
       // Update the token history
       setPrevPageTokens(prev => prev.slice(0, -1));
-      
+
       // Fetch with the previous token
       if (lastToken) {
         await fetchEmails(lastToken);
       } else {
         await fetchEmails(); // First page
       }
-      
+
       setCurrentPage(prev => prev - 1);
     } catch (error) {
       console.error('Failed to load previous page of emails:', error);
@@ -405,7 +444,7 @@ export const Dashboard: React.FC = () => {
       <div className="flex-1 p-4">
         {/* Voice Commands */}
         <VoiceCommands {...voiceCommandCallbacks} />
-        
+
         <div className="max-w-5xl mx-auto">
           {/* Header */}
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 mb-6 border border-transparent dark:border-gray-800">
@@ -420,42 +459,44 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
+                {/* Purple accent — no dedicated variant; keep raw button with uniform sizing + dark mode */}
                 <button
                   onClick={() => window.open('https://paypal.me/Cadienvan', '_blank')}
-                  className="flex items-center gap-2 px-3 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors text-sm"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 dark:bg-purple-600 dark:hover:bg-purple-700 transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
                   title="Donate"
                 >
                   <LucideDollarSign size={16} />
                   Donate
                 </button>
-                <button
+                <Button
+                  variant="secondary"
                   onClick={() => window.open('https://github.com/Cadienvan/gmail-reader', '_blank')}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 transition-colors text-sm"
+                  leftIcon={<Github size={16} />}
                   title="View on GitHub"
                 >
-                  <Github size={16} />
                   GitHub
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={() => setShowConfigurationModal(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+                  leftIcon={<Settings size={16} />}
                   title="Open Configuration"
                 >
-                  <Settings size={16} />
                   Configuration
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={checkOllamaStatus}
-                  className="text-xs md:text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  leftIcon={<RefreshCw size={14} />}
                   title="Refresh Ollama Status"
                 >
-                  <RefreshCw size={14} />
                   Refresh Status
-                </button>
+                </Button>
               </div>
             </div>
           </div>
-          
+
           <div className="flex flex-col md:flex-row md:items-center gap-4">
             <div className="w-full md:w-auto">
               {environmentConfigService.getAiBackend() === 'local' && <OllamaStatusIndicator />}
@@ -471,24 +512,27 @@ export const Dashboard: React.FC = () => {
                <p className="text-gray-600 dark:text-gray-300 text-sm">Available features and tools</p>
             </div>
             <div className="flex gap-3">
+              {/* Teal accent — no dedicated variant; uniform sizing + dark mode */}
               <button
                 onClick={() => setShowTabSummariesModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 shadow-md transition-all duration-200"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-800 transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
               >
                 <FileText size={18} />
                 Tab Summaries
               </button>
+              {/* Orange accent — no dedicated variant; uniform sizing + dark mode */}
               <button
                 onClick={() => setShowImportExportModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 shadow-md transition-all duration-200"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800 transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
               >
                 <Download size={18} />
                 Import/Export Flash Cards
               </button>
+              {/* Purple accent — no dedicated variant; uniform sizing + dark mode */}
               <button
                 onClick={loadAllFlashCards}
                 disabled={isLoadingFlashCards}
-                className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-md disabled:opacity-50 transition-all duration-200"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800 disabled:opacity-50 transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 disabled:cursor-not-allowed"
               >
                 <Gamepad2 size={18} />
                 {isLoadingFlashCards ? 'Loading...' : 'Play Flash Card Game'}
@@ -502,17 +546,18 @@ export const Dashboard: React.FC = () => {
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 mb-6 border border-transparent dark:border-gray-800">
             <div className="text-center">
               <Mail size={48} className="mx-auto text-blue-500 mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Connect to Gmail</h2>
-              <p className="text-gray-600 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Connect to Gmail</h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Authenticate with your Google account to access your unread emails
               </p>
-              <button
+              <Button
+                variant="primary"
                 onClick={handleAuthenticate}
                 disabled={isLoading}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                loading={isLoading}
               >
                 {isLoading ? 'Connecting...' : 'Connect Gmail'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -526,51 +571,38 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center gap-6">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600">{emails.length}</div>
-                    <div className="text-sm text-gray-600">Unread Emails</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Unread Emails</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">{viewedEmails.length}</div>
-                    <div className="text-sm text-gray-600">Viewed Emails</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Viewed Emails</div>
                   </div>
                 </div>
-                
+
                 <div className="flex gap-3">
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={() => setShowLogModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    leftIcon={<BookOpen size={16} />}
                   >
-                    <BookOpen size={16} />
                     View Log
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     onClick={() => setShowSavedForLaterModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 border border-orange-300 rounded-lg hover:bg-orange-50 text-orange-700"
+                    leftIcon={<Bookmark size={16} />}
+                    className="text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20 border border-orange-300 dark:border-orange-700"
                   >
-                    <Bookmark size={16} />
                     Saved for later
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="primary"
                     onClick={refreshEmails}
                     disabled={isLoading || isRetrying}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    leftIcon={<RefreshCw size={16} className={isLoading || isRetrying ? 'animate-spin' : ''} />}
                   >
-                    {isRetrying ? (
-                      <>
-                        <RefreshCw size={16} className="animate-spin" />
-                        Retrying...
-                      </>
-                    ) : isLoading ? (
-                      <>
-                        <RefreshCw size={16} className="animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw size={16} />
-                        Refresh Emails
-                      </>
-                    )}
-                  </button>
+                    {isRetrying ? 'Retrying...' : isLoading ? 'Loading...' : 'Refresh Emails'}
+                  </Button>
                   <button
                     onClick={() => {
                       if (!gempestService.hasApiKey()) {
@@ -597,13 +629,13 @@ export const Dashboard: React.FC = () => {
                       }
                     }}
                     title={!gempestService.hasApiKey() ? 'Click to configure Gemini API key in Settings' : isGempestRunning ? 'Stop Gempest' : 'Run Gempest'}
-                    className={`flex items-center gap-2 px-5 py-2.5 ${
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 ${
                       !gempestService.hasApiKey()
-                        ? 'bg-gray-400 hover:bg-gray-500'
+                        ? 'bg-gray-400 hover:bg-gray-500 focus-visible:ring-gray-400'
                         : isGempestRunning
-                          ? 'bg-red-600 hover:bg-red-700'
-                          : 'bg-emerald-600 hover:bg-emerald-700'
-                    } text-white rounded-lg shadow-md transition-all duration-200`}
+                          ? 'bg-red-600 hover:bg-red-700 focus-visible:ring-red-500'
+                          : 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 focus-visible:ring-emerald-500'
+                    }`}
                   >
                     {isGempestRunning ? <StopCircle size={18} /> : <Sparkles size={18} />}
                     {!gempestService.hasApiKey() ? 'Setup Gempest' : isGempestRunning ? 'Stop Gempest' : 'Run Gempest'}
@@ -612,53 +644,53 @@ export const Dashboard: React.FC = () => {
               </div>
 
               {ollamaStatus === 'unavailable' && !isOllamaWarningDismissed && environmentConfigService.getAiBackend() === 'local' && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle size={20} className="text-yellow-600 mt-0.5" />
-                      <div>
-                        <h3 className="font-medium text-yellow-800">Ollama Service Required</h3>
-                        <p className="text-yellow-700 text-sm mt-1">
-                          Please ensure Ollama is running locally on port 11434 with the deepseek-r1:1.5b model installed.
-                          Link summaries will not work without this service.
-                        </p>
-                        <div className="mt-2 text-xs text-yellow-600">
-                          <code>ollama pull deepseek-r1:1.5b</code>
-                        </div>
+                <Callout variant="warning" icon={<AlertCircle size={20} />}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-medium">Ollama Service Required</h3>
+                      <p className="text-sm mt-1">
+                        Please ensure Ollama is running locally on port 11434 with the deepseek-r1:1.5b model installed.
+                        Link summaries will not work without this service.
+                      </p>
+                      <div className="mt-2 text-xs">
+                        <code>ollama pull deepseek-r1:1.5b</code>
                       </div>
                     </div>
                     {environmentConfigService.getSaveForLaterMode() && (
-                      <button
+                      <IconButton
+                        variant="ghost"
+                        size="sm"
+                        label="Don't show this warning for 30 days. Since you're using 'Save for later' mode, you might not need Ollama immediately."
                         onClick={handleDismissOllamaWarning}
-                        className="p-1 hover:bg-yellow-100 rounded transition-colors"
-                        title="Don't show this warning for 30 days. Since you're using 'Save for later' mode, you might not need Ollama immediately."
                       >
-                        <X size={16} className="text-yellow-600" />
-                      </button>
+                        <X size={16} />
+                      </IconButton>
                     )}
                   </div>
                   {environmentConfigService.getSaveForLaterMode() && (
-                    <div className="mt-3 pt-3 border-t border-yellow-200">
-                      <p className="text-xs text-yellow-600">
-                        💡 Since you're using "Save for later" mode, you can dismiss this warning. 
+                    <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
+                      <p className="text-xs">
+                        Since you're using "Save for later" mode, you can dismiss this warning.
                         Content will be saved without requiring Ollama to be running.
                       </p>
                     </div>
                   )}
-                </div>
+                </Callout>
               )}
             </div>
 
             {/* Email List */}
             {emails.length > 0 && (
               <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 border border-transparent dark:border-gray-800">
-                <h2 className="text-lg font-semibold mb-4">Unread Emails</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Unread Emails</h2>
                 <div className="max-h-96 overflow-y-auto pr-2 space-y-3">
                   {emails.map((email, index) => (
                     <div
                       key={email.id}
-                      className={`border rounded-lg p-4 hover:bg-gray-50 transition-colors ${
-                        emailLogService.hasBeenViewed(email.id) ? 'bg-blue-50 border-blue-200' : ''
+                      className={`border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+                        emailLogService.hasBeenViewed(email.id)
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                          : 'border-gray-200 dark:border-gray-700'
                       } cursor-pointer`}
                       onClick={() => {
                         setCurrentEmailIndex(index);
@@ -667,21 +699,24 @@ export const Dashboard: React.FC = () => {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-gray-900 truncate hover:text-blue-600">
-                            {email.subject}
-                          </h3>
-                          <div className="mt-1 text-sm text-gray-600">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate hover:text-blue-600 dark:hover:text-blue-400">
+                              {email.subject}
+                            </h3>
+                            <SenderSentimentBadge sender={email.from} />
+                          </div>
+                          <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                             <div>From: {email.from}</div>
                             <div>Date: {new Date(email.date).toLocaleDateString()}</div>
                           </div>
-                          <p className="mt-2 text-sm text-gray-500 line-clamp-2">
+                          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
                             {email.snippet || email.body.substring(0, 150) + '...'}
                           </p>
                         </div>
-                        <div className="ml-4 text-sm text-gray-500">
+                        <div className="ml-4 text-sm text-gray-500 dark:text-gray-400">
                           #{index + 1}
                           {emailLogService.hasBeenViewed(email.id) && (
-                            <span className="ml-2 text-blue-600">✓ Viewed</span>
+                            <span className="ml-2 text-blue-600 dark:text-blue-400">✓ Viewed</span>
                           )}
                         </div>
                       </div>
@@ -694,26 +729,26 @@ export const Dashboard: React.FC = () => {
 
                 {/* Pagination Controls */}
                 <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     Page {currentPage}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
+                      variant="secondary"
                       onClick={handlePrevPage}
                       disabled={prevPageTokens.length === 0 || isLoading}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                      leftIcon={<ChevronLeft size={16} />}
                     >
-                      <ChevronLeft size={16} />
                       Previous
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
                       onClick={handleNextPage}
                       disabled={!nextPageToken || isLoading}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                      rightIcon={<ChevronRight size={16} />}
                     >
                       Next
-                      <ChevronRight size={16} />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -723,24 +758,21 @@ export const Dashboard: React.FC = () => {
 
         {/* Error Display */}
         {error && (
-          <div className={`border rounded-lg p-4 mb-6 ${isRetrying ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'}`}>
-            <div className="flex items-start gap-3">
-              <AlertCircle size={20} className={isRetrying ? 'text-yellow-600 mt-0.5' : 'text-red-600 mt-0.5'} />
-              <div>
-                <h3 className={`font-medium ${isRetrying ? 'text-yellow-800' : 'text-red-800'}`}>
-                  {isRetrying ? 'Retrying' : 'Error'}
-                </h3>
-                <p className={`text-sm mt-1 ${isRetrying ? 'text-yellow-700' : 'text-red-700'}`}>{error}</p>
-                {!isRetrying && error.includes('manually') && (
-                  <button 
-                    onClick={loadEmails}
-                    className="mt-2 text-sm bg-blue-600 text-white px-4 py-1 rounded-md hover:bg-blue-700"
-                  >
-                    Refresh Now
-                  </button>
-                )}
-              </div>
-            </div>
+          <div className="mb-6">
+            <Callout variant={isRetrying ? 'warning' : 'danger'} icon={<AlertCircle size={20} />}>
+              <h3 className="font-medium">{isRetrying ? 'Retrying' : 'Error'}</h3>
+              <p className="text-sm mt-1">{error}</p>
+              {!isRetrying && error.includes('manually') && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={loadEmails}
+                  className="mt-2"
+                >
+                  Refresh Now
+                </Button>
+              )}
+            </Callout>
           </div>
         )}
 

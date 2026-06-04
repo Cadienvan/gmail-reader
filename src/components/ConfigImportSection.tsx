@@ -3,6 +3,7 @@ import { Upload, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
 import { configExportService } from '../services/configExportService';
 import type { ConfigExportSummary, ConfigImportResult } from '../types/configExport';
 import { ConfigImportPreview } from './ConfigImportPreview';
+import { Callout, Card } from './ui';
 
 export function ConfigImportSection() {
   const [rawJson, setRawJson] = useState<string | null>(null);
@@ -50,42 +51,28 @@ export function ConfigImportSection() {
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4">
-      <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center gap-2">
+    <Card padding="md">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
         <Upload size={20} />
         Import Configuration
       </h3>
 
       {importResult ? (
-        <div
-          className={`p-3 border rounded-md ${
-            importResult.success
-              ? 'bg-green-50 border-green-200'
-              : 'bg-red-50 border-red-200'
-          }`}
+        <Callout
+          variant={importResult.success ? 'success' : 'danger'}
+          icon={importResult.success ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
         >
-          <div
-            className={`flex items-center gap-2 text-sm font-medium ${
-              importResult.success ? 'text-green-700' : 'text-red-700'
-            }`}
-          >
-            {importResult.success ? (
-              <CheckCircle size={16} />
-            ) : (
-              <AlertCircle size={16} />
-            )}
-            {importResult.success
-              ? 'Configuration imported! Reloading...'
-              : 'Import failed'}
-          </div>
+          <span className="font-medium">
+            {importResult.success ? 'Configuration imported! Reloading...' : 'Import failed'}
+          </span>
           {importResult.errors.length > 0 && (
-            <ul className="mt-2 text-xs text-red-600 space-y-1">
+            <ul className="mt-2 text-xs space-y-1">
               {importResult.errors.map((err, i) => (
                 <li key={i}>• {err}</li>
               ))}
             </ul>
           )}
-        </div>
+        </Callout>
       ) : preview ? (
         <ConfigImportPreview
           summary={preview}
@@ -96,17 +83,14 @@ export function ConfigImportSection() {
       ) : (
         <>
           {validationErrors.length > 0 && (
-            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
-              <div className="flex items-center gap-2 text-red-700 mb-1">
-                <AlertTriangle size={16} />
-                <span className="text-sm font-medium">Invalid file</span>
-              </div>
-              <ul className="text-xs text-red-600 space-y-1">
+            <Callout variant="danger" icon={<AlertTriangle size={16} />} className="mb-3">
+              <span className="font-medium">Invalid file</span>
+              <ul className="text-xs space-y-1 mt-1">
                 {validationErrors.map((err, i) => (
                   <li key={i}>• {err}</li>
                 ))}
               </ul>
-            </div>
+            </Callout>
           )}
           <input
             type="file"
@@ -117,13 +101,13 @@ export function ConfigImportSection() {
           />
           <label
             htmlFor="config-import"
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors cursor-pointer text-gray-600"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer text-gray-600 dark:text-gray-400"
           >
             <Upload size={16} />
             Select JSON file to import
           </label>
         </>
       )}
-    </div>
+    </Card>
   );
 }

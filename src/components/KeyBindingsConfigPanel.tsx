@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, CheckCircle } from 'lucide-react';
 import { environmentConfigService } from '../services/environmentConfigService';
 import type { KeyBindings } from '../services/environmentConfigService';
+import { Button, Input, Label, Card } from './ui';
 
 export const KeyBindingsConfigPanel: React.FC = () => {
   const [bindings, setBindings] = useState<KeyBindings>(() => environmentConfigService.getKeyBindings());
@@ -67,78 +68,69 @@ export const KeyBindingsConfigPanel: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+      <Card padding="lg">
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">Key bindings</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-300 mb-2">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
           Configure keyboard shortcuts used in the application. Click a field and press a key to capture it.
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">Tip: click a field and press the desired key (e.g. ArrowLeft, Space, Q).</p>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Previous email</label>
-            <input
-              type="text"
+            <Label>Previous email</Label>
+            <Input
               value={bindings.gotoPreviousEmail}
               onKeyDown={handleKeyCapture('gotoPreviousEmail')}
               readOnly
-              className="w-full px-3 py-2 border rounded-md text-sm border-gray-300"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Next email</label>
-            <input
-              type="text"
+            <Label>Next email</Label>
+            <Input
               value={bindings.gotoNextEmail}
               onKeyDown={handleKeyCapture('gotoNextEmail')}
               readOnly
-              className="w-full px-3 py-2 border rounded-md text-sm border-gray-300"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mark as read</label>
-            <input
-              type="text"
+            <Label>Mark as read</Label>
+            <Input
               value={bindings.markAsRead}
               onKeyDown={handleKeyCapture('markAsRead')}
               readOnly
-              className="w-full px-3 py-2 border rounded-md text-sm border-gray-300"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Delete active email</label>
-            <input
-              type="text"
+            <Label>Delete active email</Label>
+            <Input
               value={bindings.deleteEmail}
               onKeyDown={handleKeyCapture('deleteEmail')}
               readOnly
-              className="w-full px-3 py-2 border rounded-md text-sm border-gray-300"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Close summary tab</label>
-            <input
-              type="text"
+            <Label>Close summary tab</Label>
+            <Input
               value={bindings.closeSummary}
               onKeyDown={handleKeyCapture('closeSummary')}
               readOnly
-              className="w-full px-3 py-2 border rounded-md text-sm border-gray-300"
             />
           </div>
         </div>
 
-        <button
+        <Button
           onClick={handleSave}
-          className="mt-6 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          variant={saved ? 'success' : 'primary'}
+          leftIcon={saved ? <CheckCircle size={16} /> : <Save size={16} />}
+          className="mt-6"
         >
-          {saved ? <CheckCircle size={16} /> : <Save size={16} />}
           {saved ? 'Saved!' : 'Save'}
-        </button>
-      </div>
+        </Button>
+      </Card>
     </div>
   );
 };

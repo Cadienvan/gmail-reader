@@ -1,5 +1,6 @@
-import { FileUp, Loader2 } from 'lucide-react';
+import { FileUp } from 'lucide-react';
 import type { ConfigExportSummary } from '../types/configExport';
+import { Button, Callout } from './ui';
 
 interface Props {
   summary: ConfigExportSummary;
@@ -16,49 +17,43 @@ export function ConfigImportPreview({ summary, onConfirm, onCancel, isImporting 
 
   return (
     <div className="space-y-3">
-      <div className="text-sm text-gray-600">
+      <div className="text-sm text-gray-600 dark:text-gray-400">
         <span className="font-medium">Exported:</span> {date}&nbsp;&nbsp;
         <span className="font-medium">Version:</span> {summary.version}
       </div>
 
-      <ul className="text-sm text-gray-700 space-y-1">
+      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
         {summary.sections.filter((s) => s.present).map((s) => (
           <li key={s.name} className="flex items-center gap-2">
-            <span className="text-green-600">✓</span>
+            <span className="text-green-600 dark:text-green-400">✓</span>
             {s.name} — {s.count}
           </li>
         ))}
       </ul>
 
-      <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+      <Callout variant="warning">
         ⚠ This will replace ALL your current configuration. This cannot be undone.
-      </p>
+      </Callout>
 
       <div className="flex gap-2">
-        <button
+        <Button
           onClick={onCancel}
           disabled={isImporting}
-          className="flex-1 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          variant="secondary"
+          className="flex-1"
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onConfirm}
           disabled={isImporting}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          loading={isImporting}
+          variant="primary"
+          leftIcon={<FileUp size={16} />}
+          className="flex-1"
         >
-          {isImporting ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              Importing...
-            </>
-          ) : (
-            <>
-              <FileUp size={16} />
-              Import &amp; Restart
-            </>
-          )}
-        </button>
+          {isImporting ? 'Importing...' : 'Import & Restart'}
+        </Button>
       </div>
     </div>
   );

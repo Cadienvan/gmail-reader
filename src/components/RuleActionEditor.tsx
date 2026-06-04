@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, AlertCircle, Code, ExternalLink, Save, MessageCircle, Mail, Trash, FileText, ChevronRight, ChevronLeft } from 'lucide-react';
 import { ruleEngineService } from '../services/ruleEngineService';
 import type { RuleAction } from '../types';
+import { Button, IconButton, Input, Textarea, Select, Label, Callout } from './ui';
 
 interface RuleActionEditorProps {
   actions: RuleAction[];
@@ -65,25 +66,27 @@ export const RuleActionEditor: React.FC<RuleActionEditorProps> = ({
     switch (param.type) {
       case 'textarea':
         return (
-          <textarea
+          <Textarea
             value={value}
             onChange={(e) => updateActionParameter(action.id, param.name, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono min-h-[100px]"
+            className="text-sm min-h-[100px]"
             placeholder={param.placeholder}
+            mono
+            rows={4}
           />
         );
-      
+
       case 'number':
         return (
-          <input
+          <Input
             type="number"
             value={value}
             onChange={(e) => updateActionParameter(action.id, param.name, Number(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            className="text-sm"
             placeholder={param.placeholder}
           />
         );
-      
+
       case 'boolean':
         return (
           <div className="flex items-center h-10">
@@ -91,18 +94,18 @@ export const RuleActionEditor: React.FC<RuleActionEditorProps> = ({
               type="checkbox"
               checked={Boolean(value)}
               onChange={(e) => updateActionParameter(action.id, param.name, e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
             />
           </div>
         );
-      
+
       default: // string
         return (
-          <input
+          <Input
             type="text"
             value={value}
             onChange={(e) => updateActionParameter(action.id, param.name, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            className="text-sm"
             placeholder={param.placeholder}
           />
         );
@@ -118,63 +121,60 @@ export const RuleActionEditor: React.FC<RuleActionEditorProps> = ({
           const ActionIcon = getActionIcon(action.type);
 
           return (
-            <div key={action.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+            <div key={action.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
               {/* Action Header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-600">Then</span>
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Then</span>
                   {index > 0 && (
-                    <span className="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-700">
+                    <span className="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                       AND
                     </span>
                   )}
-                  <span className="text-purple-600">
+                  <span className="text-purple-600 dark:text-purple-400">
                     <ActionIcon size={16} />
                   </span>
                 </div>
-                <button
+                <IconButton
                   onClick={() => removeAction(action.id)}
-                  className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
-                  title="Remove action"
+                  variant="danger"
+                  size="sm"
+                  label="Remove action"
                 >
                   <Trash2 size={16} />
-                </button>
+                </IconButton>
               </div>
 
               {/* Action Type Selection */}
               <div className="mb-4">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Action Type
-                </label>
-                <select
+                <Label className="text-xs">Action Type</Label>
+                <Select
                   value={action.type}
-                  onChange={(e) => updateAction(action.id, { 
+                  onChange={(e) => updateAction(action.id, {
                     type: e.target.value as any,
                     parameters: {} // Reset parameters when changing type
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="text-sm"
                 >
                   {availableActions.map(actionType => (
                     <option key={actionType.type} value={actionType.type}>
                       {actionType.label}
                     </option>
                   ))}
-                </select>
+                </Select>
                 {actionDef && (
-                  <p className="text-xs text-gray-500 mt-1">{actionDef.description}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{actionDef.description}</p>
                 )}
               </div>
 
               {/* Action Description */}
               <div className="mb-4">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Description (Optional)
-                </label>
-                <input
+                <Label className="text-xs">Description (Optional)</Label>
+                <Input
                   type="text"
                   value={action.description || ''}
                   onChange={(e) => updateAction(action.id, { description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="text-sm"
                   placeholder="Describe what this action does..."
                 />
               </div>
@@ -182,18 +182,18 @@ export const RuleActionEditor: React.FC<RuleActionEditorProps> = ({
               {/* Action Parameters */}
               {actionDef?.parameters.map((param) => (
                 <div key={param.name} className="mb-4">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                     {param.label}
                     {param.required && <span className="text-red-500 ml-1">*</span>}
                   </label>
                   {renderParameterInput(action, param)}
-                  <p className="text-xs text-gray-500 mt-1">{param.description}</p>
-                  
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{param.description}</p>
+
                   {/* Special help for specific parameter types */}
                   {param.name === 'code' && action.type === 'javascript_code' && (
-                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                      <p className="font-medium text-blue-800 mb-1">Available variables:</p>
-                      <ul className="text-blue-700 space-y-0.5">
+                    <Callout variant="info" className="mt-2 text-xs">
+                      <p className="font-medium mb-1">Available variables:</p>
+                      <ul className="space-y-0.5">
                         <li>• <code>email</code> - Email object with id, subject, from, body, etc.</li>
                         <li>• <code>senderInfo</code> - Object with email and name</li>
                         <li>• <code>extractedLinks</code> - Array of links found in email</li>
@@ -203,31 +203,31 @@ export const RuleActionEditor: React.FC<RuleActionEditorProps> = ({
                         <li>• <code>window</code> - Limited window object (window.open)</li>
                         <li>• <code>utils</code> - Utility functions (utils.extractRegex)</li>
                       </ul>
-                    </div>
+                    </Callout>
                   )}
-                  
+
                   {param.name === 'regexPattern' && (
-                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
-                      <p className="font-medium text-amber-800 mb-1">Regex Examples:</p>
-                      <ul className="text-amber-700 space-y-0.5">
+                    <Callout variant="warning" className="mt-2 text-xs">
+                      <p className="font-medium mb-1">Regex Examples:</p>
+                      <ul className="space-y-0.5">
                         <li>• <code>href=["']([^"']*)["]</code> - Extract href URLs</li>
                         <li>• <code>https?://([^/]+)</code> - Extract domain from URLs</li>
                         <li>• <code>(\\d+)</code> - Extract numbers</li>
                       </ul>
-                    </div>
+                    </Callout>
                   )}
-                  
+
                   {(param.name === 'message' || param.name === 'url' || param.name === 'body' || param.name === 'title') && (
-                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
-                      <p className="font-medium text-green-800 mb-1">Variable substitution:</p>
-                      <ul className="text-green-700 space-y-0.5">
+                    <Callout variant="success" className="mt-2 text-xs">
+                      <p className="font-medium mb-1">Variable substitution:</p>
+                      <ul className="space-y-0.5">
                         <li>• <code>${'${email.subject}'}</code> - Email subject</li>
                         <li>• <code>${'${senderInfo.email}'}</code> - Sender email</li>
                         <li>• <code>${'${senderInfo.name}'}</code> - Sender name</li>
                         <li>• <code>${'${senderScore}'}</code> - Sender score</li>
                         <li>• <code>${'${variables.variableName}'}</code> - Custom variables</li>
                       </ul>
-                    </div>
+                    </Callout>
                   )}
                 </div>
               ))}
@@ -238,7 +238,7 @@ export const RuleActionEditor: React.FC<RuleActionEditorProps> = ({
                   {actionDef.parameters
                     .filter(p => p.required && !action.parameters[p.name])
                     .map(p => (
-                      <div key={p.name} className="flex items-center gap-2 text-xs text-red-600">
+                      <div key={p.name} className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
                         <AlertCircle size={12} />
                         <span>Required field "{p.label}" is empty</span>
                       </div>
@@ -251,27 +251,29 @@ export const RuleActionEditor: React.FC<RuleActionEditorProps> = ({
       </div>
 
       {/* Add Action Button */}
-      <button
+      <Button
         onClick={addAction}
-        className="flex items-center gap-2 px-4 py-2 text-purple-600 border border-purple-300 border-dashed rounded-lg hover:bg-purple-50 transition-colors w-full justify-center"
+        variant="ghost"
+        fullWidth
+        leftIcon={<Plus size={16} />}
+        className="border border-purple-300 dark:border-purple-700 border-dashed text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
       >
-        <Plus size={16} />
         Add Action
-      </button>
+      </Button>
 
       {/* Help Text */}
       {actions.length === 0 && (
-        <div className="text-center py-6 text-gray-500">
-          <AlertCircle size={24} className="mx-auto mb-2 text-gray-400" />
+        <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+          <AlertCircle size={24} className="mx-auto mb-2 text-gray-400 dark:text-gray-500" />
           <p className="text-sm">No actions defined.</p>
           <p className="text-xs mt-1">Add at least one action to specify what should happen when conditions are met.</p>
         </div>
       )}
 
       {/* Action Examples */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h4 className="font-medium text-blue-900 mb-2">Common Action Examples:</h4>
-        <div className="space-y-2 text-sm text-blue-800">
+      <Callout variant="info" className="mt-6">
+        <h4 className="font-medium mb-2">Common Action Examples:</h4>
+        <div className="space-y-2 text-sm">
           <div>
             <strong>Log high-scoring emails:</strong>
             <ol className="ml-4 mt-1 list-decimal list-inside text-xs">
@@ -315,7 +317,7 @@ export const RuleActionEditor: React.FC<RuleActionEditorProps> = ({
             </ol>
           </div>
         </div>
-      </div>
+      </Callout>
     </div>
   );
 };

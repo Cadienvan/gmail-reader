@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, AlertCircle } from 'lucide-react';
 import { ruleEngineService } from '../services/ruleEngineService';
 import type { RuleCondition } from '../types';
+import { Button, IconButton, Input, Select, Label } from './ui';
 
 interface RuleConditionEditorProps {
   conditions: RuleCondition[];
@@ -70,7 +71,7 @@ export const RuleConditionEditor: React.FC<RuleConditionEditorProps> = ({
 
   const shouldShowCaseSensitive = (condition: RuleCondition): boolean => {
     const conditionDef = availableConditions.find(c => c.type === condition.type);
-    return conditionDef?.valueType === 'string' && 
+    return conditionDef?.valueType === 'string' &&
            ['contains', 'starts_with', 'ends_with', 'regex_match'].includes(condition.operator);
   };
 
@@ -79,32 +80,26 @@ export const RuleConditionEditor: React.FC<RuleConditionEditorProps> = ({
       {/* Logic Operator Selection */}
       {conditions.length > 1 && (
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Conditions logic:</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Conditions logic:</span>
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={() => onLogicOperatorChange('AND')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                logicOperator === 'AND'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              variant={logicOperator === 'AND' ? 'primary' : 'secondary'}
+              size="sm"
             >
               AND
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => onLogicOperatorChange('OR')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                logicOperator === 'OR'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              variant={logicOperator === 'OR' ? 'primary' : 'secondary'}
+              size="sm"
             >
               OR
-            </button>
+            </Button>
           </div>
-          <div className="ml-2 text-xs text-gray-500">
-            {logicOperator === 'AND' 
-              ? 'All conditions must be true' 
+          <div className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+            {logicOperator === 'AND'
+              ? 'All conditions must be true'
               : 'At least one condition must be true'}
           </div>
         </div>
@@ -118,79 +113,74 @@ export const RuleConditionEditor: React.FC<RuleConditionEditorProps> = ({
           const inputType = getValueInputType(condition.type);
 
           return (
-            <div key={condition.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+            <div key={condition.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
               {/* Condition Header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-600">If</span>
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">If</span>
                   {index > 0 && (
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      logicOperator === 'AND' 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'bg-green-100 text-green-700'
+                      logicOperator === 'AND'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
                     }`}>
                       {logicOperator}
                     </span>
                   )}
                 </div>
-                <button
+                <IconButton
                   onClick={() => removeCondition(condition.id)}
-                  className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
-                  title="Remove condition"
+                  variant="danger"
+                  size="sm"
+                  label="Remove condition"
                 >
                   <Trash2 size={16} />
-                </button>
+                </IconButton>
               </div>
 
               {/* Condition Configuration */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {/* Condition Type */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Field
-                  </label>
-                  <select
+                  <Label className="text-xs">Field</Label>
+                  <Select
                     value={condition.type}
-                    onChange={(e) => updateCondition(condition.id, { 
+                    onChange={(e) => updateCondition(condition.id, {
                       type: e.target.value as any,
                       operator: getOperatorsByConditionType(e.target.value)[0] as any
                     })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    className="text-sm"
                   >
                     {availableConditions.map(condType => (
                       <option key={condType.type} value={condType.type}>
                         {condType.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   {conditionDef && (
-                    <p className="text-xs text-gray-500 mt-1">{conditionDef.description}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{conditionDef.description}</p>
                   )}
                 </div>
 
                 {/* Operator */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Operator
-                  </label>
-                  <select
+                  <Label className="text-xs">Operator</Label>
+                  <Select
                     value={condition.operator}
                     onChange={(e) => updateCondition(condition.id, { operator: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    className="text-sm"
                   >
                     {supportedOperators.map(op => (
                       <option key={op} value={op}>
                         {getOperatorLabel(op)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 {/* Value */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Value
-                  </label>
+                  <Label className="text-xs">Value</Label>
                   {shouldShowValueInput(condition) ? (
                     inputType === 'checkbox' ? (
                       <div className="flex items-center h-10">
@@ -198,26 +188,27 @@ export const RuleConditionEditor: React.FC<RuleConditionEditorProps> = ({
                           type="checkbox"
                           checked={Boolean(condition.value)}
                           onChange={(e) => updateCondition(condition.id, { value: e.target.checked })}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                         />
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <input
+                        <Input
                           type={inputType}
                           value={condition.value as string | number}
-                          onChange={(e) => updateCondition(condition.id, { 
-                            value: inputType === 'number' ? Number(e.target.value) : e.target.value 
+                          onChange={(e) => updateCondition(condition.id, {
+                            value: inputType === 'number' ? Number(e.target.value) : e.target.value
                           })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                          className="text-sm"
                           placeholder={
                             condition.type === 'content_regex' || condition.operator === 'regex_match'
                               ? 'Regular expression pattern'
                               : 'Value to match'
                           }
+                          mono={condition.type === 'content_regex' || condition.operator === 'regex_match'}
                         />
                         {condition.operator === 'regex_match' && (
-                          <div className="text-xs text-amber-600 flex items-center gap-1">
+                          <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                             <AlertCircle size={12} />
                             Use valid regex syntax. Example: \\bhref=["']([^"']*)["']
                           </div>
@@ -225,7 +216,7 @@ export const RuleConditionEditor: React.FC<RuleConditionEditorProps> = ({
                       </div>
                     )
                   ) : (
-                    <div className="flex items-center h-10 text-xs text-gray-500">
+                    <div className="flex items-center h-10 text-xs text-gray-500 dark:text-gray-400">
                       No value needed for this operator
                     </div>
                   )}
@@ -240,9 +231,9 @@ export const RuleConditionEditor: React.FC<RuleConditionEditorProps> = ({
                     id={`case-${condition.id}`}
                     checked={condition.caseSensitive}
                     onChange={(e) => updateCondition(condition.id, { caseSensitive: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                   />
-                  <label htmlFor={`case-${condition.id}`} className="text-xs text-gray-600">
+                  <label htmlFor={`case-${condition.id}`} className="text-xs text-gray-600 dark:text-gray-400">
                     Case sensitive matching
                   </label>
                 </div>
@@ -253,18 +244,20 @@ export const RuleConditionEditor: React.FC<RuleConditionEditorProps> = ({
       </div>
 
       {/* Add Condition Button */}
-      <button
+      <Button
         onClick={addCondition}
-        className="flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-300 border-dashed rounded-lg hover:bg-blue-50 transition-colors w-full justify-center"
+        variant="ghost"
+        fullWidth
+        leftIcon={<Plus size={16} />}
+        className="border border-blue-300 dark:border-blue-700 border-dashed text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
       >
-        <Plus size={16} />
         Add Condition
-      </button>
+      </Button>
 
       {/* Help Text */}
       {conditions.length === 0 && (
-        <div className="text-center py-6 text-gray-500">
-          <AlertCircle size={24} className="mx-auto mb-2 text-gray-400" />
+        <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+          <AlertCircle size={24} className="mx-auto mb-2 text-gray-400 dark:text-gray-500" />
           <p className="text-sm">No conditions defined.</p>
           <p className="text-xs mt-1">Add at least one condition to specify when this rule should trigger.</p>
         </div>

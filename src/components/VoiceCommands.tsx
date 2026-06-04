@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, HelpCircle } from 'lucide-react';
 import { voiceCommandService, type VoiceCommand } from '../services/voiceCommandService';
+import { IconButton, Modal, Button, Callout } from './ui';
 
 interface VoiceCommandsProps {
   onNext: () => void;
@@ -25,7 +26,7 @@ export const VoiceCommands: React.FC<VoiceCommandsProps> = ({
 
   useEffect(() => {
     setIsSupported(voiceCommandService.isSupported());
-    
+
     // Set up callbacks
     voiceCommandService.setCallbacks({
       onNext,
@@ -59,26 +60,23 @@ export const VoiceCommands: React.FC<VoiceCommandsProps> = ({
     <div className="fixed top-4 left-4 z-40">
       <div className="flex items-center gap-2">
         {/* Voice Command Toggle Button */}
-        <button
+        <IconButton
           onClick={toggleVoiceCommands}
-          className={`p-3 rounded-full transition-all duration-200 ${
-            isListening
-              ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg animate-pulse'
-              : 'bg-blue-500 hover:bg-blue-600 text-white shadow-md'
-          }`}
-          title={isListening ? 'Stop voice commands' : 'Start voice commands'}
+          label={isListening ? 'Stop voice commands' : 'Start voice commands'}
+          variant={isListening ? 'danger' : 'primary'}
+          className={`rounded-full p-3 shadow-md ${isListening ? 'animate-pulse' : ''}`}
         >
           {isListening ? <MicOff size={20} /> : <Mic size={20} />}
-        </button>
+        </IconButton>
 
         {/* Help Button */}
-        <button
+        <IconButton
           onClick={() => setShowHelp(true)}
-          className="p-3 rounded-full bg-gray-600 hover:bg-gray-700 text-white shadow-md transition-all duration-200"
-          title="Voice commands help"
+          label="Voice commands help"
+          className="rounded-full p-3 bg-gray-600 hover:bg-gray-700 text-white shadow-md transition-all duration-200"
         >
           <HelpCircle size={20} />
-        </button>
+        </IconButton>
 
         {/* Status Indicator */}
         {isListening && (
@@ -90,59 +88,46 @@ export const VoiceCommands: React.FC<VoiceCommandsProps> = ({
       </div>
 
       {/* Help Modal */}
-      {showHelp && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Voice Commands</h3>
-              <button
-                onClick={() => setShowHelp(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Use voice commands to control the application hands-free. Commands work in both Italian and English.
-              </p>
-              
-              <div className="space-y-3">
-                {getSupportedCommands().map((command, index) => (
-                  <div key={index} className="border-l-4 border-blue-200 pl-3">
-                    <div className="font-medium text-sm text-gray-900">
-                      {command.description}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Examples: {command.examples}
-                    </div>
-                  </div>
-                ))}
-              </div>
+      <Modal
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+        title="Voice Commands"
+        size="sm"
+        footer={
+          <Button onClick={() => setShowHelp(false)} variant="primary">
+            Got it!
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Use voice commands to control the application hands-free. Commands work in both Italian and English.
+          </p>
 
-              <div className="mt-6 p-3 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-900 text-sm mb-2">Tips:</h4>
-                <ul className="text-xs text-blue-800 space-y-1">
-                  <li>• Speak clearly and at normal volume</li>
-                  <li>• Works in both Italian and English</li>
-                  <li>• Commands are case-insensitive</li>
-                  <li>• Click the microphone to start/stop</li>
-                </ul>
+          <div className="space-y-3">
+            {getSupportedCommands().map((command, index) => (
+              <div key={index} className="border-l-4 border-blue-200 dark:border-blue-700 pl-3">
+                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                  {command.description}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Examples: {command.examples}
+                </div>
               </div>
-            </div>
-            
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowHelp(false)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Got it!
-              </button>
-            </div>
+            ))}
           </div>
+
+          <Callout variant="info">
+            <h4 className="font-medium text-sm mb-2">Tips:</h4>
+            <ul className="text-xs space-y-1">
+              <li>• Speak clearly and at normal volume</li>
+              <li>• Works in both Italian and English</li>
+              <li>• Commands are case-insensitive</li>
+              <li>• Click the microphone to start/stop</li>
+            </ul>
+          </Callout>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { ollamaService } from '../services/ollamaService';
 import { environmentConfigService } from '../services/environmentConfigService';
 import type { EnvironmentConfig } from '../services/environmentConfigService';
 import type { ModelConfiguration, OllamaModel } from '../types';
+import { Button, Input, Select, Label, Card } from './ui';
 
 interface ModelConfigPanelProps {
   onConfigChange?: (config: ModelConfiguration) => void;
@@ -74,34 +75,29 @@ export const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
         {/* Header with refresh button */}
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">AI Models Configuration</h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AI Models Configuration</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               Configure which AI models to use for different tasks
             </p>
           </div>
-          <button
+          <Button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            title="Refresh models and configuration"
+            leftIcon={<RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />}
           >
-            <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
             Refresh
-          </button>
+          </Button>
         </div>
 
         {/* AI Configuration */}
-        <div className="space-y-3 pb-4 border-b border-gray-200">
-          <h4 className="font-medium text-gray-700">AI Configuration</h4>
+        <div className="space-y-3 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <h4 className="font-medium text-gray-700 dark:text-gray-300">AI Configuration</h4>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ollama Base URL
-            </label>
-            <input
+            <Label>Ollama Base URL</Label>
+            <Input
               type="text"
               value={envConfig.ollamaBaseUrl}
               onChange={(e) => handleEnvConfigChange(e.target.value)}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
               placeholder="http://localhost:11434"
             />
           </div>
@@ -112,17 +108,14 @@ export const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
           {/* Quick Model */}
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quick Model
-              </label>
-              <p className="text-xs text-gray-600 mb-3">
+              <Label>Quick Model</Label>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
                 Used for fast operations like quick summaries and initial processing. Should be a lightweight, fast model.
               </p>
             </div>
-            <select
+            <Select
               value={config.quick}
               onChange={(e) => handleConfigChange({ quick: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
               <option value="">Select a quick model...</option>
@@ -131,23 +124,20 @@ export const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
                   {getModelDisplayName(model)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {/* Detailed Model */}
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Detailed Model
-              </label>
-              <p className="text-xs text-gray-600 mb-3">
+              <Label>Detailed Model</Label>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
                 Used for complex operations like detailed analysis and flash card generation. Can be a more powerful, slower model.
               </p>
             </div>
-            <select
+            <Select
               value={config.detailed}
               onChange={(e) => handleConfigChange({ detailed: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
               <option value="">Select a detailed model...</option>
@@ -156,41 +146,41 @@ export const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
                   {getModelDisplayName(model)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 
         {/* Current Configuration Display */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-medium text-gray-900 mb-3">Current Configuration</h4>
+        <Card>
+          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Current Configuration</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <span className="text-sm text-gray-600">Quick Model:</span>
-              <p className="font-medium text-gray-900">{config.quick || 'Not selected'}</p>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Quick Model:</span>
+              <p className="font-medium text-gray-900 dark:text-gray-100">{config.quick || 'Not selected'}</p>
             </div>
             <div>
-              <span className="text-sm text-gray-600">Detailed Model:</span>
-              <p className="font-medium text-gray-900">{config.detailed || 'Not selected'}</p>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Detailed Model:</span>
+              <p className="font-medium text-gray-900 dark:text-gray-100">{config.detailed || 'Not selected'}</p>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Available Models List */}
         {models.length > 0 && (
           <div>
-            <h4 className="font-medium text-gray-900 mb-3">Available Models ({models.length})</h4>
-            <div className="bg-gray-50 rounded-lg p-4 max-h-60 overflow-y-auto">
+            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Available Models ({models.length})</h4>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-60 overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {models.map((model) => (
                   <div
                     key={model.model}
-                    className="bg-white rounded border p-2 text-sm"
+                    className="bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 p-2 text-sm"
                   >
-                    <div className="font-medium text-gray-900 truncate">
+                    <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
                       {getModelDisplayName(model)}
                     </div>
                     {model.size && (
-                      <div className="text-gray-600 text-xs mt-1">
+                      <div className="text-gray-600 dark:text-gray-400 text-xs mt-1">
                         Size: {model.size}
                       </div>
                     )}
@@ -203,20 +193,17 @@ export const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
 
         {isLoading && (
           <div className="text-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-gray-400" />
-            <p className="text-gray-600">Loading available models...</p>
+            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-gray-400 dark:text-gray-500" />
+            <p className="text-gray-600 dark:text-gray-400">Loading available models...</p>
           </div>
         )}
 
         {models.length === 0 && !isLoading && (
           <div className="text-center py-8">
-            <p className="text-gray-600 mb-3">No models available. Make sure Ollama is running and has models installed.</p>
-            <button
-              onClick={loadModels}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
+            <p className="text-gray-600 dark:text-gray-400 mb-3">No models available. Make sure Ollama is running and has models installed.</p>
+            <Button onClick={loadModels}>
               Retry
-            </button>
+            </Button>
           </div>
         )}
       </div>

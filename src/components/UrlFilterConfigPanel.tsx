@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Trash2, 
-  Edit, 
-  Save, 
-  X, 
-  ToggleLeft, 
-  ToggleRight, 
-  CheckCircle, 
+import {
+  Plus,
+  Trash2,
+  Edit,
+  Save,
+  X,
+  ToggleLeft,
+  ToggleRight,
+  CheckCircle,
   AlertCircle,
   Eye,
   EyeOff,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { urlFilterService } from '../services/urlFilterService';
 import type { UrlFilterPattern, UrlFilterConfigPanelProps } from '../types';
+import { Button, IconButton, Input, Label, Card, Callout } from './ui';
 
 export const UrlFilterConfigPanel: React.FC<UrlFilterConfigPanelProps> = ({
   onConfigChange,
@@ -162,7 +163,7 @@ export const UrlFilterConfigPanel: React.FC<UrlFilterConfigPanelProps> = ({
       }
     };
     reader.readAsText(file);
-    
+
     // Reset the input
     event.target.value = '';
   };
@@ -178,103 +179,99 @@ export const UrlFilterConfigPanel: React.FC<UrlFilterConfigPanelProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">URL Filter Configuration</h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">URL Filter Configuration</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               Create regex patterns to filter URLs from email analysis and link lists
             </p>
           </div>
-          <button
+          <Button
             onClick={handleToggleEnabled}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-              isEnabled
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
+            variant={isEnabled ? 'success' : 'secondary'}
+            leftIcon={isEnabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
           >
-            {isEnabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-            <span className="font-medium">
-              {isEnabled ? 'Filtering Enabled' : 'Filtering Disabled'}
-            </span>
-          </button>
+            {isEnabled ? 'Filtering Enabled' : 'Filtering Disabled'}
+          </Button>
         </div>
 
         {/* URL Test Section */}
-        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-          <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+        <Card>
+          <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
             <TestTube size={16} />
             Test URL Against Patterns
           </h4>
           <div className="flex gap-2">
-            <input
+            <Input
               type="url"
               value={testUrl}
               onChange={(e) => setTestUrl(e.target.value)}
               placeholder="Enter a URL to test against all patterns..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="flex-1"
             />
-            <button
+            <Button
               onClick={handleTestUrl}
               disabled={!testUrl.trim()}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              variant="primary"
             >
               Test
-            </button>
+            </Button>
           </div>
           {testUrl && testResults.size > 0 && (
-            <div className="mt-3 p-3 bg-white border rounded-md">
-              <div className="flex items-center gap-2 mb-2">
-                {getFilteredCount() > 0 ? (
-                  <>
-                    <AlertCircle size={16} className="text-red-500" />
-                    <span className="text-sm font-medium text-red-700">
-                      URL would be filtered by {getFilteredCount()} pattern(s)
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle size={16} className="text-green-500" />
-                    <span className="text-sm font-medium text-green-700">
-                      URL would not be filtered
-                    </span>
-                  </>
-                )}
-              </div>
-              {Array.from(testResults.entries()).some(([_, matches]) => matches) && (
-                <div className="text-xs text-gray-600">
-                  Matching patterns: {Array.from(testResults.entries())
-                    .filter(([_, matches]) => matches)
-                    .map(([id, _]) => patterns.find(p => p.id === id)?.name)
-                    .join(', ')}
+            <div className="mt-3">
+              <Callout variant={getFilteredCount() > 0 ? 'danger' : 'success'}>
+                <div className="flex items-center gap-2 mb-1">
+                  {getFilteredCount() > 0 ? (
+                    <>
+                      <AlertCircle size={16} />
+                      <span className="font-medium">
+                        URL would be filtered by {getFilteredCount()} pattern(s)
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={16} />
+                      <span className="font-medium">
+                        URL would not be filtered
+                      </span>
+                    </>
+                  )}
                 </div>
-              )}
+                {Array.from(testResults.entries()).some(([, matches]) => matches) && (
+                  <div className="text-xs mt-1">
+                    Matching patterns: {Array.from(testResults.entries())
+                      .filter(([, matches]) => matches)
+                      .map(([id]) => patterns.find(p => p.id === id)?.name)
+                      .join(', ')}
+                  </div>
+                )}
+              </Callout>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
-          <button
+          <Button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            variant="primary"
+            leftIcon={<Plus size={16} />}
           >
-            <Plus size={16} />
             Add Pattern
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleResetToDefaults}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+            variant="secondary"
+            leftIcon={<RotateCcw size={16} />}
           >
-            <RotateCcw size={16} />
             Reset to Defaults
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleExportPatterns}
-            className="flex items-center gap-2 px-3 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors"
+            variant="secondary"
+            leftIcon={<Download size={16} />}
           >
-            <Download size={16} />
             Export
-          </button>
-          <label className="flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors cursor-pointer">
+          </Button>
+          <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors cursor-pointer focus-within:ring-2 focus-within:ring-green-500">
             <Upload size={16} />
             Import
             <input
@@ -288,57 +285,49 @@ export const UrlFilterConfigPanel: React.FC<UrlFilterConfigPanelProps> = ({
 
         {/* Add Pattern Form */}
         {showAddForm && (
-          <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
-            <h4 className="font-medium text-gray-700 mb-3">Add New Filter Pattern</h4>
+          <Card>
+            <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">Add New Filter Pattern</h4>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Pattern Name
-                </label>
-                <input
+                <Label>Pattern Name</Label>
+                <Input
                   type="text"
                   value={newPattern.name}
                   onChange={(e) => setNewPattern(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="e.g., Social Media Links"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Regex Pattern
-                </label>
-                <input
+                <Label>Regex Pattern</Label>
+                <Input
                   type="text"
                   value={newPattern.pattern}
                   onChange={(e) => setNewPattern(prev => ({ ...prev, pattern: e.target.value }))}
                   placeholder="e.g., .*(facebook|twitter|instagram)\.com.*"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  mono
                 />
                 {validationErrors.has('new') && (
-                  <p className="mt-1 text-sm text-red-600">{validationErrors.get('new')}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validationErrors.get('new')}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optional)
-                </label>
-                <input
+                <Label>Description (optional)</Label>
+                <Input
                   type="text"
                   value={newPattern.description}
                   onChange={(e) => setNewPattern(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Description of what this pattern filters"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div className="flex gap-2">
-                <button
+                <Button
                   onClick={handleAddPattern}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+                  variant="success"
+                  leftIcon={<Save size={16} />}
                 >
-                  <Save size={16} />
                   Save Pattern
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => {
                     setShowAddForm(false);
                     setNewPattern({ name: '', pattern: '', description: '' });
@@ -348,23 +337,23 @@ export const UrlFilterConfigPanel: React.FC<UrlFilterConfigPanelProps> = ({
                       return newMap;
                     });
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                  variant="secondary"
+                  leftIcon={<X size={16} />}
                 >
-                  <X size={16} />
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Patterns List */}
         <div className="space-y-3">
-          <h4 className="font-medium text-gray-700">
+          <h4 className="font-medium text-gray-700 dark:text-gray-300">
             Filter Patterns ({patterns.length})
           </h4>
           {patterns.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <p>No filter patterns configured.</p>
               <p className="text-sm mt-1">Click "Add Pattern" to create your first filter.</p>
             </div>
@@ -457,82 +446,78 @@ const PatternCard: React.FC<PatternCardProps> = ({
 
   if (isEditing) {
     return (
-      <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+      <Card>
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Pattern Name
-            </label>
-            <input
+            <Label>Pattern Name</Label>
+            <Input
               type="text"
               value={editForm.name}
               onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Regex Pattern
-            </label>
-            <input
+            <Label>Regex Pattern</Label>
+            <Input
               type="text"
               value={editForm.pattern}
               onChange={(e) => setEditForm(prev => ({ ...prev, pattern: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+              mono
             />
             {validationError && (
-              <p className="mt-1 text-sm text-red-600">{validationError}</p>
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validationError}</p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <input
+            <Label>Description</Label>
+            <Input
               type="text"
               value={editForm.description}
               onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={handleSave}
-              className="flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+              variant="success"
+              size="sm"
+              leftIcon={<Save size={16} />}
             >
-              <Save size={16} />
               Save
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={onCancel}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+              variant="secondary"
+              size="sm"
+              leftIcon={<X size={16} />}
             >
-              <X size={16} />
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className={`border rounded-lg p-4 transition-colors ${
-      pattern.enabled ? 'border-gray-200 bg-white' : 'border-gray-300 bg-gray-50'
-    } ${testResult !== undefined ? (testResult ? 'ring-2 ring-red-200' : '') : ''}`}>
+    <div className={`border rounded-lg p-4 transition-colors bg-white dark:bg-gray-800/50 ${
+      pattern.enabled
+        ? 'border-gray-200 dark:border-gray-700'
+        : 'border-gray-300 dark:border-gray-600'
+    } ${!pattern.enabled ? 'opacity-60' : ''} ${testResult !== undefined ? (testResult ? 'ring-2 ring-red-200 dark:ring-red-800' : '') : ''}`}>
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <h5 className={`font-medium truncate ${
-              pattern.enabled ? 'text-gray-900' : 'text-gray-500'
+              pattern.enabled ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'
             }`}>
               {pattern.name}
             </h5>
             {testResult !== undefined && (
               <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                testResult 
-                  ? 'bg-red-100 text-red-700' 
-                  : 'bg-gray-100 text-gray-600'
+                testResult
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
               }`}>
                 {testResult ? (
                   <>
@@ -548,51 +533,47 @@ const PatternCard: React.FC<PatternCardProps> = ({
               </div>
             )}
           </div>
-          <code className={`text-sm bg-gray-100 px-2 py-1 rounded break-all ${
-            pattern.enabled ? 'text-gray-800' : 'text-gray-500'
+          <code className={`text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded break-all ${
+            pattern.enabled ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'
           }`}>
             {pattern.pattern}
           </code>
           {pattern.description && (
             <p className={`text-sm mt-2 ${
-              pattern.enabled ? 'text-gray-600' : 'text-gray-400'
+              pattern.enabled ? 'text-gray-600 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'
             }`}>
               {pattern.description}
             </p>
           )}
           <div className={`text-xs mt-2 ${
-            pattern.enabled ? 'text-gray-500' : 'text-gray-400'
+            pattern.enabled ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'
           }`}>
-            Created: {pattern.createdAt.toLocaleDateString()} • 
+            Created: {pattern.createdAt.toLocaleDateString()} •
             Modified: {pattern.lastModified.toLocaleDateString()}
           </div>
         </div>
         <div className="flex items-center gap-1 ml-4">
-          <button
+          <IconButton
             onClick={() => onToggle(!pattern.enabled)}
-            className={`p-2 rounded-md transition-colors ${
-              pattern.enabled
-                ? 'text-green-600 hover:bg-green-50'
-                : 'text-gray-400 hover:bg-gray-100'
-            }`}
-            title={pattern.enabled ? 'Disable pattern' : 'Enable pattern'}
+            variant={pattern.enabled ? 'success' : 'ghost'}
+            label={pattern.enabled ? 'Disable pattern' : 'Enable pattern'}
           >
             {pattern.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
-          </button>
-          <button
+          </IconButton>
+          <IconButton
             onClick={onEdit}
-            className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            title="Edit pattern"
+            variant="primary"
+            label="Edit pattern"
           >
             <Edit size={16} />
-          </button>
-          <button
+          </IconButton>
+          <IconButton
             onClick={onDelete}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-            title="Delete pattern"
+            variant="danger"
+            label="Delete pattern"
           >
             <Trash2 size={16} />
-          </button>
+          </IconButton>
         </div>
       </div>
     </div>

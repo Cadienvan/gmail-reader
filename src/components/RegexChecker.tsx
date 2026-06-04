@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, TestTube, CheckCircle, AlertCircle, X, Save } from 'lucide-react';
 import { urlFilterService } from '../services/urlFilterService';
 import type { UrlFilterPattern } from '../types';
+import { Button, Input, Label, Card, Callout, Modal } from './ui';
 
 interface RegexCheckerProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ export const RegexChecker: React.FC<RegexCheckerProps> = ({
 
     const results = new Map<string, boolean>();
     const currentPatterns = urlFilterService.getPatterns();
-    
+
     currentPatterns.forEach(pattern => {
       if (pattern.enabled) {
         results.set(pattern.id, urlFilterService.testPattern(pattern.pattern, urlToTest));
@@ -53,7 +54,7 @@ export const RegexChecker: React.FC<RegexCheckerProps> = ({
 
   const handlePatternChange = (field: keyof typeof newPattern, value: string) => {
     setNewPattern(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear validation error when user starts typing in pattern field
     if (field === 'pattern') {
       setValidationError('');
@@ -62,12 +63,12 @@ export const RegexChecker: React.FC<RegexCheckerProps> = ({
 
   const generatePatternFromUrl = () => {
     if (!testUrl.trim()) return;
-    
+
     try {
       const url = new URL(testUrl);
       const domain = url.hostname.replace(/\./g, '\\.');
       const suggestedPattern = `.*${domain}.*`;
-      
+
       setNewPattern(prev => ({
         ...prev,
         pattern: suggestedPattern,
@@ -109,10 +110,10 @@ export const RegexChecker: React.FC<RegexCheckerProps> = ({
     setNewPattern({ name: '', pattern: '', description: '' });
     setShowAddForm(false);
     setValidationError('');
-    
+
     // Re-test the URL with the new pattern
     handleTestUrl();
-    
+
     onPatternAdded?.(added);
   };
 
@@ -121,235 +122,217 @@ export const RegexChecker: React.FC<RegexCheckerProps> = ({
     return Array.from(testResults.values()).filter(Boolean).length;
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60 p-4">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <TestTube size={20} />
-            Regex URL Checker
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-2 rounded hover:bg-gray-100"
-          >
-            <X size={20} />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        <span className="flex items-center gap-2">
+          <TestTube size={20} />
+          Regex URL Checker
+        </span>
+      }
+      size="md"
+      footer={
+        <div className="flex w-full items-center justify-between">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            Regex patterns are case-insensitive and applied to URLs during extraction.
+          </span>
+          <Button variant="secondary" onClick={onClose} leftIcon={<X size={16} />}>
+            Close
+          </Button>
         </div>
+      }
+    >
+      <div className="space-y-4">
+        {/* URL Test Section */}
+        <Card>
+          <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">Test URL Against Patterns</h4>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                value={testUrl}
+                onChange={(e) => setTestUrl(e.target.value)}
+                placeholder="Enter a URL to test..."
+                className="flex-1"
+              />
+              <Button
+                onClick={() => handleTestUrl()}
+                disabled={!testUrl.trim()}
+                variant="primary"
+              >
+                Test
+              </Button>
+            </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* URL Test Section */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-700 mb-3">Test URL Against Patterns</h4>
+            {testUrl && testResults.size > 0 && (
+              <Callout variant={getFilteredCount() > 0 ? 'danger' : 'success'}>
+                <div className="flex items-center gap-2 mb-1">
+                  {getFilteredCount() > 0 ? (
+                    <>
+                      <AlertCircle size={16} />
+                      <span className="font-medium">
+                        URL would be filtered by {getFilteredCount()} pattern(s)
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={16} />
+                      <span className="font-medium">
+                        URL would not be filtered
+                      </span>
+                    </>
+                  )}
+                </div>
+                {Array.from(testResults.entries()).some(([, matches]) => matches) && (
+                  <div className="text-xs mt-1">
+                    Matching patterns: {Array.from(testResults.entries())
+                      .filter(([, matches]) => matches)
+                      .map(([id]) => patterns.find(p => p.id === id)?.name)
+                      .filter(Boolean)
+                      .join(', ')}
+                  </div>
+                )}
+              </Callout>
+            )}
+          </div>
+        </Card>
+
+        {/* Quick Add Pattern Section */}
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-gray-700 dark:text-gray-300">Quick Add Pattern</h4>
+            {!showAddForm && (
+              <Button
+                onClick={() => setShowAddForm(true)}
+                variant="primary"
+                size="sm"
+                leftIcon={<Plus size={14} />}
+              >
+                Add Pattern
+              </Button>
+            )}
+          </div>
+
+          {showAddForm ? (
             <div className="space-y-3">
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={testUrl}
-                  onChange={(e) => setTestUrl(e.target.value)}
-                  placeholder="Enter a URL to test..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <button
-                  onClick={() => handleTestUrl()}
+                <Button
+                  onClick={generatePatternFromUrl}
                   disabled={!testUrl.trim()}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  variant="success"
+                  size="sm"
                 >
-                  Test
-                </button>
+                  Generate from URL
+                </Button>
+                <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                  Auto-generate a regex pattern to match the test URL
+                </div>
               </div>
-              
-              {testUrl && testResults.size > 0 && (
-                <div className="p-3 bg-gray-50 border rounded-md">
-                  <div className="flex items-center gap-2 mb-2">
-                    {getFilteredCount() > 0 ? (
-                      <>
-                        <AlertCircle size={16} className="text-red-500" />
-                        <span className="text-sm font-medium text-red-700">
-                          URL would be filtered by {getFilteredCount()} pattern(s)
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle size={16} className="text-green-500" />
-                        <span className="text-sm font-medium text-green-700">
-                          URL would not be filtered
-                        </span>
-                      </>
+
+              <div>
+                <Label>Pattern Name</Label>
+                <Input
+                  type="text"
+                  value={newPattern.name}
+                  onChange={(e) => handlePatternChange('name', e.target.value)}
+                  placeholder="e.g., Filter Social Media"
+                />
+              </div>
+
+              <div>
+                <Label>Regex Pattern</Label>
+                <Input
+                  type="text"
+                  value={newPattern.pattern}
+                  onChange={(e) => handlePatternChange('pattern', e.target.value)}
+                  placeholder="e.g., .*(facebook|twitter)\.com.*"
+                  mono
+                />
+                {validationError && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validationError}</p>
+                )}
+              </div>
+
+              <div>
+                <Label>Description (optional)</Label>
+                <Input
+                  type="text"
+                  value={newPattern.description}
+                  onChange={(e) => handlePatternChange('description', e.target.value)}
+                  placeholder="Description of what this pattern filters"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleAddPattern}
+                  variant="success"
+                  leftIcon={<Save size={16} />}
+                >
+                  Save Pattern
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewPattern({ name: '', pattern: '', description: '' });
+                    setValidationError('');
+                  }}
+                  variant="secondary"
+                  leftIcon={<X size={16} />}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Add a new regex pattern to filter URLs. You can auto-generate a pattern from the test URL above.
+            </p>
+          )}
+        </Card>
+
+        {/* Current Patterns */}
+        <Card>
+          <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Current Patterns ({patterns.filter(p => p.enabled).length} active)
+          </h4>
+          {patterns.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">No patterns configured.</p>
+          ) : (
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {patterns.map((pattern) => (
+                <div
+                  key={pattern.id}
+                  className={`p-2 rounded border text-xs ${
+                    pattern.enabled
+                      ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50'
+                      : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800'
+                  } ${testResults.get(pattern.id) ? 'ring-2 ring-red-200 dark:ring-red-800' : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {pattern.name}
+                      </div>
+                      <code className="text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs break-all">
+                        {pattern.pattern}
+                      </code>
+                    </div>
+                    {testResults.get(pattern.id) && (
+                      <div className="ml-2 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        <AlertCircle size={10} />
+                        Match
+                      </div>
                     )}
                   </div>
-                  {Array.from(testResults.entries()).some(([_, matches]) => matches) && (
-                    <div className="text-xs text-gray-600">
-                      Matching patterns: {Array.from(testResults.entries())
-                        .filter(([_, matches]) => matches)
-                        .map(([id, _]) => patterns.find(p => p.id === id)?.name)
-                        .filter(Boolean)
-                        .join(', ')}
-                    </div>
-                  )}
                 </div>
-              )}
+              ))}
             </div>
-          </div>
-
-          {/* Quick Add Pattern Section */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-gray-700">Quick Add Pattern</h4>
-              {!showAddForm && (
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
-                >
-                  <Plus size={14} />
-                  Add Pattern
-                </button>
-              )}
-            </div>
-
-            {showAddForm ? (
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <button
-                    onClick={generatePatternFromUrl}
-                    disabled={!testUrl.trim()}
-                    className="px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm"
-                  >
-                    Generate from URL
-                  </button>
-                  <div className="text-xs text-gray-500 flex items-center">
-                    Auto-generate a regex pattern to match the test URL
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Pattern Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newPattern.name}
-                    onChange={(e) => handlePatternChange('name', e.target.value)}
-                    placeholder="e.g., Filter Social Media"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Regex Pattern
-                  </label>
-                  <input
-                    type="text"
-                    value={newPattern.pattern}
-                    onChange={(e) => handlePatternChange('pattern', e.target.value)}
-                    placeholder="e.g., .*(facebook|twitter)\.com.*"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                  />
-                  {validationError && (
-                    <p className="mt-1 text-sm text-red-600">{validationError}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={newPattern.description}
-                    onChange={(e) => handlePatternChange('description', e.target.value)}
-                    placeholder="Description of what this pattern filters"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleAddPattern}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
-                  >
-                    <Save size={16} />
-                    Save Pattern
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowAddForm(false);
-                      setNewPattern({ name: '', pattern: '', description: '' });
-                      setValidationError('');
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
-                  >
-                    <X size={16} />
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-600">
-                Add a new regex pattern to filter URLs. You can auto-generate a pattern from the test URL above.
-              </p>
-            )}
-          </div>
-
-          {/* Current Patterns */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-700 mb-3">
-              Current Patterns ({patterns.filter(p => p.enabled).length} active)
-            </h4>
-            {patterns.length === 0 ? (
-              <p className="text-sm text-gray-500">No patterns configured.</p>
-            ) : (
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {patterns.map((pattern) => (
-                  <div
-                    key={pattern.id}
-                    className={`p-2 rounded border text-xs ${
-                      pattern.enabled ? 'border-gray-200 bg-white' : 'border-gray-300 bg-gray-50'
-                    } ${testResults.get(pattern.id) ? 'ring-2 ring-red-200' : ''}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 truncate">
-                          {pattern.name}
-                        </div>
-                        <code className="text-gray-600 bg-gray-100 px-1 rounded text-xs break-all">
-                          {pattern.pattern}
-                        </code>
-                      </div>
-                      {testResults.get(pattern.id) && (
-                        <div className="ml-2 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                          <AlertCircle size={10} />
-                          Match
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="border-t p-4 bg-gray-50">
-          <div className="flex justify-between items-center">
-            <div className="text-xs text-gray-500">
-              Regex patterns are case-insensitive and applied to URLs during extraction.
-            </div>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+          )}
+        </Card>
       </div>
-    </div>
+    </Modal>
   );
 };

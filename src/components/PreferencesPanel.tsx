@@ -54,7 +54,7 @@ export const PreferencesPanel: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Sub-tab Navigation */}
-      <div className="flex border-b mb-6 overflow-x-auto">
+      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 overflow-x-auto">
         <div className="flex flex-nowrap min-w-full">
           {subTabs.map((tab) => {
             const IconComponent = tab.icon;

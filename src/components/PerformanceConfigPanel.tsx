@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, RotateCcw, Activity, Clock, Trash2, AlertTriangle } from 'lucide-react';
 import { ollamaService } from '../services/ollamaService';
 import type { PerformanceConfiguration } from '../types';
+import { Button, Callout, Card } from './ui';
 
 interface PerformanceConfigPanelProps {
   onConfigChange?: (config: PerformanceConfiguration) => void;
@@ -75,53 +76,53 @@ export const PerformanceConfigPanel: React.FC<PerformanceConfigPanelProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Performance Configuration</h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Performance Configuration</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               Configure AI request handling and queue management
             </p>
           </div>
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<RotateCcw size={16} />}
             onClick={handleResetToDefault}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-            title="Reset to default settings"
           >
-            <RotateCcw size={16} />
             Reset to Default
-          </button>
+          </Button>
         </div>
 
         {/* Queue Status Display */}
-        <div className="bg-gray-50 rounded-lg p-4">
+        <Card padding="md">
           <div className="flex items-center gap-2 mb-3">
-            <Activity className="w-5 h-5 text-blue-600" />
-            <h4 className="font-medium text-gray-900">Current Queue Status</h4>
+            <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h4 className="font-medium text-gray-900 dark:text-gray-100">Current Queue Status</h4>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded p-3 border">
+            <div className="bg-white dark:bg-gray-800 rounded p-3 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Queue Length</span>
-                <span className={`font-semibold ${queueStatus.queueLength > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Queue Length</span>
+                <span className={`font-semibold ${queueStatus.queueLength > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
                   {queueStatus.queueLength}
                 </span>
               </div>
             </div>
-            
-            <div className="bg-white rounded p-3 border">
+
+            <div className="bg-white dark:bg-gray-800 rounded p-3 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Active Requests</span>
-                <span className={`font-semibold ${queueStatus.activeRequests > 0 ? 'text-blue-600' : 'text-gray-600'}`}>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Active Requests</span>
+                <span className={`font-semibold ${queueStatus.activeRequests > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
                   {queueStatus.activeRequests}
                 </span>
               </div>
             </div>
-            
-            <div className="bg-white rounded p-3 border">
+
+            <div className="bg-white dark:bg-gray-800 rounded p-3 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Processing</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Processing</span>
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${queueStatus.isProcessing ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-                  <span className="text-sm font-semibold">
+                  <div className={`w-2 h-2 rounded-full ${queueStatus.isProcessing ? 'bg-green-500 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'}`}></div>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     {queueStatus.isProcessing ? 'Yes' : 'No'}
                   </span>
                 </div>
@@ -131,26 +132,27 @@ export const PerformanceConfigPanel: React.FC<PerformanceConfigPanelProps> = ({
 
           {/* Clear Queue Button */}
           {(queueStatus.queueLength > 0 || queueStatus.activeRequests > 0) && (
-            <div className="mt-4 pt-3 border-t">
-              <button
+            <div className="mt-4 pt-3 border-t dark:border-gray-700">
+              <Button
+                variant="danger"
+                size="sm"
+                leftIcon={<Trash2 size={14} />}
                 onClick={handleClearQueue}
-                className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
               >
-                <Trash2 size={14} />
                 Clear Queue
-              </button>
+              </Button>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Configuration Settings */}
         <div className="space-y-6">
           {/* Queue Mode Toggle */}
-          <div className="border border-gray-200 rounded-lg p-6">
+          <Card padding="lg">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h4 className="font-medium text-gray-900">Queue Mode</h4>
-                <p className="text-sm text-gray-600 mt-1">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100">Queue Mode</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   Enable request queuing to manage AI service load and prevent overwhelming the server
                 </p>
               </div>
@@ -161,33 +163,30 @@ export const PerformanceConfigPanel: React.FC<PerformanceConfigPanelProps> = ({
                   onChange={(e) => setTempConfig(prev => ({ ...prev, enableQueueMode: e.target.checked }))}
                   className="sr-only"
                 />
-                <div className={`w-11 h-6 rounded-full transition-colors ${tempConfig.enableQueueMode ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                <div className={`w-11 h-6 rounded-full transition-colors ${tempConfig.enableQueueMode ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
                   <div className={`w-4 h-4 bg-white rounded-full transition-transform m-1 ${tempConfig.enableQueueMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
                 </div>
               </label>
             </div>
 
             {!tempConfig.enableQueueMode && (
-              <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-yellow-700">
-                  When queue mode is disabled, requests are processed immediately which may overwhelm the AI service if many requests are made simultaneously.
-                </p>
-              </div>
+              <Callout variant="warning" icon={<AlertTriangle className="w-4 h-4" />}>
+                When queue mode is disabled, requests are processed immediately which may overwhelm the AI service if many requests are made simultaneously.
+              </Callout>
             )}
-          </div>
+          </Card>
 
           {/* Max Concurrent Requests */}
-          <div className="border border-gray-200 rounded-lg p-6">
+          <Card padding="lg">
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Max Concurrent Requests
               </label>
-              <p className="text-sm text-gray-600 mb-3">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Maximum number of AI requests that can be processed simultaneously
               </p>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <input
                 type="range"
@@ -204,30 +203,30 @@ export const PerformanceConfigPanel: React.FC<PerformanceConfigPanelProps> = ({
                   max="10"
                   value={tempConfig.maxConcurrentRequests}
                   onChange={(e) => setTempConfig(prev => ({ ...prev, maxConcurrentRequests: Math.max(1, Math.min(10, parseInt(e.target.value) || 1)) }))}
-                  className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+                  className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 />
               </div>
             </div>
-            
-            <div className="mt-2 text-xs text-gray-500">
-              {tempConfig.maxConcurrentRequests === 1 ? 
+
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {tempConfig.maxConcurrentRequests === 1 ?
                 'Requests will be processed one at a time (recommended for most setups)' :
                 `Up to ${tempConfig.maxConcurrentRequests} requests can be processed simultaneously`
               }
             </div>
-          </div>
+          </Card>
 
           {/* Request Delay */}
-          <div className="border border-gray-200 rounded-lg p-6">
+          <Card padding="lg">
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Request Delay
               </label>
-              <p className="text-sm text-gray-600 mb-3">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Delay between processing queued requests (in milliseconds)
               </p>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <input
                 type="range"
@@ -246,33 +245,35 @@ export const PerformanceConfigPanel: React.FC<PerformanceConfigPanelProps> = ({
                   step="100"
                   value={tempConfig.requestDelay}
                   onChange={(e) => setTempConfig(prev => ({ ...prev, requestDelay: Math.max(0, parseInt(e.target.value) || 0) }))}
-                  className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
+                  className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 />
-                <span className="text-sm text-gray-500">ms</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">ms</span>
               </div>
             </div>
-            
-            <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
               <Clock size={12} />
-              {tempConfig.requestDelay === 0 ? 
+              {tempConfig.requestDelay === 0 ?
                 'No delay between requests' :
                 `${tempConfig.requestDelay}ms delay between requests (${(tempConfig.requestDelay / 1000).toFixed(1)}s)`
               }
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Save Button */}
         {hasChanges && (
-          <div className="flex justify-end pt-4 border-t">
-            <button
+          <div className="flex justify-end pt-4 border-t dark:border-gray-700">
+            <Button
+              variant="success"
+              size="lg"
+              leftIcon={<Save size={16} />}
               onClick={handleSaveConfig}
               disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              loading={isSaving}
             >
-              <Save size={16} />
               {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
+            </Button>
           </div>
         )}
       </div>
