@@ -21,40 +21,22 @@ import { gempestService } from '../services/gempestService';
 import { newsletterRatingService } from '../services/newsletterRatingService';
 import { Button, IconButton, Callout } from './ui';
 
-// Singolo pollice su/giù con percentuale, colorato in base al segno della qualità.
-const QualityThumb: React.FC<{ quality: number; title: string }> = ({ quality, title }) => {
-  const isPositive = quality >= 50;
-  return (
-    <span
-      title={title}
-      className={`inline-flex items-center gap-0.5 shrink-0 text-xs font-medium ${
-        isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-      }`}
-    >
-      {isPositive ? <ThumbsUp size={13} /> : <ThumbsDown size={13} />}
-      {quality}%
-    </span>
-  );
-};
-
-// Mostra, accanto al titolo, l'orientamento storico verso il mittente con due badge:
-// la qualità complessiva (all-time) e quella degli ultimi 30 giorni.
-// Non mostra nulla finché non ci sono rating per il mittente.
+// Shows, next to the title, the historical sentiment toward the sender: number of
+// positive and negative feedback all-time. Renders nothing until there is feedback.
 const SenderSentimentBadge: React.FC<{ sender: string }> = ({ sender }) => {
   const stats = newsletterRatingService.getSenderStats(sender);
-  if (stats.globalQuality < 0) return null;
+  if (stats.positiveAll === 0 && stats.negativeAll === 0) return null;
   return (
-    <span className="inline-flex items-center gap-1.5 shrink-0">
-      <QualityThumb
-        quality={stats.globalQuality}
-        title={`Storico complessivo: ${stats.globalQuality}% positivo (${stats.totalRatings} valutazioni)`}
-      />
-      {stats.last30Quality >= 0 && (
-        <QualityThumb
-          quality={stats.last30Quality}
-          title={`Ultimi 30 giorni: ${stats.last30Quality}% positivo (${stats.ratingsLast30} valutazioni)`}
-        />
-      )}
+    <span
+      className="inline-flex items-center gap-1.5 shrink-0 text-xs font-medium"
+      title={`Overall feedback: ${stats.positiveAll} positive / ${stats.negativeAll} negative (last 30 days: ${stats.positive30} / ${stats.negative30})`}
+    >
+      <span className="inline-flex items-center gap-0.5 text-green-600 dark:text-green-400">
+        <ThumbsUp size={13} />{stats.positiveAll}
+      </span>
+      <span className="inline-flex items-center gap-0.5 text-red-600 dark:text-red-400">
+        <ThumbsDown size={13} />{stats.negativeAll}
+      </span>
     </span>
   );
 };

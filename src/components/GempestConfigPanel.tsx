@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2, Pencil, Trash2, Check, X, AlertTriangle, ThumbsUp, ThumbsDown, Ban, MailX, Trash, Sparkles, FileText, BarChart3 } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle, HelpCircle, Loader2, Pencil, Trash2, Check, X, AlertTriangle, ThumbsUp, ThumbsDown, MailX, Sparkles, FileText, BarChart3 } from 'lucide-react';
 import { gempestService, fetchGeminiModels, type GempestConfig, type GeminiModel } from '../services/gempestService';
 import { Button, IconButton, Input, Select, Callout, EditableField } from './ui';
 import { memoryService } from '../services/memoryService';
@@ -104,7 +104,7 @@ export const GempestConfigPanel: React.FC = () => {
   };
 
   const handleClearInsights = () => {
-    if (!window.confirm('Vuoi svuotare tutti i dati di Newsletter Quality Insight (valutazioni e rifiuti)? L\'operazione non è reversibile.')) return;
+    if (!window.confirm('Clear all Newsletter Quality Insight data (your positive/negative feedback)? This cannot be undone.')) return;
     newsletterRatingService.clearAll();
     refreshStats();
   };
@@ -484,7 +484,7 @@ export const GempestConfigPanel: React.FC = () => {
           disabled={senderStats.length === 0 && unsubscribeSuggestions.length === 0}
           leftIcon={<Trash2 size={16} />}
         >
-          Svuota dati
+          Clear data
         </Button>
       </div>
       {/* Unsubscribe Suggestions */}
@@ -492,16 +492,16 @@ export const GempestConfigPanel: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <MailX size={20} className="text-red-500" />
-            Newsletter da rivedere
+            Newsletters to review
           </h3>
           <button onClick={refreshStats} className="text-xs text-blue-600 hover:underline">Refresh</button>
         </div>
         <p className="text-sm text-gray-500 mb-4">
-          Mittenti per cui, negli ultimi 30 giorni, hai fruito di meno contenuti di quanti ne hai scartati
-          (rating negativi, chiusure automatiche di Gempest e cancellazioni manuali). Potresti valutare la disiscrizione.
+          Senders for whom, over the last 30 days, your negative feedback outweighs the positive.
+          The judgement is entirely yours (given while reading or deleting emails). You may want to consider unsubscribing.
         </p>
         {unsubscribeSuggestions.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">Nessun suggerimento: per ora i tuoi mittenti hanno un buon rapporto tra contenuti fruiti e scartati.</p>
+          <p className="text-sm text-gray-400 italic">No suggestions: for now your senders have more positive than negative feedback.</p>
         ) : (
           <ul className="space-y-2">
             {unsubscribeSuggestions.map(s => {
@@ -516,9 +516,8 @@ export const GempestConfigPanel: React.FC = () => {
                     <p className="text-xs text-gray-500 mb-1 truncate" title={s.sender}>{info.email}</p>
                     <p className="text-xs text-gray-600">{s.reason}</p>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
-                      <span className="flex items-center gap-1 text-green-600"><ThumbsUp size={11} />{s.engagedLast30} fruiti</span>
-                      <span className="flex items-center gap-1 text-orange-600"><Ban size={11} />{s.autoClosedLast30} chiusi da Gempest</span>
-                      <span className="flex items-center gap-1 text-red-600"><Trash size={11} />{s.manualDeletesLast30} cancellati a mano</span>
+                      <span className="flex items-center gap-1 text-green-600"><ThumbsUp size={11} />{s.positive30} positive</span>
+                      <span className="flex items-center gap-1 text-red-600"><ThumbsDown size={11} />{s.negative30} negative</span>
                     </div>
                   </div>
                 </li>
@@ -537,69 +536,44 @@ export const GempestConfigPanel: React.FC = () => {
           <button onClick={refreshStats} className="text-xs text-blue-600 hover:underline">Refresh</button>
         </div>
         <p className="text-sm text-gray-500 mb-4">
-          Ratings you give via thumbs up/down in email summaries, plus rejection counts from Gempest automatic processing and your manual deletions.
+          Positive/negative feedback you give by marking or deleting emails (from the summary bar or with the shortcuts). The judgement is entirely yours.
         </p>
         {senderStats.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">No data yet. Rate newsletters from the summary tab, or run Gempest to start collecting rejections.</p>
+          <p className="text-sm text-gray-400 italic">No data yet. Mark newsletters positive/negative from the summary bar or when deleting them.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
                   <th className="pb-2 pr-4">Sender</th>
-                  <th className="pb-2 pr-3 text-center">All-time</th>
-                  <th className="pb-2 pr-3 text-center">Last 30d</th>
-                  <th className="pb-2 pr-3 text-center" title="Total ratings given">Ratings</th>
-                  <th className="pb-2 text-center" title="Gempest auto-rejections">Rejections</th>
+                  <th className="pb-2 pr-3 text-center" title="Positive / negative feedback all-time">All-time</th>
+                  <th className="pb-2 text-center" title="Positive / negative feedback in the last 30 days">Last 30d</th>
                 </tr>
               </thead>
               <tbody>
                 {senderStats
-                  .sort((a, b) => {
-                    if (a.globalQuality < 0 && b.globalQuality >= 0) return 1;
-                    if (a.globalQuality >= 0 && b.globalQuality < 0) return -1;
-                    return b.globalQuality - a.globalQuality;
-                  })
-                  .map(s => {
-                    const qualityColor = (q: number) =>
-                      q < 0 ? 'text-gray-400' :
-                      q >= 70 ? 'text-green-600 font-semibold' :
-                      q >= 40 ? 'text-yellow-600 font-semibold' :
-                      'text-red-600 font-semibold';
-                    return (
-                      <tr key={s.sender} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-2 pr-4 text-gray-800 max-w-[220px] truncate" title={s.sender}>{s.sender}</td>
-                        <td className="py-2 pr-3 text-center">
-                          {s.globalQuality < 0 ? (
-                            <span className="text-gray-400">—</span>
-                          ) : (
-                            <span className={`flex items-center justify-center gap-1 ${qualityColor(s.globalQuality)}`}>
-                              {s.globalQuality >= 50 ? <ThumbsUp size={11} /> : <ThumbsDown size={11} />}
-                              {s.globalQuality}%
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2 pr-3 text-center">
-                          {s.last30Quality < 0 ? (
-                            <span className="text-gray-400">—</span>
-                          ) : (
-                            <span className={qualityColor(s.last30Quality)}>{s.last30Quality}%</span>
-                          )}
-                        </td>
-                        <td className="py-2 pr-3 text-center text-gray-600">{s.totalRatings}</td>
-                        <td className="py-2 text-center">
-                          {s.rejections.total > 0 ? (
-                            <span className="flex items-center justify-center gap-1 text-orange-600" title={`Not newsletter: ${s.rejections.not_newsletter} · Low value full: ${s.rejections.low_value_full} · Low value link: ${s.rejections.low_value_link} · Manual delete: ${s.rejections.manual_delete}`}>
-                              <Ban size={11} />
-                              {s.rejections.total}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  .sort((a, b) => (b.positiveAll - b.negativeAll) - (a.positiveAll - a.negativeAll))
+                  .map(s => (
+                    <tr key={s.sender} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-2 pr-4 text-gray-800 max-w-[220px] truncate" title={s.sender}>{s.sender}</td>
+                      <td className="py-2 pr-3 text-center">
+                        <span className="inline-flex items-center justify-center gap-2">
+                          <span className="inline-flex items-center gap-0.5 text-green-600 font-semibold"><ThumbsUp size={11} />{s.positiveAll}</span>
+                          <span className="inline-flex items-center gap-0.5 text-red-600 font-semibold"><ThumbsDown size={11} />{s.negativeAll}</span>
+                        </span>
+                      </td>
+                      <td className="py-2 text-center">
+                        {s.positive30 === 0 && s.negative30 === 0 ? (
+                          <span className="text-gray-400">—</span>
+                        ) : (
+                          <span className="inline-flex items-center justify-center gap-2">
+                            <span className="inline-flex items-center gap-0.5 text-green-600"><ThumbsUp size={11} />{s.positive30}</span>
+                            <span className="inline-flex items-center gap-0.5 text-red-600"><ThumbsDown size={11} />{s.negative30}</span>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>

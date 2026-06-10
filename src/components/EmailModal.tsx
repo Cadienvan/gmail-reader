@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Filter, AlertCircle, StopCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText, CheckCircle, Mail, BookOpen, ChevronDown, ChevronUp, Trash2, Filter, AlertCircle, StopCircle, ThumbsUp, ThumbsDown, Maximize2, Minimize2 } from 'lucide-react';
 import { Button, IconButton, Modal, Textarea } from './ui';
 import type { ParsedEmail, ExtractedLink, LinkSummary, FlashCard, ModelConfiguration } from '../types';
 import { linkService } from '../services/linkService';
@@ -17,7 +17,7 @@ import { RegexChecker } from './RegexChecker';
 import { environmentConfigService } from '../services/environmentConfigService';
 import { gempestService } from '../services/gempestService';
 import { newsletterRatingService, extractSenderInfo } from '../services/newsletterRatingService';
-import type { RatingValue } from '../services/newsletterRatingService';
+import type { FeedbackValue, SenderStats } from '../services/newsletterRatingService';
 import { ruleEngineService } from '../services/ruleEngineService';
 import type { RuleContext } from '../types';
 import { memoryService } from '../services/memoryService';
@@ -266,6 +266,19 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     return saved !== null ? JSON.parse(saved) : false;
   });
 
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(() => {
+    const saved = localStorage.getItem('emailModal_fullScreen');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
+  const handleToggleFullScreen = () => {
+    setIsFullScreen(prev => {
+      const next = !prev;
+      localStorage.setItem('emailModal_fullScreen', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const currentEmail = emails[currentIndex];
 
   // Resolve which newsletter the rating bar refers to, following the ACTIVE summary tab.
@@ -294,31 +307,49 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     return null;
   })();
 
-  // Newsletter rating state — tracks the current rating for the rated newsletter
-  const [currentRating, setCurrentRating] = useState<RatingValue | null>(null);
-  const [senderStats, setSenderStats] = useState<{ globalQuality: number; last30Quality: number } | null>(null);
+  // Newsletter feedback state — tracks the explicit positive/negative feedback
+  // for the newsletter behind the active tab, plus the sender's aggregated stats.
+  const [currentFeedback, setCurrentFeedback] = useState<FeedbackValue | null>(null);
+  const [senderStats, setSenderStats] = useState<SenderStats | null>(null);
 
-  // Reload rating and stats whenever the rated newsletter changes — email
+  // Reload feedback and stats whenever the rated newsletter changes — email
   // navigation, switching tabs, and closing tabs all change which one is in focus
   useEffect(() => {
-    if (!ratedNewsletter) { setCurrentRating(null); setSenderStats(null); return; }
-    setCurrentRating(newsletterRatingService.getRatingForKey(ratedNewsletter.key));
-    const stats = newsletterRatingService.getSenderStats(ratedNewsletter.sender);
-    setSenderStats(stats.totalRatings > 0 ? { globalQuality: stats.globalQuality, last30Quality: stats.last30Quality } : null);
+    if (!ratedNewsletter) { setCurrentFeedback(null); setSenderStats(null); return; }
+    setCurrentFeedback(newsletterRatingService.getFeedbackForKey(ratedNewsletter.key));
+    setSenderStats(newsletterRatingService.getSenderStats(ratedNewsletter.sender));
   }, [ratedNewsletter?.key, ratedNewsletter?.sender]);
 
-  const handleRate = (rating: RatingValue) => {
+  // "Mark positive/negative": records the feedback while leaving the email in the
+  // inbox. Pressing the same choice again clears it (toggle).
+  const handleFeedback = (feedback: FeedbackValue) => {
     if (!ratedNewsletter) return;
-    const next = currentRating === rating ? null : rating;
+    const next = currentFeedback === feedback ? null : feedback;
     if (next) {
-      newsletterRatingService.rateNewsletter(ratedNewsletter.key, ratedNewsletter.sender, next);
+      newsletterRatingService.setFeedback(ratedNewsletter.key, ratedNewsletter.sender, next);
     } else {
-      newsletterRatingService.removeRating(ratedNewsletter.key);
+      newsletterRatingService.removeFeedback(ratedNewsletter.key);
     }
-    setCurrentRating(next);
-    const stats = newsletterRatingService.getSenderStats(ratedNewsletter.sender);
-    setSenderStats(stats.totalRatings > 0 ? { globalQuality: stats.globalQuality, last30Quality: stats.last30Quality } : null);
+    setCurrentFeedback(next);
+    setSenderStats(newsletterRatingService.getSenderStats(ratedNewsletter.sender));
   };
+
+  // Variant used by the "mark positive/negative" keyboard shortcuts: always sets
+  // the feedback (no toggle) and shows a quick confirmation.
+  const applyFeedback = (feedback: FeedbackValue) => {
+    if (!ratedNewsletter) return;
+    newsletterRatingService.setFeedback(ratedNewsletter.key, ratedNewsletter.sender, feedback);
+    setCurrentFeedback(feedback);
+    setSenderStats(newsletterRatingService.getSenderStats(ratedNewsletter.sender));
+    showNotification(
+      feedback === 'positive' ? 'Newsletter marked as positive' : 'Newsletter marked as negative',
+      feedback === 'positive' ? 'success' : 'info',
+    );
+  };
+
+  // Feedback to apply to the next deletion (set by the "delete positive/negative"
+  // shortcuts). null = neutral deletion, no feedback recorded.
+  const [pendingDeleteFeedback, setPendingDeleteFeedback] = useState<FeedbackValue | null>(null);
 
   // Display name for the newsletter currently being rated
   const ratedSenderName = ratedNewsletter
@@ -575,17 +606,21 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     }
   };
 
-  const handleDeleteEmail = async () => {
+  // Deletes the current email. If the deletion carries a judgement (the "delete
+  // positive/negative" shortcuts), it records it as feedback for the sender; a
+  // plain deletion stays neutral. `feedbackArg` takes precedence over the pending
+  // state so the "skip confirmation" path doesn't read stale state.
+  const handleDeleteEmail = async (feedbackArg?: FeedbackValue | null) => {
     if (!currentEmail) return;
+    const feedback = feedbackArg !== undefined ? feedbackArg : pendingDeleteFeedback;
 
     setIsDeletingEmail(true);
     try {
       const success = await gmailService.deleteEmail(currentEmail.id);
       if (success) {
-        // Track the manual deletion as a negative signal for this sender, so it
-        // feeds the quality insights and unsubscribe suggestions alongside
-        // Gempest's automatic rejections.
-        newsletterRatingService.recordRejection(currentEmail.from, 'manual_delete');
+        if (feedback) {
+          newsletterRatingService.setFeedback(`email:${currentEmail.id}`, currentEmail.from, feedback);
+        }
         // Notify parent component - let the parent handle navigation
         onEmailDeleted?.(currentEmail.id);
         // The parent component (Dashboard) will handle the navigation and index updates
@@ -599,13 +634,15 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     } finally {
       setIsDeletingEmail(false);
       setShowDeleteConfirm(false);
+      setPendingDeleteFeedback(null);
     }
   };
 
-  const handleShowDeleteConfirm = () => {
+  const handleShowDeleteConfirm = (feedback: FeedbackValue | null = null) => {
     if (isDeletingEmail) return;
+    setPendingDeleteFeedback(feedback);
     if (environmentConfigService.shouldSkipDeleteConfirmation()) {
-      void handleDeleteEmail();
+      void handleDeleteEmail(feedback);
       return;
     }
     setShowDeleteConfirm(true);
@@ -613,6 +650,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   const handleCancelDelete = () => {
     setShowDeleteConfirm(false);
+    setPendingDeleteFeedback(null);
   };
 
   const handleNavigationWithConfirm = (action: 'close') => {
@@ -802,6 +840,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
       } else if (matches(keyBindings.deleteEmail)) {
         event.preventDefault();
         handleShowDeleteConfirm();
+      } else if (matches(keyBindings.deletePositive)) {
+        event.preventDefault();
+        handleShowDeleteConfirm('positive');
+      } else if (matches(keyBindings.deleteNegative)) {
+        event.preventDefault();
+        handleShowDeleteConfirm('negative');
+      } else if (matches(keyBindings.markPositive)) {
+        event.preventDefault();
+        applyFeedback('positive');
+      } else if (matches(keyBindings.markNegative)) {
+        event.preventDefault();
+        applyFeedback('negative');
       } else if (matches(keyBindings.closeSummary)) {
         event.preventDefault();
         // Close the active summary tab using the same handler as clicking the tab X
@@ -810,6 +860,23 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         if (closeTarget) {
           handleCloseSummary(closeTarget);
         }
+      } else if (matches(keyBindings.toggleFullScreen)) {
+        event.preventDefault();
+        handleToggleFullScreen();
+      } else if (matches(keyBindings.expandSummaryPanel)) {
+        event.preventDefault();
+        setSummaryHeight(prev => {
+          const next = Math.min(prev + 80, window.innerHeight - 200);
+          localStorage.setItem('emailModal_summaryHeight', String(next));
+          return next;
+        });
+      } else if (matches(keyBindings.shrinkSummaryPanel)) {
+        event.preventDefault();
+        setSummaryHeight(prev => {
+          const next = Math.max(prev - 80, 100);
+          localStorage.setItem('emailModal_summaryHeight', String(next));
+          return next;
+        });
       } else if (pressed === 'escape') {
         // Always allow Escape to close the modal (preserve existing behavior)
         event.preventDefault();
@@ -824,7 +891,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, currentIndex, emails.length, currentEmail, isCurrentEmailRead, isMarkingAsRead, showConfirmDialog, showDeleteConfirm]);
+  }, [isOpen, currentIndex, emails.length, currentEmail, isCurrentEmailRead, isMarkingAsRead, showConfirmDialog, showDeleteConfirm, ratedNewsletter?.key, ratedNewsletter?.sender, currentFeedback, pendingDeleteFeedback]);
 
   // Rule navigation event listener
   useEffect(() => {
@@ -1958,6 +2025,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const readLabel = `${formatKeyLabel(keyBindings.markAsRead) || '↑'} Read`;
   const deleteLabel = `${formatKeyLabel(keyBindings.deleteEmail) || '↓'} Delete`;
   const closeLabel = `${formatKeyLabel(keyBindings.closeSummary) || 'Q'} Close`;
+  const fullScreenLabel = `${formatKeyLabel(keyBindings.toggleFullScreen) || 'F'} Fullscreen`;
 
   return (
     <>      <style>
@@ -2353,13 +2421,33 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           }
         `}
       </style>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 rounded-lg w-full max-w-7xl h-full max-h-[90vh] flex flex-col">
+      <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${isFullScreen ? '' : 'p-4'}`}>
+      <div className={`bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 flex flex-col ${isFullScreen ? 'w-full h-full' : 'rounded-lg w-full max-w-7xl h-full max-h-[90vh]'}`}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate flex-1 mr-4">
             {currentEmail.subject}
           </h2>
+          {(() => {
+            // Historical sentiment toward the current email's sender: positive/negative
+            // feedback all-time and over the last 30 days. Hidden until there is feedback.
+            const ts = newsletterRatingService.getSenderStats(currentEmail.from);
+            if (ts.positiveAll === 0 && ts.negativeAll === 0) return null;
+            return (
+              <span
+                className="inline-flex items-center gap-2 text-xs font-medium shrink-0 mr-4"
+                title={`Feedback for ${currentEmail.from} — all-time ${ts.positiveAll} positive / ${ts.negativeAll} negative · last 30 days ${ts.positive30} / ${ts.negative30}`}
+              >
+                <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
+                  <ThumbsUp size={12} />{ts.positiveAll}
+                </span>
+                <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400">
+                  <ThumbsDown size={12} />{ts.negativeAll}
+                </span>
+                <span className="text-gray-400 dark:text-gray-500">(30d {ts.positive30}/{ts.negative30})</span>
+              </span>
+            );
+          })()}
           <div className="flex items-center gap-2">
             {/* Keyboard shortcuts info */}
             <div className="text-xs text-gray-500 dark:text-gray-400 mr-4 hidden sm:block">
@@ -2369,6 +2457,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 <span>{readLabel}</span>
                 <span>{deleteLabel}</span>
                 <span>{closeLabel}</span>
+                <span>{fullScreenLabel}</span>
               </div>
             </div>
             
@@ -2387,7 +2476,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             
             {/* Delete Button */}
             <Button
-              onClick={handleShowDeleteConfirm}
+              onClick={() => handleShowDeleteConfirm()}
               disabled={isDeletingEmail}
               variant="danger"
               size="sm"
@@ -2425,6 +2514,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               label="Next email"
             >
               <ChevronRight size={20} />
+            </IconButton>
+
+            <IconButton
+              onClick={handleToggleFullScreen}
+              label={isFullScreen ? 'Exit full screen' : 'Full screen'}
+            >
+              {isFullScreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
             </IconButton>
 
             <IconButton
@@ -2925,10 +3021,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       )}:
                     </span>
                     <button
-                      onClick={() => handleRate('up')}
-                      title="Good edition — thumbs up"
+                      onClick={() => handleFeedback('positive')}
+                      title="Mark as positive (keep in inbox)"
                       className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors ${
-                        currentRating === 'up'
+                        currentFeedback === 'positive'
                           ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 border border-transparent'
                       }`}
@@ -2936,26 +3032,30 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                       <ThumbsUp size={12} />
                     </button>
                     <button
-                      onClick={() => handleRate('down')}
-                      title="Bad edition — thumbs down"
+                      onClick={() => handleFeedback('negative')}
+                      title="Mark as negative (keep in inbox)"
                       className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors ${
-                        currentRating === 'down'
+                        currentFeedback === 'negative'
                           ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 border border-transparent'
                       }`}
                     >
                       <ThumbsDown size={12} />
                     </button>
-                    {senderStats && (
-                      <div className="flex items-center gap-2 ml-auto text-xs text-gray-500 dark:text-gray-400">
-                        <span title="Global quality for this sender">
-                          All-time: <strong className={senderStats.globalQuality >= 70 ? 'text-green-600 dark:text-green-400' : senderStats.globalQuality >= 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}>{senderStats.globalQuality}%</strong>
+                    {senderStats && (senderStats.positiveAll > 0 || senderStats.negativeAll > 0) && (
+                      <div className="flex items-center gap-3 ml-auto text-xs text-gray-500 dark:text-gray-400">
+                        <span title="Overall feedback for this sender">
+                          All-time:{' '}
+                          <strong className="text-green-600 dark:text-green-400">{senderStats.positiveAll}</strong>
+                          {' / '}
+                          <strong className="text-red-600 dark:text-red-400">{senderStats.negativeAll}</strong>
                         </span>
-                        {senderStats.last30Quality >= 0 && (
-                          <span title="Quality in the last 30 days">
-                            30d: <strong className={senderStats.last30Quality >= 70 ? 'text-green-600 dark:text-green-400' : senderStats.last30Quality >= 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}>{senderStats.last30Quality}%</strong>
-                          </span>
-                        )}
+                        <span title="Feedback in the last 30 days">
+                          30d:{' '}
+                          <strong className="text-green-600 dark:text-green-400">{senderStats.positive30}</strong>
+                          {' / '}
+                          <strong className="text-red-600 dark:text-red-400">{senderStats.negative30}</strong>
+                        </span>
                       </div>
                     )}
                   </div>
@@ -3182,11 +3282,17 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             </Button>
             <Button
               variant="danger"
-              onClick={handleDeleteEmail}
+              onClick={() => handleDeleteEmail()}
               disabled={isDeletingEmail}
               loading={isDeletingEmail}
             >
-              {isDeletingEmail ? 'Deleting...' : 'Delete Email'}
+              {isDeletingEmail
+                ? 'Deleting...'
+                : pendingDeleteFeedback === 'positive'
+                  ? 'Delete (positive)'
+                  : pendingDeleteFeedback === 'negative'
+                    ? 'Delete (negative)'
+                    : 'Delete Email'}
             </Button>
           </>
         }

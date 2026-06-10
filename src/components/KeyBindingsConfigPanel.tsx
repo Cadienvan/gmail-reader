@@ -113,10 +113,73 @@ export const KeyBindingsConfigPanel: React.FC = () => {
           </div>
 
           <div>
+            <Label>Mark positive (keep in inbox)</Label>
+            <Input
+              value={bindings.markPositive}
+              onKeyDown={handleKeyCapture('markPositive')}
+              readOnly
+            />
+          </div>
+
+          <div>
+            <Label>Mark negative (keep in inbox)</Label>
+            <Input
+              value={bindings.markNegative}
+              onKeyDown={handleKeyCapture('markNegative')}
+              readOnly
+            />
+          </div>
+
+          <div>
+            <Label>Delete as positive</Label>
+            <Input
+              value={bindings.deletePositive}
+              onKeyDown={handleKeyCapture('deletePositive')}
+              readOnly
+            />
+          </div>
+
+          <div>
+            <Label>Delete as negative</Label>
+            <Input
+              value={bindings.deleteNegative}
+              onKeyDown={handleKeyCapture('deleteNegative')}
+              readOnly
+            />
+          </div>
+
+          <div>
             <Label>Close summary tab</Label>
             <Input
               value={bindings.closeSummary}
               onKeyDown={handleKeyCapture('closeSummary')}
+              readOnly
+            />
+          </div>
+
+          <div>
+            <Label>Toggle full screen</Label>
+            <Input
+              value={bindings.toggleFullScreen}
+              onKeyDown={handleKeyCapture('toggleFullScreen')}
+              readOnly
+            />
+          </div>
+
+          <div>
+            <Label>Expand summary panel</Label>
+            <Input
+              value={bindings.expandSummaryPanel}
+              onKeyDown={handleKeyCapture('expandSummaryPanel')}
+              readOnly
+            />
+          </div>
+
+          <div>
+            <Label>Shrink summary panel</Label>
+            <Input
+              value={bindings.shrinkSummaryPanel}
+              onKeyDown={handleKeyCapture('shrinkSummaryPanel')}
               readOnly
             />
           </div>

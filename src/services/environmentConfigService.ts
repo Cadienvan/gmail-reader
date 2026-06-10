@@ -6,7 +6,16 @@ export interface KeyBindings {
   gotoPreviousEmail: string;
   markAsRead: string;
   deleteEmail: string;
+  // User feedback on a newsletter. The "delete*" variants record the judgement and
+  // delete the email; the "mark*" variants record it while keeping it in the inbox.
+  deletePositive: string;
+  deleteNegative: string;
+  markPositive: string;
+  markNegative: string;
   closeSummary: string;
+  toggleFullScreen: string;
+  expandSummaryPanel: string;
+  shrinkSummaryPanel: string;
 }
 
 export interface EnvironmentConfig {
@@ -203,8 +212,15 @@ class EnvironmentConfigService {
       const saved = localStorage.getItem(this.CONFIG_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as EnvironmentConfig;
-        // Merge with defaults to ensure all fields exist
-        return { ...this.getDefaultConfiguration(), ...parsed };
+        const defaults = this.getDefaultConfiguration();
+        // Merge with defaults to ensure all fields exist. keyBindings is merged
+        // one level deeper so configs saved before new shortcuts still inherit
+        // their defaults instead of missing the field.
+        return {
+          ...defaults,
+          ...parsed,
+          keyBindings: { ...defaults.keyBindings, ...(parsed.keyBindings || {}) },
+        };
       }
     } catch (error) {
       console.error('Failed to load environment configuration:', error);
@@ -233,12 +249,18 @@ class EnvironmentConfigService {
       gmailQuery: 'is:unread -is:spam -is:starred in:inbox',
       aiBackend: 'local',
       keyBindings: {
-        // Defaults wired to arrow keys and 'q' for closing summary tab
         gotoNextEmail: 'ArrowRight',
         gotoPreviousEmail: 'ArrowLeft',
         markAsRead: 'ArrowUp',
         deleteEmail: 'ArrowDown',
-        closeSummary: 'q'
+        deletePositive: 'G',
+        deleteNegative: 'B',
+        markPositive: 'P',
+        markNegative: 'N',
+        closeSummary: 'q',
+        toggleFullScreen: 'f',
+        expandSummaryPanel: ']',
+        shrinkSummaryPanel: '['
       }
     };
   }
@@ -249,7 +271,17 @@ class EnvironmentConfigService {
       typeof config.keyBindings.gotoPreviousEmail === 'string' &&
       typeof config.keyBindings.markAsRead === 'string' &&
       typeof config.keyBindings.deleteEmail === 'string' &&
-      typeof config.keyBindings.closeSummary === 'string';
+      // The feedback shortcuts are optional for backward compatibility with
+      // configurations exported before they were introduced (they get filled in
+      // from the defaults during the merge).
+      (config.keyBindings.deletePositive === undefined || typeof config.keyBindings.deletePositive === 'string') &&
+      (config.keyBindings.deleteNegative === undefined || typeof config.keyBindings.deleteNegative === 'string') &&
+      (config.keyBindings.markPositive === undefined || typeof config.keyBindings.markPositive === 'string') &&
+      (config.keyBindings.markNegative === undefined || typeof config.keyBindings.markNegative === 'string') &&
+      typeof config.keyBindings.closeSummary === 'string' &&
+      typeof config.keyBindings.toggleFullScreen === 'string' &&
+      typeof config.keyBindings.expandSummaryPanel === 'string' &&
+      typeof config.keyBindings.shrinkSummaryPanel === 'string';
 
     return (
       typeof config === 'object' &&

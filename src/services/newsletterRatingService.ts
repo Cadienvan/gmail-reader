@@ -1,224 +1,185 @@
-export type RatingValue = 'up' | 'down';
-export type RejectionReason = 'not_newsletter' | 'low_value_full' | 'low_value_link' | 'manual_delete';
+// Explicit user feedback on a newsletter: the judgement is always theirs, given at
+// the moment of greatest clarity (reading / deleting). There is no longer any
+// automatic vote: Gempest no longer contributes to this data.
+export type FeedbackValue = 'positive' | 'negative';
 
-export interface NewsletterRating {
-  // Unique per rated tab (the tab URL, or `email:<id>` when reading an email
-  // with no tab open). This lets every tab be rated independently, even when
-  // many tabs come from the same sender.
+export interface NewsletterFeedback {
+  // Unique per rated tab (the tab URL, or `email:<id>` when rating an email with
+  // no tab open). Lets every edition/tab be rated independently, even when they
+  // come from the same sender.
   key: string;
   sender: string;
-  rating: RatingValue;
-  timestamp: number;
-}
-
-export interface NewsletterRejection {
-  sender: string;
-  reason: RejectionReason;
+  feedback: FeedbackValue;
   timestamp: number;
 }
 
 export interface SenderStats {
   sender: string;
-  globalQuality: number;
-  last30Quality: number;
-  totalRatings: number;
-  ratingsLast30: number;
-  rejections: {
-    not_newsletter: number;
-    low_value_full: number;
-    low_value_link: number;
-    manual_delete: number;
-    total: number;
-  };
+  // Cumulative (all-time) and last-30-days counts.
+  positiveAll: number;
+  negativeAll: number;
+  positive30: number;
+  negative30: number;
 }
 
 export interface UnsubscribeSuggestion {
   sender: string;
-  // Contenuti effettivamente fruiti negli ultimi 30 giorni (rating positivi).
-  engagedLast30: number;
-  // Segnali negativi negli ultimi 30 giorni: rating negativi + chiusure
-  // automatiche di Gempest + cancellazioni manuali.
-  discardedLast30: number;
-  // Quante delle scartate sono cancellazioni manuali dell'utente.
-  manualDeletesLast30: number;
-  // Quante delle scartate sono chiusure automatiche di Gemini (low value / not newsletter).
-  autoClosedLast30: number;
-  // Frase pronta da mostrare in UI che spiega perché è suggerita la disiscrizione.
+  positive30: number;
+  negative30: number;
+  // Ready-to-display sentence explaining why unsubscribing is suggested.
   reason: string;
 }
 
-const RATINGS_KEY = 'newsletter_ratings';
-const REJECTIONS_KEY = 'newsletter_rejections';
+const FEEDBACK_KEY = 'newsletter_feedback';
+// Old model key (up/down ratings): migrated only once.
+const LEGACY_RATINGS_KEY = 'newsletter_ratings';
+const LEGACY_REJECTIONS_KEY = 'newsletter_rejections';
 const MS_30_DAYS = 30 * 24 * 60 * 60 * 1000;
-// Soglia minima di segnali negli ultimi 30 giorni per suggerire la disiscrizione,
-// così da evitare falsi positivi su un solo dato isolato.
+// Minimum number of signals in the last 30 days before suggesting unsubscribe,
+// to avoid false positives on a single isolated data point.
 const MIN_SIGNALS_FOR_SUGGESTION = 3;
 
 class NewsletterRatingService {
-  private getRatings(): NewsletterRating[] {
+  private getFeedbacks(): NewsletterFeedback[] {
     try {
-      return JSON.parse(localStorage.getItem(RATINGS_KEY) || '[]');
+      const raw = localStorage.getItem(FEEDBACK_KEY);
+      if (raw !== null) return JSON.parse(raw);
     } catch {
       return [];
     }
+    // No data in the new format: migrate once from the old up/down model.
+    return this.migrateLegacy();
   }
 
-  private saveRatings(ratings: NewsletterRating[]): void {
-    localStorage.setItem(RATINGS_KEY, JSON.stringify(ratings));
+  private saveFeedbacks(feedbacks: NewsletterFeedback[]): void {
+    localStorage.setItem(FEEDBACK_KEY, JSON.stringify(feedbacks));
   }
 
-  private getRejections(): NewsletterRejection[] {
+  // Converts the old up/down ratings into positive/negative feedback (Gempest's
+  // automatic rejections are dropped: the judgement goes back to the user only).
+  // Always writes the new key so the migration happens only once.
+  private migrateLegacy(): NewsletterFeedback[] {
+    let migrated: NewsletterFeedback[] = [];
     try {
-      return JSON.parse(localStorage.getItem(REJECTIONS_KEY) || '[]');
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_RATINGS_KEY) || '[]');
+      if (Array.isArray(legacy)) {
+        migrated = legacy
+          .filter((r: any) => r && typeof r.key === 'string' && (r.rating === 'up' || r.rating === 'down'))
+          .map((r: any) => ({
+            key: r.key,
+            sender: r.sender,
+            feedback: (r.rating === 'up' ? 'positive' : 'negative') as FeedbackValue,
+            timestamp: typeof r.timestamp === 'number' ? r.timestamp : Date.now(),
+          }));
+      }
     } catch {
-      return [];
+      migrated = [];
     }
+    this.saveFeedbacks(migrated);
+    localStorage.removeItem(LEGACY_RATINGS_KEY);
+    localStorage.removeItem(LEGACY_REJECTIONS_KEY);
+    return migrated;
   }
 
-  private saveRejections(rejections: NewsletterRejection[]): void {
-    localStorage.setItem(REJECTIONS_KEY, JSON.stringify(rejections));
-  }
-
-  rateNewsletter(key: string, sender: string, rating: RatingValue): void {
-    const ratings = this.getRatings();
-    const existingIdx = ratings.findIndex(r => r.key === key);
-    const entry: NewsletterRating = { key, sender, rating, timestamp: Date.now() };
+  // Records (or updates) the user's feedback for a tab/email.
+  setFeedback(key: string, sender: string, feedback: FeedbackValue): void {
+    const feedbacks = this.getFeedbacks();
+    const existingIdx = feedbacks.findIndex(f => f.key === key);
+    const entry: NewsletterFeedback = { key, sender, feedback, timestamp: Date.now() };
     if (existingIdx >= 0) {
-      ratings[existingIdx] = entry;
+      feedbacks[existingIdx] = entry;
     } else {
-      ratings.push(entry);
+      feedbacks.push(entry);
     }
-    this.saveRatings(ratings);
+    this.saveFeedbacks(feedbacks);
   }
 
-  removeRating(key: string): void {
-    const ratings = this.getRatings().filter(r => r.key !== key);
-    this.saveRatings(ratings);
+  removeFeedback(key: string): void {
+    this.saveFeedbacks(this.getFeedbacks().filter(f => f.key !== key));
   }
 
-  getRatingForKey(key: string): RatingValue | null {
-    const ratings = this.getRatings();
-    return ratings.find(r => r.key === key)?.rating ?? null;
-  }
-
-  recordRejection(sender: string, reason: RejectionReason): void {
-    const rejections = this.getRejections();
-    rejections.push({ sender, reason, timestamp: Date.now() });
-    this.saveRejections(rejections);
+  getFeedbackForKey(key: string): FeedbackValue | null {
+    return this.getFeedbacks().find(f => f.key === key)?.feedback ?? null;
   }
 
   getSenderStats(sender: string): SenderStats {
-    const now = Date.now();
-    const cutoff = now - MS_30_DAYS;
-
-    const allRatings = this.getRatings().filter(r => r.sender === sender);
-    const recentRatings = allRatings.filter(r => r.timestamp >= cutoff);
-
-    const globalQuality = allRatings.length === 0
-      ? -1
-      : Math.round((allRatings.filter(r => r.rating === 'up').length / allRatings.length) * 100);
-
-    const last30Quality = recentRatings.length === 0
-      ? -1
-      : Math.round((recentRatings.filter(r => r.rating === 'up').length / recentRatings.length) * 100);
-
-    const allRejections = this.getRejections().filter(r => r.sender === sender);
+    const cutoff = Date.now() - MS_30_DAYS;
+    const all = this.getFeedbacks().filter(f => f.sender === sender);
+    const recent = all.filter(f => f.timestamp >= cutoff);
 
     return {
       sender,
-      globalQuality,
-      last30Quality,
-      totalRatings: allRatings.length,
-      ratingsLast30: recentRatings.length,
-      rejections: {
-        not_newsletter: allRejections.filter(r => r.reason === 'not_newsletter').length,
-        low_value_full: allRejections.filter(r => r.reason === 'low_value_full').length,
-        low_value_link: allRejections.filter(r => r.reason === 'low_value_link').length,
-        manual_delete: allRejections.filter(r => r.reason === 'manual_delete').length,
-        total: allRejections.length,
-      },
+      positiveAll: all.filter(f => f.feedback === 'positive').length,
+      negativeAll: all.filter(f => f.feedback === 'negative').length,
+      positive30: recent.filter(f => f.feedback === 'positive').length,
+      negative30: recent.filter(f => f.feedback === 'negative').length,
     };
   }
 
   getAllSenderStats(): SenderStats[] {
-    const ratings = this.getRatings();
-    const rejections = this.getRejections();
-
-    const senders = new Set<string>([
-      ...ratings.map(r => r.sender),
-      ...rejections.map(r => r.sender),
-    ]);
-
+    const senders = new Set<string>(this.getFeedbacks().map(f => f.sender));
     return Array.from(senders).map(s => this.getSenderStats(s));
   }
 
-  // Suggerisce i mittenti da cui valutare la disiscrizione: quelli per cui,
-  // negli ultimi 30 giorni, i contenuti fruiti (rating positivi) sono inferiori
-  // ai contenuti scartati (rating negativi + chiusure automatiche di Gempest +
-  // cancellazioni manuali). Non esegue alcuna disiscrizione: produce solo l'elenco.
+  // Suggests senders worth considering for unsubscribe: those for whom, over the
+  // last 30 days, negative feedback outweighs positive (with at least
+  // MIN_SIGNALS_FOR_SUGGESTION signals). It does not unsubscribe from anything.
   getUnsubscribeSuggestions(): UnsubscribeSuggestion[] {
-    const now = Date.now();
-    const cutoff = now - MS_30_DAYS;
-
-    const recentRatings = this.getRatings().filter(r => r.timestamp >= cutoff);
-    const recentRejections = this.getRejections().filter(r => r.timestamp >= cutoff);
-
-    const senders = new Set<string>([
-      ...recentRatings.map(r => r.sender),
-      ...recentRejections.map(r => r.sender),
-    ]);
+    const cutoff = Date.now() - MS_30_DAYS;
+    const recent = this.getFeedbacks().filter(f => f.timestamp >= cutoff);
+    const senders = new Set<string>(recent.map(f => f.sender));
 
     const suggestions: UnsubscribeSuggestion[] = [];
 
     for (const sender of senders) {
-      const ratings = recentRatings.filter(r => r.sender === sender);
-      const rejections = recentRejections.filter(r => r.sender === sender);
+      const items = recent.filter(f => f.sender === sender);
+      const positive = items.filter(f => f.feedback === 'positive').length;
+      const negative = items.filter(f => f.feedback === 'negative').length;
 
-      const engaged = ratings.filter(r => r.rating === 'up').length;
-      const downvotes = ratings.filter(r => r.rating === 'down').length;
-      const manualDeletes = rejections.filter(r => r.reason === 'manual_delete').length;
-      const autoClosed = rejections.filter(r => r.reason !== 'manual_delete').length;
-      const discarded = downvotes + manualDeletes + autoClosed;
+      const total = positive + negative;
+      if (total < MIN_SIGNALS_FOR_SUGGESTION) continue;
+      if (negative <= positive) continue;
 
-      const totalSignals = engaged + discarded;
-      if (totalSignals < MIN_SIGNALS_FOR_SUGGESTION) continue;
-      if (engaged >= discarded) continue;
+      const reason = positive === 0
+        ? `${negative} negative reports and none positive in the last 30 days.`
+        : `${negative} negative reports against ${positive} positive in the last 30 days.`;
 
-      let reason: string;
-      if (engaged === 0) {
-        reason = `${discarded} newsletter scartate e nessun contenuto fruito negli ultimi 30 giorni.`;
-      } else {
-        reason = `Solo ${engaged} contenuti fruiti contro ${discarded} scartati negli ultimi 30 giorni.`;
-      }
-
-      suggestions.push({
-        sender,
-        engagedLast30: engaged,
-        discardedLast30: discarded,
-        manualDeletesLast30: manualDeletes,
-        autoClosedLast30: autoClosed,
-        reason,
-      });
+      suggestions.push({ sender, positive30: positive, negative30: negative, reason });
     }
 
-    // I casi più netti (più scartati, meno fruiti) prima.
+    // The clearest cases (more negative, fewer positive) first.
     return suggestions.sort((a, b) =>
-      (b.discardedLast30 - b.engagedLast30) - (a.discardedLast30 - a.engagedLast30));
+      (b.negative30 - b.positive30) - (a.negative30 - a.positive30));
   }
 
-  // Svuota tutti i dati di Newsletter Quality Insight (rating e rifiuti).
+  // Clears all Newsletter Quality Insight data.
   clearAll(): void {
-    localStorage.removeItem(RATINGS_KEY);
-    localStorage.removeItem(REJECTIONS_KEY);
+    localStorage.removeItem(FEEDBACK_KEY);
+    localStorage.removeItem(LEGACY_RATINGS_KEY);
+    localStorage.removeItem(LEGACY_REJECTIONS_KEY);
   }
 
-  exportData(): { ratings: NewsletterRating[]; rejections: NewsletterRejection[] } {
-    return { ratings: this.getRatings(), rejections: this.getRejections() };
+  exportData(): { feedback: NewsletterFeedback[] } {
+    return { feedback: this.getFeedbacks() };
   }
 
-  importData(data: { ratings?: NewsletterRating[]; rejections?: NewsletterRejection[] }): void {
-    if (Array.isArray(data.ratings)) this.saveRatings(data.ratings);
-    if (Array.isArray(data.rejections)) this.saveRejections(data.rejections);
+  importData(data: { feedback?: NewsletterFeedback[]; ratings?: any[] }): void {
+    if (Array.isArray(data.feedback)) {
+      this.saveFeedbacks(data.feedback);
+      return;
+    }
+    // Backward compatibility with exports from the old model (up/down).
+    if (Array.isArray(data.ratings)) {
+      const migrated = data.ratings
+        .filter((r: any) => r && typeof r.key === 'string' && (r.rating === 'up' || r.rating === 'down'))
+        .map((r: any) => ({
+          key: r.key,
+          sender: r.sender,
+          feedback: (r.rating === 'up' ? 'positive' : 'negative') as FeedbackValue,
+          timestamp: typeof r.timestamp === 'number' ? r.timestamp : Date.now(),
+        }));
+      this.saveFeedbacks(migrated);
+    }
   }
 }
 

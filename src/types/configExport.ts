@@ -11,8 +11,7 @@ export interface AppConfigExport {
   rules: object;
   rulesConfig: object;
   newsletterRatings?: {
-    ratings: object[];
-    rejections: object[];
+    feedback: object[];
   };
   gempest: object;
   memoryList?: string[];
