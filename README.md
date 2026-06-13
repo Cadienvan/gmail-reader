@@ -4,7 +4,7 @@
 
 ## 🌐 **Quick Access**
 
-- **🚀 Live App**: [https://gmail-ai-reader.netlify.app/](https://gmail-ai-reader.netlify.app/)
+- **🚀 Live App**: [https://cadienvan.github.io/gmail-reader/](https://cadienvan.github.io/gmail-reader/)
 
 ---
 
