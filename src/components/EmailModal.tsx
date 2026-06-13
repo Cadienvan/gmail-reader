@@ -865,15 +865,25 @@ export const EmailModal: React.FC<EmailModalProps> = ({
         handleToggleFullScreen();
       } else if (matches(keyBindings.expandSummaryPanel)) {
         event.preventDefault();
-        setSummaryHeight(prev => {
-          const next = Math.min(prev + 80, window.innerHeight - 200);
-          localStorage.setItem('emailModal_summaryHeight', String(next));
-          return next;
-        });
+        if (!isSummaryVisible) {
+          setIsSummaryVisible(true);
+          localStorage.setItem('emailModal_summaryVisible', 'true');
+        } else {
+          setSummaryHeight(prev => {
+            const next = Math.min(prev + 80, window.innerHeight - 200);
+            localStorage.setItem('emailModal_summaryHeight', String(next));
+            return next;
+          });
+        }
       } else if (matches(keyBindings.shrinkSummaryPanel)) {
         event.preventDefault();
         setSummaryHeight(prev => {
-          const next = Math.max(prev - 80, 100);
+          const next = prev - 80;
+          if (next < 100) {
+            setIsSummaryVisible(false);
+            localStorage.setItem('emailModal_summaryVisible', 'false');
+            return prev;
+          }
           localStorage.setItem('emailModal_summaryHeight', String(next));
           return next;
         });
