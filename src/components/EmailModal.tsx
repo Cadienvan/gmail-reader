@@ -2024,8 +2024,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const nextLabel = `${formatKeyLabel(keyBindings.gotoNextEmail) || '→'} Next`;
   const readLabel = `${formatKeyLabel(keyBindings.markAsRead) || '↑'} Read`;
   const deleteLabel = `${formatKeyLabel(keyBindings.deleteEmail) || '↓'} Delete`;
-  const closeLabel = `${formatKeyLabel(keyBindings.closeSummary) || 'Q'} Close`;
+  const markPositiveLabel = `${formatKeyLabel(keyBindings.markPositive) || 'P'} +Keep`;
+  const markNegativeLabel = `${formatKeyLabel(keyBindings.markNegative) || 'N'} -Keep`;
+  const deletePositiveLabel = `${formatKeyLabel(keyBindings.deletePositive) || 'D'} Del+`;
+  const deleteNegativeLabel = `${formatKeyLabel(keyBindings.deleteNegative) || 'X'} Del-`;
+  const closeSummaryLabel = `${formatKeyLabel(keyBindings.closeSummary) || 'Q'} CloseTab`;
   const fullScreenLabel = `${formatKeyLabel(keyBindings.toggleFullScreen) || 'F'} Fullscreen`;
+  const expandSummaryLabel = `${formatKeyLabel(keyBindings.expandSummaryPanel) || '+'} Expand`;
+  const shrinkSummaryLabel = `${formatKeyLabel(keyBindings.shrinkSummaryPanel) || '-'} Shrink`;
 
   return (
     <>      <style>
@@ -2451,13 +2457,19 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           <div className="flex items-center gap-2">
             {/* Keyboard shortcuts info */}
             <div className="text-xs text-gray-500 dark:text-gray-400 mr-4 hidden sm:block">
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
                 <span>{prevLabel}</span>
                 <span>{nextLabel}</span>
                 <span>{readLabel}</span>
                 <span>{deleteLabel}</span>
-                <span>{closeLabel}</span>
+                <span>{markPositiveLabel}</span>
+                <span>{markNegativeLabel}</span>
+                <span>{deletePositiveLabel}</span>
+                <span>{deleteNegativeLabel}</span>
+                <span>{closeSummaryLabel}</span>
                 <span>{fullScreenLabel}</span>
+                <span>{expandSummaryLabel}</span>
+                <span>{shrinkSummaryLabel}</span>
               </div>
             </div>
             
