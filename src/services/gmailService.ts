@@ -288,14 +288,16 @@ class GmailService {
     }
   }
 
-  async getUnreadEmails(pageToken?: string, maxResults: number = 50, forceRefresh: boolean = false): Promise<{ emails: ParsedEmail[], nextPageToken?: string }> {
+  async getUnreadEmails(pageToken?: string, maxResults: number = 50, forceRefresh: boolean = false, searchQuery?: string): Promise<{ emails: ParsedEmail[], nextPageToken?: string }> {
     if (!this.isAuthenticatedFlag) {
       throw new Error('Gmail not authenticated. Please authenticate first.');
     }
 
+    const search = searchQuery?.trim() || '';
+
     // Try to get cached emails first (unless forcing refresh)
     if (!forceRefresh) {
-      const cachedResult = emailCacheService.getCachedEmails(pageToken);
+      const cachedResult = emailCacheService.getCachedEmails(pageToken, search);
       if (cachedResult) {
         console.log('Using cached emails for page:', pageToken || 'first');
         return cachedResult;
@@ -305,9 +307,10 @@ class GmailService {
     }
 
     try {
-      // Get the configurable Gmail query from environment configuration
-      const gmailQuery = environmentConfigService.getGmailQuery();
-      
+      // Get the configurable Gmail query from environment configuration, optionally
+      // narrowed by the user's search terms (the configured query stays as a prefix)
+      const gmailQuery = `${environmentConfigService.getGmailQuery()} ${search}`.trim();
+
       // Build URL with pagination parameters using the configurable query
       let url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(gmailQuery)}&maxResults=${maxResults}`;
       if (pageToken) {
@@ -327,7 +330,7 @@ class GmailService {
 
       if (!listData.messages || listData.messages.length === 0) {
         const result = { emails: [], nextPageToken: undefined };
-        emailCacheService.cacheEmails([], pageToken, undefined);
+        emailCacheService.cacheEmails([], pageToken, undefined, search);
         return result;
       }
 
@@ -350,7 +353,7 @@ class GmailService {
       const parsedEmails = emailMessages.map(this.parseEmailMessage);
       
       // Cache the results
-      emailCacheService.cacheEmails(parsedEmails, pageToken, listData.nextPageToken);
+      emailCacheService.cacheEmails(parsedEmails, pageToken, listData.nextPageToken, search);
       
       console.log('GmailService: Successfully fetched', parsedEmails.length, 'emails from Gmail API', forceRefresh ? '(force refresh)' : '');
       

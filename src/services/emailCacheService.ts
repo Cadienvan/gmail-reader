@@ -21,9 +21,9 @@ class EmailCacheService {
   /**
    * Get cached emails if they exist and are still valid
    */
-  getCachedEmails(pageToken?: string): { emails: ParsedEmail[], nextPageToken?: string } | null {
+  getCachedEmails(pageToken?: string, searchQuery?: string): { emails: ParsedEmail[], nextPageToken?: string } | null {
     try {
-      const cacheKey = this.getCacheKey(pageToken);
+      const cacheKey = this.getCacheKey(pageToken, searchQuery);
       const cachedData = localStorage.getItem(cacheKey);
       
       if (!cachedData) {
@@ -34,7 +34,7 @@ class EmailCacheService {
       
       // Check if cache is still valid
       if (Date.now() - parsed.timestamp > this.CACHE_DURATION) {
-        this.invalidateCache(pageToken);
+        localStorage.removeItem(cacheKey);
         return null;
       }
 
@@ -51,9 +51,9 @@ class EmailCacheService {
   /**
    * Cache emails with pagination info
    */
-  cacheEmails(emails: ParsedEmail[], pageToken?: string, nextPageToken?: string): void {
+  cacheEmails(emails: ParsedEmail[], pageToken?: string, nextPageToken?: string, searchQuery?: string): void {
     try {
-      const cacheKey = this.getCacheKey(pageToken);
+      const cacheKey = this.getCacheKey(pageToken, searchQuery);
       const cacheData: CachedEmailData = {
         emails,
         timestamp: Date.now(),
@@ -307,8 +307,11 @@ class EmailCacheService {
   }
 
   // Private helper methods
-  private getCacheKey(pageToken?: string): string {
-    return pageToken ? `${this.CACHE_KEY}-${pageToken}` : `${this.CACHE_KEY}-first-page`;
+  private getCacheKey(pageToken?: string, searchQuery?: string): string {
+    // Keep the un-searched keys byte-identical to the historical format so existing caches still hit.
+    const page = pageToken ? `-${pageToken}` : '-first-page';
+    const search = searchQuery?.trim() ? `::q=${searchQuery.trim()}` : '';
+    return `${this.CACHE_KEY}${search}${page}`;
   }
 
   private getAllCacheKeys(): string[] {

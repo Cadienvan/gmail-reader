@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, LucideDollarSign, FileText, Sparkles, StopCircle, X, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Mail, BookOpen, AlertCircle, CheckCircle, Gamepad2, RefreshCw, ChevronLeft, ChevronRight, Download, Settings, Github, Bookmark, LucideDollarSign, FileText, Sparkles, StopCircle, X, ThumbsUp, ThumbsDown, Search } from 'lucide-react';
 import type { ParsedEmail, ViewedEmail, FlashCard, ModelConfiguration, LinkSummary } from '../types';
 import { gmailService } from '../services/gmailService';
 import { ollamaService } from '../services/ollamaService';
@@ -19,7 +19,7 @@ import { TabSummariesModal } from './TabSummariesModal';
 import { RulesDebugFloater } from './RulesDebugFloater';
 import { gempestService } from '../services/gempestService';
 import { newsletterRatingService } from '../services/newsletterRatingService';
-import { Button, IconButton, Callout } from './ui';
+import { Button, IconButton, Callout, Input } from './ui';
 
 // Shows, next to the title, the historical sentiment toward the sender: number of
 // positive and negative feedback all-time. Renders nothing until there is feedback.
@@ -56,6 +56,10 @@ export const Dashboard: React.FC = () => {
   const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
   const [prevPageTokens, setPrevPageTokens] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Search state — the input holds only the extra terms appended to the configured Gmail query
+  const [searchInput, setSearchInput] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
 
   // Modal states
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -189,8 +193,10 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const fetchEmails = async (token?: string): Promise<void> => {
-    const result = await gmailService.getUnreadEmails(token);
+  // `searchOverride` lets callers that just changed the search pass the new value
+  // explicitly, instead of reading the not-yet-committed `appliedSearch` state.
+  const fetchEmails = async (token?: string, searchOverride?: string): Promise<void> => {
+    const result = await gmailService.getUnreadEmails(token, 50, false, searchOverride ?? appliedSearch);
     setEmails(result.emails);
     setNextPageToken(result.nextPageToken);
     setIsLoading(false);
@@ -198,13 +204,38 @@ export const Dashboard: React.FC = () => {
     setRetryCount(0);
   };
 
-  const fetchEmailsWithForceRefresh = async (token?: string): Promise<void> => {
-    const result = await gmailService.getUnreadEmails(token, 50, true);
+  const fetchEmailsWithForceRefresh = async (token?: string, searchOverride?: string): Promise<void> => {
+    const result = await gmailService.getUnreadEmails(token, 50, true, searchOverride ?? appliedSearch);
     setEmails(result.emails);
     setNextPageToken(result.nextPageToken);
     setIsLoading(false);
     setIsRetrying(false);
     setRetryCount(0);
+  };
+
+  // Applies (or clears) the extra search terms and restarts from the first page:
+  // Gmail page tokens are bound to the query they were issued for.
+  const applySearch = async (term: string) => {
+    const normalized = term.trim();
+
+    setSearchInput(normalized);
+    setAppliedSearch(normalized);
+    setNextPageToken(undefined);
+    setPrevPageTokens([]);
+    setCurrentPage(1);
+    setCurrentEmailIndex(0);
+    setIsLoading(true);
+    setError(null);
+    setRetryCount(0);
+    setIsRetrying(false);
+
+    try {
+      await fetchEmails(undefined, normalized);
+    } catch (error) {
+      console.error('Failed to search emails:', error);
+      setError('Failed to search emails. Please check your query and try again.');
+      setIsLoading(false);
+    }
   };
 
   const handleRetry = async () => {
@@ -625,6 +656,42 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
 
+              {/* Search — the configured Gmail query is shown as a fixed, read-only prefix */}
+              <form
+                className="flex items-center gap-2 mb-4 last:mb-0"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  applySearch(searchInput);
+                }}
+              >
+                <Input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  prefix={environmentConfigService.getGmailQuery()}
+                  placeholder="Add search terms (e.g. from:news@example.com)"
+                  aria-label="Search emails"
+                  disabled={isLoading || isRetrying}
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  leftIcon={<Search size={16} />}
+                  disabled={isLoading || isRetrying}
+                >
+                  Search
+                </Button>
+                {appliedSearch && (
+                  <Button
+                    variant="ghost"
+                    leftIcon={<X size={16} />}
+                    onClick={() => applySearch('')}
+                    disabled={isLoading || isRetrying}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </form>
+
               {ollamaStatus === 'unavailable' && !isOllamaWarningDismissed && environmentConfigService.getAiBackend() === 'local' && (
                 <Callout variant="warning" icon={<AlertCircle size={20} />}>
                   <div className="flex items-start justify-between gap-3">
@@ -733,6 +800,28 @@ export const Dashboard: React.FC = () => {
                     </Button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Empty state — kept outside the list so the search stays reachable */}
+            {emails.length === 0 && !isLoading && !isRetrying && !error && (
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 border border-transparent dark:border-gray-800 text-center">
+                <Mail size={32} className="mx-auto text-gray-400 dark:text-gray-500 mb-3" />
+                <p className="text-gray-600 dark:text-gray-300">
+                  {appliedSearch
+                    ? 'No emails match your search terms.'
+                    : 'No emails found for the current Gmail query.'}
+                </p>
+                {appliedSearch && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => applySearch('')}
+                  >
+                    Clear search
+                  </Button>
+                )}
               </div>
             )}
           </div>
